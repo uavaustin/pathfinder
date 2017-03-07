@@ -3,6 +3,7 @@
         {
             "target_name": "path-finder",
             "sources": [
+                "src/location.cpp",
                 "src/path_finder.cpp",
                 "src/path_finder_wrapper.cpp",
                 "src/wrapper_util.cpp"

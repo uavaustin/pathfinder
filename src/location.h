@@ -3,18 +3,55 @@
 
 #include <cfloat>
 
+const long double PI = 3.141592653589793238L;
+
 namespace loc {
-    struct Distance {
-        Distance() : x(0), y(0), z(0) {}
-
-        Distance(double x_, double y_) : x(x_), y(y_), z(0) {}
-
-        Distance(double x_, double y_, double z_) : x(x_), y(y_), z(z_) {}
-
+    class Distance {
+    public:
         double x;
         double y;
-        double z;
+
+        Distance(double x, double y);
+
+        double GetMagnitude();
+        double GetBearing();
+
+        Distance GetTransform(double angle);
+
+        static Distance FromMagnitude(double dist, double bearing);
     };
+
+    Distance operator+(const Distance &dist, Distance other);
+    Distance operator-(const Distance &dist, Distance other);
+
+    Distance operator*(const Distance &dist, double k);
+    Distance operator*(double k, const Distance &dist);
+    Distance operator/(const Distance &dist, double k);
+
+    class Distance3D: public Distance {
+    public:
+        double z;
+
+        Distance3D(double x, double y, double z);
+
+        double GetMagnitude();
+
+        Distance3D GetTransform(double angle);
+
+        static Distance3D FromMagnitude(double dist, double bearing,
+                double alt);
+    };
+
+    Distance3D operator+(Distance3D &dist, Distance3D other);
+    Distance3D operator+(Distance3D &dist, Distance other);
+    Distance3D operator+(Distance other, const Distance3D &dist);
+    Distance3D operator-(Distance3D &dist, Distance3D other);
+    Distance3D operator-(Distance3D &dist, Distance other);
+    Distance3D operator-(Distance other, const Distance3D &dist);
+
+    Distance3D operator*(Distance3D &dist, double k);
+    Distance3D operator*(double k, const Distance3D &dist);
+    Distance3D operator/(Distance3D &dist, double k);
 
     struct Location {
         Location() : lat(0), lon(0), alt(-DBL_MAX) {}
