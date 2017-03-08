@@ -11,6 +11,8 @@
  */
 v8::Local<v8::String> V8String(std::string string);
 
+v8::Local<v8::String> V8String(char *string);
+
 /**
  * Return a string from a v8 value.
  */

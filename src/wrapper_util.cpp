@@ -11,6 +11,10 @@ v8::Local<v8::String> V8String(std::string string) {
     return Nan::New(string).ToLocalChecked();
 }
 
+v8::Local<v8::String> V8String(char *string) {
+    return Nan::New(string).ToLocalChecked();
+}
+
 std::string ValueToString(v8::Local<v8::Value> value) {
     return std::string(*v8::String::Utf8Value(value->ToString()));
 }
