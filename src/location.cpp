@@ -34,7 +34,7 @@ loc::Distance loc::operator+(const loc::Distance &dist, loc::Distance other) {
 }
 
 loc::Distance loc::operator-(const loc::Distance &dist, loc::Distance other) {
-    return loc::Distance(dist.x - other.x, dist.y - dist.y);
+    return loc::Distance(dist.x - other.x, dist.y - other.y);
 }
 
 loc::Distance loc::operator*(const loc::Distance &dist, double k) {
@@ -73,29 +73,29 @@ static loc::Distance3D FromMagnitude(double dist, double bearing, double alt) {
     return loc::Distance3D(x, y, alt);
 }
 
-loc::Distance3D operator+(loc::Distance3D &dist, loc::Distance3D other){
+loc::Distance3D loc::operator+(loc::Distance3D &dist, loc::Distance3D other){
     return loc::Distance3D(
-        dist.x + other.x, dist.y + dist.y, dist.z + other.z
+        dist.x + other.x, dist.y + other.y, dist.z + other.z
     );
 }
 
 loc::Distance3D loc::operator+(loc::Distance3D &dist, loc::Distance other) {
-    return loc::Distance3D(dist.x + other.x, dist.y + dist.y, dist.z);
+    return loc::Distance3D(dist.x + other.x, dist.y + other.y, dist.z);
 }
 
 loc::Distance3D loc::operator+(loc::Distance other,
         const loc::Distance3D &dist) {
-    return loc::Distance3D(dist.x + other.x, dist.y + dist.y, dist.z);
+    return loc::Distance3D(dist.x + other.x, dist.y + other.y, dist.z);
 }
 
 loc::Distance3D loc::operator-(loc::Distance3D &dist, loc::Distance3D other) {
     return loc::Distance3D(
-        dist.x - other.x, dist.y - dist.y, dist.z - other.z
+        dist.x - other.x, dist.y - other.y, dist.z - other.z
     );
 }
 
 loc::Distance3D loc::operator-(loc::Distance3D &dist, loc::Distance other) {
-    return loc::Distance3D(dist.x - other.x, dist.y - dist.y, dist.z);
+    return loc::Distance3D(dist.x - other.x, dist.y - other.y, dist.z);
 }
 
 loc::Distance3D loc::operator-(loc::Distance other,
