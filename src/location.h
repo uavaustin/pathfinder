@@ -12,6 +12,7 @@ namespace loc {
         double y;
 
         Distance(double x, double y);
+        Distance(double x, double y, double heading);
 
         double GetMagnitude();
         double GetBearing();
@@ -33,6 +34,7 @@ namespace loc {
         double z;
 
         Distance3D(double x, double y, double z);
+        Distance3D(double x, double y, double z, double heading);
 
         double GetMagnitude();
 

@@ -7,6 +7,13 @@ loc::Distance::Distance(double x, double y) {
     this->y = y;
 }
 
+loc::Distance::Distance(double x, double y, double angle) {
+    loc::Distance dist = Distance(x, y).GetTransform(angle);
+
+    this->x = dist.x;
+    this->y = dist.y;
+}
+
 double loc::Distance::GetMagnitude() {
     return std::sqrt(std::pow(x, 2) + std::pow(y, 2));
 }
@@ -50,6 +57,11 @@ loc::Distance loc::operator/(const loc::Distance &dist, double k) {
 }
 
 loc::Distance3D::Distance3D(double x, double y, double z) : Distance(x, y) {
+    this->z = z;
+}
+
+loc::Distance3D::Distance3D(double x, double y, double z, double heading) :
+        Distance(x, y, heading) {
     this->z = z;
 }
 
