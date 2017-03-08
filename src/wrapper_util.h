@@ -39,3 +39,5 @@ Telemetry UnpackTelemetry(v8::Local<v8::Object> telemetry_object);
 
 AdjustPathOptions UnpackAdjustPathOptions(
         v8::Local<v8::Object> options_object);
+
+v8::Local<v8::Array> PackWaypoints(std::vector<Waypoint> waypoint_vector);

@@ -57,20 +57,7 @@ void AdjustPathWrapper(const Nan::FunctionCallbackInfo<v8::Value>& info) {
     if (!did_change || error_message != "") {
         new_waypoints = Nan::Null();
     } else {
-        v8::Local<v8::Array> new_waypoints_array = Nan::New<v8::Array>();
-
-        new_waypoints_array->Set(0, Nan::New<v8::Object>());
-
-        for (unsigned i = 0; i < waypoints.size(); i++) {
-            v8::Local<v8::Object> wp = Nan::New<v8::Object>();
-
-            wp->Set(V8String("lat"), Nan::New(waypoints[i].loc.lat));
-            wp->Set(V8String("lon"), Nan::New(waypoints[i].loc.lon));
-            wp->Set(V8String("alt"), Nan::New(waypoints[i].loc.alt));
-            wp->Set(V8String("radius"), Nan::New(waypoints[i].radius));
-
-            new_waypoints_array->Set(i, wp);
-        }
+        v8::Local<v8::Array> new_waypoints_array = PackWaypoints(waypoints);
 
         new_waypoints = v8::Local<v8::Value>::Cast(new_waypoints_array);
     }
