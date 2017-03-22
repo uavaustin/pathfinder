@@ -3,6 +3,9 @@
     "version": "0.0.1",
     "description": "Correct a plane's path given obstacles in the way",
     "main": "path-finder.js",
+    "scripts": {
+        "test": "mocha test/js"
+    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/uav-team-ut/Obstacle-Path-Finder.git"

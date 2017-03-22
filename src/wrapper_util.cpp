@@ -155,10 +155,10 @@ v8::Local<v8::Array> PackWaypoints(std::vector<Waypoint> waypoint_vector) {
     for (unsigned i = 0; i < waypoint_vector.size(); i++) {
         v8::Local<v8::Object> wp = Nan::New<v8::Object>();
 
-        wp->Set(V8String("lat"), Nan::New(waypoint_vector[i].loc.lat));
-        wp->Set(V8String("lon"), Nan::New(waypoint_vector[i].loc.lon));
-        wp->Set(V8String("alt"), Nan::New(waypoint_vector[i].loc.alt));
-        wp->Set(V8String("radius"), Nan::New(waypoint_vector[i].radius));
+        wp->Set(V8String((char*)"lat"), Nan::New(waypoint_vector[i].loc.lat));
+        wp->Set(V8String((char*)"lon"), Nan::New(waypoint_vector[i].loc.lon));
+        wp->Set(V8String((char*)"alt"), Nan::New(waypoint_vector[i].loc.alt));
+        wp->Set(V8String((char*)"radius"), Nan::New(waypoint_vector[i].radius));
 
         waypoints_array->Set(i, wp);
     }
