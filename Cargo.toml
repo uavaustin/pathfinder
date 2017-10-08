@@ -1,6 +1,10 @@
 [package]
 name = "Obstacle-Path-Finder"
-version = "0.1.0"
+version = "0.0.0"
 authors = ["UAV Austin <uavaustin@gmail.com>"]
+license = "MIT"
+
+[badges]
+travis-ci = { repository = "uavaustin/Obstacle-Path-Finder", branch = "master" }
 
 [dependencies]
