@@ -12,6 +12,7 @@ impl PathFinder{
             plane: Plane::new(0.0,0.0,0.0),
             obstacle_list: Vec::new(),
             wp_list: Vec::new(),
+	    flyzone_points: Vec::new(),
         }
     }
 }
