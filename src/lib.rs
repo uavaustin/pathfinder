@@ -37,7 +37,7 @@ impl PathFinder
 mod tests {
 	#[test]
 	fn test() {
-	   let mut point : Point = Point{lat: 0.0, lon: 0.0};
+	   /*let mut point : Point = Point{lat: 0.0, lon: 0.0};
 	   let mut point2 : Point = Point{lat: 0.0, lon: 0.0};
 	   let mut point3 : Point = Point{lat: 0.0, lon: 0.0};
 	   let mut vec : Vec<Waypoint> = vec![Waypoint{index: 0, coords: point, alt: 0.0, radius: 0.0}];
@@ -46,6 +46,6 @@ mod tests {
 	   let mut plane : Plane = Plane::new(0.0,0.0,0.0);
 	   //let mut vec2 : Vec<Waypoint> = vec![Waypoint{}];
 	   let mut f : PathFinder = PathFinder{delta_x: 0, buffer: 0, max_process_time: 0, plane: plane,obstacle_list: obstacles, wp_list : vec, flyzone_points : flyzones};
-	   f.set_x(5);
+	   f.set_x(5);*/
 	}
 }
