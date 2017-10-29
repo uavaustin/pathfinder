@@ -1,51 +1,132 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
+
+use std::collections::HashSet;
 
 mod obj;
 use obj::*;
 
-impl PathFinder{
-    pub fn new() -> PathFinder {
-        PathFinder {
-            delta_x: 1,
-            buffer: 1,
-            max_process_time: 10,
-            plane: Plane::new(0.0,0.0,0.0),
-            obstacle_list: Vec::new(),
-            wp_list: Vec::new(),
-	    flyzone_points: Vec::new(),
-        }
+const EQUATORIAL_RADIUS:f32 = 63781370.0;
+const POLAR_RADIUS:f32 = 6356752.0;
+const RADIUS:f32 = 6371000.0;
+
+#[derive(Hash, Clone, Copy)]
+pub struct Node {
+    x: i32,
+    y: i32,
+    cost: u32,
+}
+
+impl PartialEq for Node {
+    fn eq(&self, other: &Node) -> bool {
+        self.x == other.x && self.y == other.y
     }
 }
 
-impl PathFinder
-{
-  //TODO
-  fn adjust_path(self) -> Vec<Waypoint> {
-    self.wp_list.clone()
-  }
-  
-  fn set_x(&mut self, new_x: u32){
-    self.delta_x = new_x;
-  }
+impl Eq for Node {}
 
-  fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
-    self.wp_list = list;
-  }
+pub struct PathFinder {
+	pub grid_size: u32,   // In meters
+	pub buffer: u32,   // In meters
+	pub max_process_time: u32,   // In seconds
+	pub origin: Point,
+	pub plane: Plane,
+	pub obstacle_list: HashSet<Node>,
+	pub wp_list: Vec<Waypoint>,
+    offset: [(i32,i32); 8]
+}
+
+impl PathFinder{
+	fn new(flyzone_points: Vec<Point>) -> PathFinder {
+        assert!(flyzone_points.len() > 2);
+		let origin = PathFinder::find_origin(&flyzone_points);
+		let mut new_path_finder = PathFinder {
+			grid_size: 1,
+			buffer: 1,
+			max_process_time: 10,
+			origin: origin,
+			plane: Plane::new(0.0,0.0,0.0),
+			obstacle_list: HashSet::new(),
+			wp_list: Vec::new(),
+			offset: [(-1,-1),(-1,0),(-1,1),(1,-1),(1,0),(1,1),(0,-1),(0,1)]
+		};
+		new_path_finder.initialize(&flyzone_points);
+		new_path_finder
+	}
+
+	fn find_origin(flyzone_points: &Vec<Point>) -> Point {
+        let mut min_lat = flyzone_points[0].lat;
+        let mut min_lon = flyzone_points[0].lon;
+        let mut max_lon = flyzone_points[0].lon;
+        let flyzone_points = &flyzone_points[1..];
+        for point in flyzone_points {
+            if point.lat < min_lat {
+                min_lat = point.lat;
+            }
+            if point.lon < min_lon {
+                min_lon = point.lon;
+            }
+            if point.lon > max_lon {
+                max_lon = point.lon;
+            }
+        }
+        let mut lon = min_lon;
+        if max_lon - min_lon > 180.0 {
+            lon = max_lon;
+        }
+
+        Point{lat: min_lat, lon: lon}.to_rad()
+	}
+
+    fn normalize(&self, point: &Point) -> Node {
+        let x = 2.0*RADIUS*(point.lat.cos()*((point.lon-self.origin.lon)/2.0).sin()).asin();
+        let y = 2.0*RADIUS*((point.lat-self.origin.lat)/2.0);
+        Node{x: x.floor() as i32, y: y.floor() as i32, cost: 0}
+    }
+
+	fn initialize(&mut self, flyzone_points: &Vec<Point>) {
+		// Initialize boundry obstacles
+        for point in flyzone_points {
+            let node = self.normalize(&(point.to_rad()));
+            self.obstacle_list.insert(node);
+        }
+	}
+
+	pub fn adjust_path(&mut self, plane: Plane) -> Vec<Waypoint> {
+	    self.plane = plane;
+
+	    self.wp_list.clone()
+ 	}
+
+	pub fn set_grid_size(&mut self, grid_size: u32){
+		self.grid_size = grid_size;
+		let grid_size = grid_size as i32;
+		self.offset = [
+		    (-grid_size,-grid_size),(-grid_size,0),(-grid_size,grid_size),
+		    (grid_size,-grid_size),(grid_size,0),(grid_size,grid_size),
+		    (0,-grid_size),(0, grid_size)
+		    ];
+		}
+
+	pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
+		self.wp_list = list;
+	}
 }
 
 #[cfg(test)]
 mod tests {
-	#[test]
-	fn test() {
-	   /*let mut point : Point = Point{lat: 0.0, lon: 0.0};
-	   let mut point2 : Point = Point{lat: 0.0, lon: 0.0};
-	   let mut point3 : Point = Point{lat: 0.0, lon: 0.0};
-	   let mut vec : Vec<Waypoint> = vec![Waypoint{index: 0, coords: point, alt: 0.0, radius: 0.0}];
-	   let mut obstacles : Vec<Obstacle> = vec![Obstacle{coords: point2, radius: 0.0, height: 0.0}];
-	   let mut flyzones : Vec<Point> = vec![point3];
-	   let mut plane : Plane = Plane::new(0.0,0.0,0.0);
-	   //let mut vec2 : Vec<Waypoint> = vec![Waypoint{}];
-	   let mut f : PathFinder = PathFinder{delta_x: 0, buffer: 0, max_process_time: 0, plane: plane,obstacle_list: obstacles, wp_list : vec, flyzone_points : flyzones};
-	   f.set_x(5);*/
-	}
+    use super::*;
+    #[test]
+    fn hav_test1() {
+        println!("---------------");
+        println!("test1");
+        let path_finder1 = PathFinder::new(vec!(
+            Point{lat:50.06638888888889,lon:-5.714722222222222},
+            Point{lat:58.64388888888889,lon:-5.714722222222222},
+            Point{lat:50.06638888888889,lon:-3.0700000000000003}
+        ));
+        for node in path_finder1.obstacle_list {
+            println!("x: {} y: {}", node.x, node.y);
+        }
+    }
 }

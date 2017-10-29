@@ -1,7 +1,14 @@
 #[derive(Clone)]
 pub struct Point {
-  lat: f32,  //In degrees
-  lon: f32,  //In degrees
+    pub lat: f32,  //In degrees
+    pub lon: f32,  //In degrees
+}
+
+impl Point {
+    pub fn to_rad(&self) -> Point{
+        const FACTOR:f32 = ::std::f32::consts::PI/180.0;
+        Point{lat: self.lat*FACTOR, lon: self.lon*FACTOR}
+    }
 }
 
 pub struct Obstacle {
@@ -12,7 +19,7 @@ pub struct Obstacle {
 
 pub struct Plane {
 	pub coords: Point,
-	pub alt: f32,  // In degrees
+	pub alt: f32,  // In meters
 	pub yaw: f32,  // In degrees
 	pub pitch: f32,    // In degrees
 	pub roll: f32, // In degrees
@@ -38,18 +45,8 @@ impl Plane {
 
 #[derive(Clone)]
 pub struct Waypoint {
-  pub index: i32,
+    pub index: i32,
 	pub coords: Point,
-	pub alt: f32,  // In degrees
+	pub alt: f32,  // In meters
 	pub radius: f32,   // In meters
-}
-
-pub struct PathFinder {
-	pub delta_x: u32,   // In meters
-	pub buffer: u32,   // In meters
-	pub max_process_time: u32,   // In seconds
-	pub plane: Plane,
-	pub obstacle_list: Vec<Obstacle>,
-	pub wp_list: Vec<Waypoint>,
-	pub flyzone_points: Vec<Point>,
 }
