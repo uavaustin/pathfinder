@@ -108,9 +108,34 @@ impl PathFinder{
 		    ];
 		}
 
-	pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
+  pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
 		self.wp_list = list;
-	}
+  }
+	
+  pub fn set_buffer( &mut self, new_buffer : u32 ) -> (){
+    self.buffer = new_buffer;
+  }
+  pub fn set_process_time( &mut self, new_time : u32 ) -> (){
+    self.max_process_time = new_time;
+  }
+  pub fn set_plane( &mut self, new_plane : Plane ) -> (){
+    self.plane = new_plane;
+  }
+  pub fn set_obstacle_list( &mut self, new_obstacle_list : HashSet<Node> ) -> (){
+    self.obstacle_list = new_obstacle_list;
+  }
+  pub fn get_buffer(self) -> u32{
+    return self.buffer
+  }
+  pub fn get_process_time(self) -> u32{
+    return self.max_process_time 
+  }
+  pub fn get_plane(self) -> Plane{
+    return self.plane
+  }
+  pub fn get_obstacle_list(self) -> HashSet<Node>{
+    return self.obstacle_list
+  }
 }
 
 #[cfg(test)]
