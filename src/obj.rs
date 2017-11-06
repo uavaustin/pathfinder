@@ -1,13 +1,16 @@
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Point {
-    pub lat: f32,  //In degrees
-    pub lon: f32,  //In degrees
+    pub lat: f32,  //In radians
+    pub lon: f32,  //In radians
 }
 
 impl Point {
-    pub fn to_rad(&self) -> Point{
+    pub fn from_degrees(lat:f32, lon:f32) -> Point {
         const FACTOR:f32 = ::std::f32::consts::PI/180.0;
-        Point{lat: self.lat*FACTOR, lon: self.lon*FACTOR}
+        Point{lat: lat*FACTOR, lon: lon*FACTOR}
+    }
+    pub fn from_radians(lat:f32, lon:f32) -> Point{
+        Point{lat: lat, lon: lon}
     }
 }
 
@@ -17,6 +20,7 @@ pub struct Obstacle {
 	pub height: f32,   // In meters
 }
 
+#[derive(Clone, Copy)]
 pub struct Plane {
 	pub coords: Point,
 	pub alt: f32,  // In meters
@@ -46,7 +50,18 @@ impl Plane {
 #[derive(Clone)]
 pub struct Waypoint {
     pub index: i32,
-	pub coords: Point,
+	pub location: Point,
 	pub alt: f32,  // In meters
 	pub radius: f32,   // In meters
+}
+
+impl Waypoint {
+    pub fn new(location: Point) -> Waypoint {
+        Waypoint {
+            index: 0,
+            location: location,
+            alt: 0.0,
+            radius: 1.0
+        }
+    }
 }
