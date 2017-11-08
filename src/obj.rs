@@ -1,3 +1,5 @@
+use super::*;
+
 #[derive(Clone, Copy)]
 pub struct Point {
     pub lat: f32,  //In radians
@@ -6,11 +8,19 @@ pub struct Point {
 
 impl Point {
     pub fn from_degrees(lat:f32, lon:f32) -> Point {
-        const FACTOR:f32 = ::std::f32::consts::PI/180.0;
+        const FACTOR:f32 = std::f32::consts::PI/180.0;
         Point{lat: lat*FACTOR, lon: lon*FACTOR}
     }
     pub fn from_radians(lat:f32, lon:f32) -> Point{
         Point{lat: lat, lon: lon}
+    }
+
+    pub fn to_node(&self, path_finder: &PathFinder) -> Node {
+        let origin = path_finder.origin;
+        let x = 2.0*RADIUS*(self.lat.cos()*((self.lon-origin.lon)/2.0).sin()).asin();
+        let y = 2.0*RADIUS*((self.lat-origin.lat)/2.0);
+        Node::new((x/path_finder.grid_size).floor() as i32,
+            (y/path_finder.grid_size).floor() as i32)
     }
 }
 
