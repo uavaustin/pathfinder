@@ -28,7 +28,12 @@ pub struct PathFinder {
 	origin: Point,
 	plane: Plane,
 	wp_list: Vec<Waypoint>,
-    obstacle_list: HashSet<Node>
+    obstacle_list: HashSet<Node>,
+    start_node: Node,
+    end_node: Node,
+    parent_map: HashMap<Node, Node>,
+    open_list: BTreeSet<Node>,
+    close_list: HashSet<Node>
 }
 
 impl PathFinder {
@@ -42,8 +47,13 @@ impl PathFinder {
             max_process_time: 10,
             origin: PathFinder::find_origin(&flyzone_points),
             plane: Plane::new(0.0,0.0,0.0),
+            wp_list: Vec::new(),
             obstacle_list: HashSet::new(),
-            wp_list: Vec::new()
+            start_node: Node::new(0,0),
+            end_node: Node::new(0,0),
+            parent_map: HashMap::new(),
+            open_list: BTreeSet::new(),
+            close_list: HashSet::new()
         };
         new_path_finder.initialize(&flyzone_points);
         new_path_finder
@@ -51,55 +61,24 @@ impl PathFinder {
 
 	pub fn adjust_path(&mut self, plane: Plane) -> Option<Vec<Waypoint>> {
 	    self.plane = plane;
-        let start = plane.coords.to_node(&self);
-        let end = self.wp_list[0].location.to_node(&self);
-        let mut g_cost_map: HashMap<Node, f32> = HashMap::new();
-        let mut parent_map: HashMap<Node, Node> = HashMap::new();
-        let mut open_list: BTreeSet<Node> = BTreeSet::new();
-        let mut close_list: HashSet<Node> = HashSet::new();
-        let mut current_node;
-        open_list.insert(start);
+        self.start_node = plane.coords.to_node(&self);
+        self.end_node = self.wp_list[0].location.to_node(&self);
+        self.reset();
+        self.open_list.insert(self.start_node);
 
-        while !open_list.is_empty() {
-            current_node = *open_list.iter().next().unwrap();
-            if current_node == end {
-                println!("Path found.");
-                let mut path = Vec::new();
-                while current_node != start {
-                    let parent = *parent_map.get(&current_node).unwrap();
-                    path.push(Waypoint::new(parent.to_point(&self)));
-                    current_node = parent;
-                }
-                return Some(path);
+        let mut current_node;
+        while !self.open_list.is_empty() {
+            current_node = *self.open_list.iter().next().unwrap();
+            if current_node == self.end_node {
+                return Some(self.generate_path(current_node));
             }
-            open_list.remove(&current_node);
-            close_list.insert(current_node);
-            let current_cost = *g_cost_map.get(&current_node).unwrap();
-            for &(x_offset, y_offset, g_cost) in OFFSET.into_iter() {
-                let x = current_node.x + x_offset;
-                let y = current_node.y + y_offset;
-                let new = Node::new(x,y);
-                if self.obstacle_list.contains(&new) {
-                    continue;
-                }
-                if close_list.contains(&new) {
-                    continue;
-                }
-                if !open_list.contains(&new) {
-                    open_list.insert(new);
-                }
-                let mut current = open_list.take(&new).unwrap();
-                let cost = current_cost + g_cost;
-                if  cost >= *g_cost_map.get(&current).unwrap() {
-                    open_list.insert(current);
-                    continue;
-                }
-                g_cost_map.insert(current, cost);
-                current.f_cost = cost +
-                    (((end.x-x).pow(2)+(end.y-y).pow(2)) as f32).sqrt();
-                parent_map.insert(current, current_node);
-                open_list.insert(current);
-            }
+            self.open_list.remove(&current_node);
+            self.close_list.insert(current_node);
+
+            // Regular a* node discovery
+            self.discover_node(current_node);
+            // Jump point search node discovery
+            //self.find_successor(current_node, x_dir, y_dir);
         }
         None
  	}
@@ -136,24 +115,61 @@ impl PathFinder {
         }
     }
 
+    fn reset(&mut self) {
+        self.parent_map = HashMap::new();
+        self.open_list = BTreeSet::new();
+        self.close_list = HashSet::new();
+    }
+
+    fn generate_path(&mut self, current_node: Node) -> Vec<Waypoint>{
+        let mut path = Vec::new();
+        let mut current_node = current_node;
+        while current_node != self.start_node {
+            let parent = *self.parent_map.get(&current_node).unwrap();
+            path.push(Waypoint::new(parent.to_point(&self)));
+            current_node = parent;
+        }
+        return path;
+    }
+
+    fn discover_node(&mut self, current_node: Node) {
+        for &(x_offset, y_offset, g_cost) in OFFSET.into_iter() {
+            let mut new_node = Node::new(current_node.x + x_offset, current_node.y + y_offset);
+            if self.obstacle_list.contains(&new_node) || self.close_list.contains(&new_node){
+                continue;
+            }
+            new_node.g_cost = current_node.g_cost + g_cost;
+            if let Some(node) = self.open_list.take(&new_node) {
+                if new_node.g_cost >= node.g_cost {
+                    self.open_list.insert(node);
+                    continue;
+                }
+            }
+            new_node.f_cost = new_node.g_cost + (((self.end_node.x-new_node.x).pow(2) +
+                (self.end_node.y-new_node.y).pow(2)) as f32).sqrt();
+            self.parent_map.insert(new_node, current_node);
+            self.open_list.insert(new_node);
+        }
+    }
+
     pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
         self.wp_list = list;
     }
 
-    pub fn set_buffer( &mut self, new_buffer : u32 ) {
+    pub fn set_buffer(&mut self, new_buffer: u32) {
         self.buffer = new_buffer;
         // TODO: regenerate node map
     }
 
-    pub fn set_process_time( &mut self, new_time : u32 ) {
+    pub fn set_process_time(&mut self, new_time: u32) {
         self.max_process_time = new_time;
     }
 
-    pub fn set_plane( &mut self, new_plane : Plane ) {
+    pub fn set_plane(&mut self, new_plane: Plane) {
         self.plane = new_plane;
     }
 
-    pub fn set_obstacle_list( &mut self, obstacle_list : Vec<Obstacle> ) {
+    pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         // Process obstacles
     }
 

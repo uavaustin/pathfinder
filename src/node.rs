@@ -7,6 +7,7 @@ use super::*;
 pub struct Node {
     pub x: i32,
     pub y: i32,
+    pub g_cost: f32,
     pub f_cost: f32
 }
 
@@ -42,7 +43,8 @@ impl Node {
         Node {
             x: x,
             y: y,
-            f_cost: ::std::f32::MAX,
+            g_cost: std::f32::MAX,
+            f_cost: std::f32::MAX,
         }
     }
     pub fn to_point(&self, path_finder: &PathFinder) -> Point {
