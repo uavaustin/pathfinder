@@ -53,4 +53,8 @@ impl Node {
          path_finder.origin.lat.cos() / lat.cos()).sqrt().asin() * 2.0 + path_finder.origin.lon;
         Point::from_radians(lat, lon)
     }
+    pub fn advance(&mut self, x_dir: i32, y_dir: i32) {
+        self.x += x_dir;
+        self.y += y_dir;
+    }
 }

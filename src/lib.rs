@@ -16,6 +16,10 @@ const OFFSET:[(i32,i32,f32); 8] = [
     (1,0,1.0),(1,1,1.4),
     (0,-1,1.0),(0,1,1.0)
 ];
+const DIR:[(i32, i32); 8] = [
+    (-1,-1),(-1,0),(-1,1),(1,-1),
+    (1,0),(1,1),(0,-1),(0,1)
+];
 
 const EQUATORIAL_RADIUS:f32 = 63781370.0;
 const POLAR_RADIUS:f32 = 6356752.0;
@@ -59,6 +63,7 @@ impl PathFinder {
         new_path_finder
     }
 
+    // Find best path using the a* algorithm
 	pub fn adjust_path(&mut self, plane: Plane) -> Option<Vec<Waypoint>> {
 	    self.plane = plane;
         self.start_node = plane.coords.to_node(&self);
@@ -77,11 +82,32 @@ impl PathFinder {
 
             // Regular a* node discovery
             self.discover_node(current_node);
-            // Jump point search node discovery
-            //self.find_successor(current_node, x_dir, y_dir);
         }
         None
  	}
+
+    // Find best path using the jump point search algorithm in combination with a*
+    pub fn adjust_path_jump_point(&mut self, plane: Plane) -> Option<Vec<Waypoint>> {
+        self.plane = plane;
+        self.start_node = plane.coords.to_node(&self);
+        self.end_node = self.wp_list[0].location.to_node(&self);
+        self.reset();
+        self.open_list.insert(self.start_node);
+
+        let mut current_node;
+        while !self.open_list.is_empty() {
+            current_node = *self.open_list.iter().next().unwrap();
+            if current_node == self.end_node {
+                return Some(self.generate_path(current_node));
+            }
+            self.open_list.remove(&current_node);
+            self.close_list.insert(current_node);
+
+            // Jump point search node discovery
+            self.jump(current_node);
+        }
+        None
+    }
 
     fn find_origin(flyzone_points: &Vec<Point>) -> Point {
         let mut min_lat = flyzone_points[0].lat;
@@ -121,9 +147,8 @@ impl PathFinder {
         self.close_list = HashSet::new();
     }
 
-    fn generate_path(&mut self, current_node: Node) -> Vec<Waypoint>{
+    fn generate_path(&mut self, mut current_node: Node) -> Vec<Waypoint>{
         let mut path = Vec::new();
-        let mut current_node = current_node;
         while current_node != self.start_node {
             let parent = *self.parent_map.get(&current_node).unwrap();
             path.push(Waypoint::new(parent.to_point(&self)));
@@ -135,7 +160,7 @@ impl PathFinder {
     fn discover_node(&mut self, current_node: Node) {
         for &(x_offset, y_offset, g_cost) in OFFSET.into_iter() {
             let mut new_node = Node::new(current_node.x + x_offset, current_node.y + y_offset);
-            if self.obstacle_list.contains(&new_node) || self.close_list.contains(&new_node){
+            if self.obstacle_list.contains(&new_node) || self.close_list.contains(&new_node) {
                 continue;
             }
             new_node.g_cost = current_node.g_cost + g_cost;
@@ -150,6 +175,101 @@ impl PathFinder {
             self.parent_map.insert(new_node, current_node);
             self.open_list.insert(new_node);
         }
+    }
+
+    fn jump(&mut self, current_node: Node) {
+        if self.parent_map.contains_key(&current_node) {
+            let parent_node = *self.parent_map.get(&current_node).unwrap();
+            let mut x_dir = 1;
+            let mut y_dir = 1;
+            if current_node.x < parent_node.x {
+                x_dir = 0;
+            } else if current_node.x < parent_node.x {
+                x_dir = -1;
+            }
+            if current_node.y < parent_node.y {
+                y_dir = 0;
+            } else if current_node.y < parent_node.y {
+                y_dir = -1;
+            }
+
+            // Diagonal case
+            if x_dir != 0 && y_dir != 0 {
+                if self.obstacle_list.contains(&Node::new(current_node.x-x_dir, current_node.y)) {
+                    self.jump_forward(current_node, -x_dir, y_dir);
+                }
+                if self.obstacle_list.contains(&Node::new(current_node.x, current_node.y-y_dir)) {
+                    self.jump_forward(current_node, x_dir, -y_dir);
+                }
+            } else {
+                self.jump_forward(current_node, x_dir, y_dir);
+            }
+        } else {
+            // Case for root node, possibly overwrite with yaw in the future
+            for &(x_dir, y_dir) in DIR.into_iter() {
+                self.jump_forward(current_node, x_dir, y_dir);
+            }
+        }
+    }
+
+    // Discover nodes by jumping until forced neighbors are encountered
+    fn jump_forward(&mut self, current_node: Node, x_dir: i32, y_dir: i32) {
+        let mut new_node = current_node;
+        let mut valid_candidate = false;
+        new_node.advance(x_dir, y_dir);
+        while new_node != self.end_node {
+            // Diagonal exploration
+            if x_dir != 0 && y_dir != 0 {
+                if self.find_successor(new_node, x_dir, 0) ||
+                  self.find_successor(new_node, 0, y_dir) {
+                    valid_candidate = true;
+                    break;
+                }
+                new_node.advance(x_dir, y_dir);
+                if self.obstacle_list.contains(&new_node) || self.close_list.contains(&new_node) {
+                    break;
+                }
+                // Forced neightbors handler
+                if self.obstacle_list.contains(&Node::new(current_node.x-x_dir, current_node.y))
+                  || self.obstacle_list.contains(&Node::new(current_node.x, current_node.y-y_dir)) {
+                    valid_candidate = true;
+                    break;
+                }
+            } else {
+                if self.find_successor(new_node, x_dir, y_dir) {
+                    valid_candidate = true;
+                    break;
+                }
+            }
+        }
+
+        if valid_candidate {
+            new_node.g_cost = (((new_node.x-current_node.x).pow(2) +
+                (new_node.y-current_node.y).pow(2)) as f32).sqrt();
+            new_node.f_cost = new_node.g_cost + (((self.end_node.x-new_node.x).pow(2) +
+                (self.end_node.y-new_node.y).pow(2)) as f32).sqrt();
+            self.open_list.insert(new_node);
+            self.parent_map.insert(new_node, current_node);
+        }
+    }
+
+    // WIP
+    // Vertical and horizontal exploration
+    // Return true if successor found, false otherwise
+    fn find_successor(&mut self, mut current_node: Node, x_dir: i32, y_dir: i32) -> bool{
+        while current_node != self.end_node {
+            current_node.advance(x_dir, y_dir);
+            if self.obstacle_list.contains(&current_node) {
+                return false;
+            }
+            // Forced neighbors handler
+            if self.obstacle_list.contains(&Node::new(current_node.x + y_dir, current_node.y + x_dir)) ||
+            self.obstacle_list.contains(&Node::new(current_node.x - y_dir, current_node.y - x_dir)) {
+              return true;
+            }
+        }
+
+        true
     }
 
     pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
