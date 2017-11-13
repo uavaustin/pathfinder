@@ -283,7 +283,7 @@ impl PathFinder {
         {
             for c in 0i32..y_max
             {
-                let current : Node = Node::new(r, c);
+                let current : Node = Node::new(c, x_max - r);
                 if self.obstacle_list.contains(&current)
                 {
                     print!(".");
