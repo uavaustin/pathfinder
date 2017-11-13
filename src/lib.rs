@@ -271,6 +271,30 @@ impl PathFinder {
 
         true
     }
+	
+    /*
+    Takes in the paramters of the max X and max Y you want to see, and displays obstacles
+    and non-obstacle nodes. Obstacle nodes are labeled "X" and non-obstacle nodes are
+    labeled as ".".
+    */
+    pub fn draw(self, x_max : i32, y_max : i32)
+    {
+        for r in 0i32..x_max
+        {
+            for c in 0i32..y_max
+            {
+                let current : Node = Node::new(r, c);
+                if self.obstacle_list.contains(&current)
+                {
+                    print!(".");
+                }
+                else {
+                    print!("X");
+                }
+            }
+            println!("",);
+        }
+    }
 
     pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
         self.wp_list = list;
