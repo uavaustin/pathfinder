@@ -134,11 +134,91 @@ impl PathFinder {
     }
 
     fn initialize(&mut self, flyzone_points: &Vec<Point>) {
-        // Initialize boundry obstacles
-        for point in flyzone_points {
-            let node = point.to_node(&self);
-            self.obstacle_list.insert(node);
+        let first_node : Node = flyzone_points[0].to_node(&self);
+        let mut index = 0;
+
+        for end_point in flyzone_points
+        {
+            let mut pre_node : Node;
+            let mut end_node : Node = end_point.to_node(&self);
+
+            if index == 0
+            {
+                pre_node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
+            }
+            else
+            {
+                pre_node = flyzone_points[index - 1].to_node(&self);
+            }
+
+            index += 1;
+
+            let mut cur_x = pre_node.x;
+            let mut cur_y = pre_node.y;
+
+            println!("FIRST: {:?} {:?}", pre_node.x, pre_node.y);
+            println!("SECOND: {:?} {:?}", end_node.x, end_node.y);
+
+            if pre_node.x == end_node.x
+            {
+                while cur_y != end_node.y
+                {
+                    //AddPoint cur_x, cur_x
+                    let to_add : Node = Node::new(cur_x, cur_y);
+                    self.obstacle_list.insert(to_add);
+
+                    if pre_node.y > end_node.y
+                    {
+                        cur_y -= 1;
+                    }
+                    else {
+                        cur_y += 1;
+                    }
+                }
+            }
+            else {
+                let top : f32 = (end_node.y - pre_node.y) as f32;
+                let bot : f32 = (end_node.x - pre_node.x) as f32;
+                let slope : f32 = top / bot;
+                let mut cur_x_f32 : f32 = cur_x as f32;
+                let mut cur_y_f32 : f32 = cur_y as f32;
+
+                while ((cur_x >= end_node.x && pre_node.x > end_node.x) || (cur_x <= end_node.x && pre_node.x < end_node.x)) && !(cur_x == end_node.x && cur_y == end_node.y)
+                {
+                    //println!("{:?} {:?}", cur_x, cur_y);
+                    if pre_node.x > end_node.x
+                    {
+                        cur_x_f32 = cur_x_f32 + (-1f32 * 0.1);
+                        cur_y_f32 = cur_y_f32 + (-1f32 * 0.1 * slope);
+                    }
+                    else {
+                        cur_x_f32 = cur_x_f32 + 0.1;
+                        cur_y_f32 = cur_y_f32 + (0.1f32 * slope);
+                    }
+
+                    if cur_x != cur_x_f32.floor() as i32 || cur_y != cur_y_f32.floor() as i32
+                    {
+                        cur_x = cur_x_f32.floor() as i32;
+                        cur_y = cur_y_f32.floor() as i32;
+
+                        let to_add : Node = Node::new(cur_x, cur_y);
+                        self.obstacle_list.insert(to_add);
+
+                        if pre_node.x > end_node.x
+                        {
+                            let add_buffer : Node = Node::new(cur_x + 1, cur_y);
+                            self.obstacle_list.insert(add_buffer);
+                        }
+                        else {
+                            let add_buffer : Node = Node::new(cur_x - 1, cur_y);
+                            self.obstacle_list.insert(add_buffer);
+                        }
+                    }
+                }
+            }
+            //self.draw(0, 200, 0, 200);
         }
+
     }
 
     fn reset(&mut self) {
@@ -277,19 +357,21 @@ impl PathFinder {
     and non-obstacle nodes. Obstacle nodes are labeled "X" and non-obstacle nodes are
     labeled as ".".
     */
-    pub fn draw(self, x_max : i32, y_max : i32)
+    pub fn draw(self, x_min : i32, x_max : i32, y_min : i32, y_max : i32)
     {
-        for r in 0i32..x_max
+        for y in y_min..y_max
         {
-            for c in 0i32..y_max
+            for x in x_min..x_max
             {
-                let current : Node = Node::new(c, x_max - r);
+                let current : Node = Node::new(x, y_max - y);
+                //print!("XY {:?} {:?}", x, y);
+                //println!("", );
                 if self.obstacle_list.contains(&current)
                 {
-                    print!(".");
+                    print!("X");
                 }
                 else {
-                    print!("X");
+                    print!(".");
                 }
             }
             println!("",);
@@ -354,5 +436,19 @@ mod tests {
         for node in path_finder1.obstacle_list {
             println!("x: {} y: {}", node.x, node.y);
         }
+    }
+	
+    #[test]
+    fn hav_test_draw() {
+        println!("test_draw");
+        let flight_zone = vec!(
+         Point::from_degrees(30.32247, -97.6009),
+         Point::from_degrees(30.32307, -97.6005),
+         Point::from_degrees(30.32373, -97.6012),
+         Point::from_degrees(30.32366, -97.6019),
+         Point::from_degrees(30.32321, -97.6025),
+     );
+        let path_finder1 = PathFinder::new(1.0, flight_zone);
+        path_finder1.draw(0, 200, 0, 200);
     }
 }
