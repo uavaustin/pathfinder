@@ -56,8 +56,8 @@ impl Node {
     }
     pub fn to_point(&self, path_finder: &PathFinder) -> Point {
         // let x = 2f64*RADIUS*(self.lat.cos()*((self.lon-origin.lon)/2f64).sin()).asin();
-        let lat = self.y as f64 / RADIUS + path_finder.origin.lat();
-        let lon = ((self.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64
+        let lat = self.y as f64 * path_finder.grid_size as f64 / RADIUS + path_finder.origin.lat();
+        let lon = ((self.x as f64 * path_finder.grid_size as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64
             + path_finder.origin.lon();
         Point::from_radians(lat, lon)
     }

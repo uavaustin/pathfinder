@@ -94,7 +94,10 @@ impl PathFinder {
 
         for end_point in flyzone_points
         {
+            // println!("{:.5}, {:.5}", end_point.lat_degree(), end_point.lon_degree());
             end_node = end_point.to_node(&self);
+            let point = end_node.to_point(&self);
+            // println!("{:.5}, {:.5}", point.lat_degree(), point.lon_degree());
 
             index += 1;
 
@@ -446,12 +449,44 @@ impl PathFinder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[conversion_test]
+    #[test]
     fn conversion_test() {
-
+        let flight_zone = vec!(
+        //  Point::from_degrees(30.32247, -97.6009),
+        //  Point::from_degrees(30.32307, -97.6005),
+        //  Point::from_degrees(30.32373, -97.6012),
+        //  Point::from_degrees(30.32366, -97.6019),
+        //  Point::from_degrees(30.32321, -97.6025),
+        Point::from_degrees(30.32521, -97.60230),
+        Point::from_degrees(30.32466, -97.59856),
+        Point::from_degrees(30.32107, -97.60032),
+        Point::from_degrees(30.32247, -97.60325),
+        Point::from_degrees(30.32473, -97.60410)
+        );
+        let path_finder1 = PathFinder::new(1.0, flight_zone);
+        let test_points = vec!(
+         Point::from_degrees(30.32247, -97.6009),
+         Point::from_degrees(30.32307, -97.6005),
+         Point::from_degrees(30.32373, -97.6012),
+         Point::from_degrees(30.32366, -97.6019),
+         Point::from_degrees(30.32321, -97.6025),
+         Point::from_degrees(30.32521, -97.60230),
+         Point::from_degrees(30.32466, -97.59856),
+         Point::from_degrees(30.32107, -97.60032),
+         Point::from_degrees(30.32247, -97.60325),
+         Point::from_degrees(30.32473, -97.60410)
+        );
+        for point in test_points {
+            let node1 = point.to_node(&path_finder1);
+            let point1 = node1.to_point(&path_finder1);
+            // print!("{:.5}, {:.5} => ", point.lat_degree(), point.lon_degree());
+            println!("{:.5}, {:.5}", point1.lat_degree(), point1.lon_degree());
+            assert!(point.lat_degree()-point1.lat_degree() < 0.001);
+            assert!(point.lon_degree()-point1.lon_degree() < 0.001);
+        }
     }
 
-    #[hav_test]
+    #[test]
     fn hav_test() {
         println!("---------------");
         println!("test1");
@@ -466,7 +501,7 @@ mod tests {
         }
     }
 
-    #[hav_test_draw]
+    #[test]
     fn hav_test_draw() {
         println!("test_draw");
         let flight_zone = vec!(
@@ -475,7 +510,7 @@ mod tests {
          Point::from_degrees(30.32373, -97.6012),
          Point::from_degrees(30.32366, -97.6019),
          Point::from_degrees(30.32321, -97.6025),
-     );
+        );
         let path_finder1 = PathFinder::new(1.0, flight_zone);
         path_finder1.draw(0, 200, 0, 200);
     }
