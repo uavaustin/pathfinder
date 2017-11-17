@@ -1,26 +1,38 @@
 use super::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Point {
-    pub lat: f32,  //In radians
-    pub lon: f32,  //In radians
+    lat: f64,  //In radians
+    lon: f64,  //In radians
 }
 
 impl Point {
-    pub fn from_degrees(lat:f32, lon:f32) -> Point {
-        const FACTOR:f32 = std::f32::consts::PI/180.0;
+    pub fn from_degrees(lat:f64, lon:f64) -> Point {
+        const FACTOR:f64 = std::f64::consts::PI/180f64;
         Point{lat: lat*FACTOR, lon: lon*FACTOR}
     }
-    pub fn from_radians(lat:f32, lon:f32) -> Point{
+    pub fn from_radians(lat:f64, lon:f64) -> Point{
         Point{lat: lat, lon: lon}
     }
 
     pub fn to_node(&self, path_finder: &PathFinder) -> Node {
         let origin = path_finder.origin;
-        let x = 2.0*RADIUS*(self.lat.cos()*((self.lon-origin.lon)/2.0).sin()).asin();
-        let y = 2.0*RADIUS*((self.lat-origin.lat)/2.0);
-        Node::new((x/path_finder.grid_size).floor() as i32,
-            (y/path_finder.grid_size).floor() as i32)
+        let x = 2f64*RADIUS*(self.lat.cos()*((self.lon-origin.lon)/2f64).sin()).asin();
+        let y = RADIUS*(self.lat-origin.lat);
+        Node::new((x/path_finder.grid_size as f64).floor() as i32,
+            (y/path_finder.grid_size as f64).floor() as i32)
+    }
+    pub fn lat(&self) -> f64 {
+        self.lat
+    }
+    pub fn lon(&self) -> f64 {
+        self.lon
+    }
+    pub fn lat_degree(&self) -> f64 {
+        self.lat * 180f64 / std::f64::consts::PI
+    }
+    pub fn lon_degree(&self) -> f64 {
+        self.lon * 180f64 / std::f64::consts::PI
     }
 }
 
@@ -43,16 +55,16 @@ pub struct Plane {
 }
 
 impl Plane {
-    pub fn new(lat:f32, lon:f32, alt:f32) -> Plane {
+    pub fn new(lat:f64, lon:f64, alt:f32) -> Plane {
         Plane {
-            coords: Point{lat: lat, lon: lon},
+            coords: Point::from_degrees(lat, lon),
             alt: alt,
-            yaw: 0.0,
-            pitch: 0.0,
-            roll: 0.0,
-            airspeed: 0.0,
-            groundspeed: 0.0,
-            wind_dir: 0.0,
+            yaw: 0f32,
+            pitch: 0f32,
+            roll: 0f32,
+            airspeed: 0f32,
+            groundspeed: 0f32,
+            wind_dir: 0f32,
         }
     }
 }
@@ -70,8 +82,8 @@ impl Waypoint {
         Waypoint {
             index: 0,
             location: location,
-            alt: 0.0,
-            radius: 1.0
+            alt: 0f32,
+            radius: 1f32
         }
     }
 }

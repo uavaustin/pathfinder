@@ -3,12 +3,20 @@ use std::hash::{Hash, Hasher};
 
 use super::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct Node {
     pub x: i32,
     pub y: i32,
     pub g_cost: f32,
-    pub f_cost: f32
+    pub f_cost: f32,
+    pub parent: Option<Rc<Node>>
+}
+
+impl Hash for Node {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.x.hash(state);
+        self.y.hash(state);
+    }
 }
 
 impl PartialEq for Node {
@@ -19,13 +27,6 @@ impl PartialEq for Node {
 
 impl Eq for Node {}
 
-impl Hash for Node {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.x.hash(state);
-        self.y.hash(state);
-    }
-}
-
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Node) -> Option<Ordering> {
         other.f_cost.partial_cmp(&self.f_cost)
@@ -34,7 +35,12 @@ impl PartialOrd for Node {
 
 impl Ord for Node {
     fn cmp(&self, other: &Node) -> Ordering  {
-        self.partial_cmp(other).unwrap()
+        let ord = self.partial_cmp(other).unwrap();
+        match ord {
+            Ordering::Greater => Ordering::Less,
+            Ordering::Less => Ordering::Greater,
+            Ordering::Equal => ord
+        }
     }
 }
 
@@ -45,12 +51,14 @@ impl Node {
             y: y,
             g_cost: std::f32::MAX,
             f_cost: std::f32::MAX,
+            parent: None
         }
     }
     pub fn to_point(&self, path_finder: &PathFinder) -> Point {
-        let lat = self.y as f32 / RADIUS + path_finder.origin.lat;
-        let lon = ((self.x as f32 / RADIUS / 2.0).powi(2).sin() /
-         path_finder.origin.lat.cos() / lat.cos()).sqrt().asin() * 2.0 + path_finder.origin.lon;
+        // let x = 2f64*RADIUS*(self.lat.cos()*((self.lon-origin.lon)/2f64).sin()).asin();
+        let lat = self.y as f64 / RADIUS + path_finder.origin.lat();
+        let lon = ((self.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64
+            + path_finder.origin.lon();
         Point::from_radians(lat, lon)
     }
     pub fn advance(&mut self, x_dir: i32, y_dir: i32) {

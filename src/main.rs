@@ -21,13 +21,13 @@ fn main() {
     let waypoints = vec!(
         Waypoint::new(Point::from_degrees(30.32392, -97.60157))
     );
-    let mut path_finder1 = PathFinder::new(1.0, flight_zone);
-    path_finder1.set_obstacle_list(obstacles);
+    let mut path_finder1 = PathFinder::new(10.0, flight_zone);
+    // path_finder1.set_obstacle_list(obstacles);
     path_finder1.set_waypoint_list(waypoints);
     let result = path_finder1.adjust_path(Plane::new(30.32456, -97.60283, 10.0));
     if let Some(result) = result {
         for node in result {
-            println!("{:?}", node.location);
+            println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
         }
     }
     // for node in path_finder1.obstacle_list {
