@@ -357,7 +357,7 @@ impl PathFinder {
     and non-obstacle nodes. Obstacle nodes are labeled "X" and non-obstacle nodes are
     labeled as ".".
     */
-    pub fn draw(self, x_min : i32, x_max : i32, y_min : i32, y_max : i32)
+    pub fn draw(&self, x_min : i32, x_max : i32, y_min : i32, y_max : i32)
     {
         for y in y_min..y_max
         {
