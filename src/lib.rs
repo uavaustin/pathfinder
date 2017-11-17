@@ -135,21 +135,12 @@ impl PathFinder {
 
     fn initialize(&mut self, flyzone_points: &Vec<Point>) {
         let first_node : Node = flyzone_points[0].to_node(&self);
+	let mut pre_node : Node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
         let mut index = 0;
 
         for end_point in flyzone_points
         {
-            let mut pre_node : Node;
             let mut end_node : Node = end_point.to_node(&self);
-
-            if index == 0
-            {
-                pre_node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
-            }
-            else
-            {
-                pre_node = flyzone_points[index - 1].to_node(&self);
-            }
 
             index += 1;
 
@@ -171,12 +162,14 @@ impl PathFinder {
                     {
                         cur_y -= 1;
                     }
-                    else {
+                    else
+		    {
                         cur_y += 1;
                     }
                 }
             }
-            else {
+            else
+	    {
                 let top : f32 = (end_node.y - pre_node.y) as f32;
                 let bot : f32 = (end_node.x - pre_node.x) as f32;
                 let slope : f32 = top / bot;
@@ -191,7 +184,8 @@ impl PathFinder {
                         cur_x_f32 = cur_x_f32 + (-1f32 * 0.1);
                         cur_y_f32 = cur_y_f32 + (-1f32 * 0.1 * slope);
                     }
-                    else {
+                    else
+		    {
                         cur_x_f32 = cur_x_f32 + 0.1;
                         cur_y_f32 = cur_y_f32 + (0.1f32 * slope);
                     }
@@ -209,16 +203,16 @@ impl PathFinder {
                             let add_buffer : Node = Node::new(cur_x + 1, cur_y);
                             self.obstacle_list.insert(add_buffer);
                         }
-                        else {
+                        else
+			{
                             let add_buffer : Node = Node::new(cur_x - 1, cur_y);
                             self.obstacle_list.insert(add_buffer);
                         }
                     }
                 }
             }
-            //self.draw(0, 200, 0, 200);
+	    pre_node = end_node;
         }
-
     }
 
     fn reset(&mut self) {
