@@ -27,7 +27,7 @@ const RADIUS:f64 = 6371000.0;
 
 pub struct PathFinder {
 	grid_size: f32,   // In meters
-	buffer: u32,   // In meters
+	buffer: f32,   // In meters
 	max_process_time: u32,   // In seconds
 	origin: Point,
 	plane: Plane,
@@ -46,7 +46,7 @@ impl PathFinder {
         }
         let mut new_path_finder = PathFinder {
             grid_size: grid_size,
-            buffer: 1,
+            buffer: 1.0,
             max_process_time: 10,
             origin: PathFinder::find_origin(&flyzone_points),
             plane: Plane::new(0.0,0.0,0.0),
@@ -408,7 +408,7 @@ impl PathFinder {
         self.wp_list = list;
     }
 
-    pub fn set_buffer(&mut self, new_buffer: u32) {
+    pub fn set_buffer(&mut self, new_buffer: f32) {
         self.buffer = new_buffer;
         // TODO: regenerate node map
     }
@@ -422,14 +422,76 @@ impl PathFinder {
     }
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
-        // Process obstacles
+        for obst in obstacle_list {
+      			let radius = (((obst.radius + self.buffer)/(self.grid_size)) as i32) + 1;
+                //println!("radius: {}",radius);
+      			let n = Point::from_degrees(obst.coords.lon(),obst.coords.lat()).to_node(&self);
+                println!("center node: {:?}",n);
+      			let top_left = Node::new(n.x - radius, n.y + radius);
+      			println!("top left node: {:?}",top_left);
+      			let bottom_right = Node::new(n.x + radius, n.y - radius);
+      			println!("bottom right node: {:?}",bottom_right);
+      			let rsquared = (radius)*(radius);
+      			println!("radius = {}", radius);
+                println!("{:?}",self.obstacle_list);
+      			for x in top_left.x .. bottom_right.x + 1 {
+                    let newx = x - n.x;
+                    println!("x: {}",x);
+                    println!("x^2: {}",x*x);
+                    println!("rsquared: {}",rsquared);
+      				let temp = (rsquared as f32 - (newx as f32)*(newx as f32));
+                    println!("rsquared - x^2: {}",temp);
+                    let y  = temp.abs().sqrt() as i32;
+                    let negy = -y;
+                    if (x == top_left.x || x == bottom_right.x){
+                        for  difference in -radius/3 .. radius/3 + 1 {
+                            self.obstacle_list.insert(Node::new(newx,y+difference));
+                        }
+                    }
+                    else{
+                        self.obstacle_list.insert(Node::new(newx,y));
+                        self.obstacle_list.insert(Node::new(newx,y-1));
+                        self.obstacle_list.insert(Node::new(newx,y+1));
+                        self.obstacle_list.insert(Node::new(newx,negy));
+                        self.obstacle_list.insert(Node::new(newx,negy-1));
+                        self.obstacle_list.insert(Node::new(newx,negy+1));
+                    }
+                    //println!("y: {}",y);
+      			}
+                println!("{:?}",self.obstacle_list);
+
+                let size : i32 = radius*2;
+                // Base 1d array
+                let mut grid_raw = vec!['.'; (size*size) as usize];
+
+                // Vector of 'width' elements slices
+                let mut grid_base: Vec<_> = grid_raw.as_mut_slice().chunks_mut((size) as usize).collect();
+
+                // Final 2d array
+                let mut arr: &mut [&mut [_]] = grid_base.as_mut_slice();
+                //println!("{:?}",arr);
+                //let mut arr : [[char; 20];20] = [['.';20];20];
+                println!("n.y: {}",n.y);
+                for node in &self.obstacle_list {
+                   println!("x: {}",(node.x - n.x) + size/2);
+                   println!("y: {}",(node.y - n.y) + size/2);
+                   if ((node.x) + size/2 < size && (node.x) + size/2 >= 0 && (node.y) + size/2  < size && (node.y) + size/2 >= 0){
+                        arr[(node.y + size/2) as usize][(node.x + size/2) as usize] = 'X';
+                   }
+                }
+                arr[(size/2) as usize][(size/2) as usize] = 'O';
+                for row in arr {
+                    println!("{:?}",row);
+                }
+		    }
+
     }
 
     pub fn get_grid_size(&self) -> f32 {
         self.grid_size
     }
 
-    pub fn get_buffer(&self) -> u32 {
+    pub fn get_buffer(&self) -> f32 {
         self.buffer
     }
 
