@@ -178,10 +178,18 @@ impl PathFinder {
         self.open_heap = BinaryHeap::new();
         self.open_set = HashSet::new();
         self.close_list = HashSet::new();
-        let start_node = Rc::new(plane.coords.to_node(&self));
+        self.end_node = self.wp_list[0].location.to_node(&self);
+        let start_node = plane.coords.to_node(&self);
+        let start_node = Rc::new(Node {
+            x: start_node.x,
+            y: start_node.y,
+            g_cost: 0f32,
+            f_cost: (((self.end_node.x-start_node.x).pow(2) +
+                (self.end_node.y-start_node.y).pow(2)) as f32).sqrt(),
+            parent: None
+        });
         self.open_set.insert(Rc::clone(&start_node));
         self.open_heap.push(Rc::clone(&start_node));
-        self.end_node = self.wp_list[0].location.to_node(&self);
 
         let mut current_node:Rc<Node>;
         #[allow(while_true)]
@@ -191,6 +199,7 @@ impl PathFinder {
             } else {
                 break;
             }
+            // println!("f_cost: {}", current_node.f_cost);
             if *current_node == self.end_node {
                 return Some(self.generate_path(Rc::clone(&current_node)));
             }
@@ -234,32 +243,47 @@ impl PathFinder {
     }
 
 // Jump Point Search
-/*
     // Find best path using the jump point search algorithm in combination with a*
     pub fn adjust_path_jump_point(&mut self, plane: Plane) -> Option<Vec<Waypoint>> {
         self.plane = plane;
-        self.start_node = plane.coords.to_node(&self);
+        self.open_heap = BinaryHeap::new();
+        self.open_set = HashSet::new();
+        self.close_list = HashSet::new();
         self.end_node = self.wp_list[0].location.to_node(&self);
-        self.reset();
-        self.open_list.insert(self.start_node);
+        let start_node = plane.coords.to_node(&self);
+        let start_node = Rc::new(Node {
+            x: start_node.x,
+            y: start_node.y,
+            g_cost: 0f32,
+            f_cost: (((self.end_node.x-start_node.x).pow(2) +
+                (self.end_node.y-start_node.y).pow(2)) as f32).sqrt(),
+            parent: None
+        });
+        self.open_set.insert(Rc::clone(&start_node));
+        self.open_heap.push(Rc::clone(&start_node));
 
-        let mut current_node;
-        while !self.open_list.is_empty() {
-            current_node = *self.open_list.iter().next().unwrap();
-            if current_node == self.end_node {
-                return Some(self.generate_path(current_node));
+        let mut current_node:Rc<Node>;
+        #[allow(while_true)]
+        while true {
+            if let Some(node) = self.open_heap.pop() {
+                current_node = node;
+            } else {
+                break;
             }
-            self.open_list.remove(&current_node);
-            self.close_list.insert(current_node);
+            // println!("f_cost: {}", current_node.f_cost);
+            if *current_node == self.end_node {
+                return Some(self.generate_path(Rc::clone(&current_node)));
+            }
+            self.open_set.take(&current_node);
+            self.close_list.insert(Rc::clone(&current_node));
 
-            // Jump point search node discovery
-            self.jump(current_node);
+            // Regular a* node discovery
+            self.jump(Rc::clone(&current_node));
         }
         None
     }
-    fn jump(&mut self, current_node: Node) {
-        if self.parent_map.contains_key(&current_node) {
-            let parent_node = *self.parent_map.get(&current_node).unwrap();
+    fn jump(&mut self, current_node: Rc<Node>) {
+        if let Some(ref parent_node) = current_node.parent {
             let mut x_dir = 1;
             let mut y_dir = 1;
             if current_node.x < parent_node.x {
@@ -276,32 +300,33 @@ impl PathFinder {
             // Diagonal case
             if x_dir != 0 && y_dir != 0 {
                 if self.obstacle_list.contains(&Node::new(current_node.x-x_dir, current_node.y)) {
-                    self.jump_forward(current_node, -x_dir, y_dir);
+                    self.jump_forward(Rc::clone(&current_node), -x_dir, y_dir);
                 }
                 if self.obstacle_list.contains(&Node::new(current_node.x, current_node.y-y_dir)) {
-                    self.jump_forward(current_node, x_dir, -y_dir);
+                    self.jump_forward(Rc::clone(&current_node), x_dir, -y_dir);
                 }
             } else {
-                self.jump_forward(current_node, x_dir, y_dir);
+                self.jump_forward(Rc::clone(&current_node), x_dir, y_dir);
             }
         } else {
             // Case for root node, possibly overwrite with yaw in the future
             for &(x_dir, y_dir) in DIR.into_iter() {
-                self.jump_forward(current_node, x_dir, y_dir);
+                self.jump_forward(Rc::clone(&current_node), x_dir, y_dir);
             }
         }
     }
 
     // Discover nodes by jumping until forced neighbors are encountered
-    fn jump_forward(&mut self, current_node: Node, x_dir: i32, y_dir: i32) {
-        let mut new_node = current_node;
+    fn jump_forward(&mut self, current_node: Rc<Node>, x_dir: i32, y_dir: i32) {
+        let mut new_node = Node::clone(&current_node);
         let mut valid_candidate = false;
         new_node.advance(x_dir, y_dir);
         while new_node != self.end_node {
+            // println!("f_cost: {}", current_node.f_cost);
             // Diagonal exploration
             if x_dir != 0 && y_dir != 0 {
-                if self.find_successor(new_node, x_dir, 0) ||
-                  self.find_successor(new_node, 0, y_dir) {
+                if self.find_successor(&mut new_node, x_dir, 0) ||
+                  self.find_successor(&mut new_node, 0, y_dir) {
                     valid_candidate = true;
                     break;
                 }
@@ -316,7 +341,7 @@ impl PathFinder {
                     break;
                 }
             } else {
-                if self.find_successor(new_node, x_dir, y_dir) {
+                if self.find_successor(&mut new_node, x_dir, y_dir) {
                     valid_candidate = true;
                     break;
                 }
@@ -328,16 +353,20 @@ impl PathFinder {
                 (new_node.y-current_node.y).pow(2)) as f32).sqrt();
             new_node.f_cost = new_node.g_cost + (((self.end_node.x-new_node.x).pow(2) +
                 (self.end_node.y-new_node.y).pow(2)) as f32).sqrt();
-            self.open_list.insert(new_node);
-            self.parent_map.insert(new_node, current_node);
+
+            new_node.parent = Some(Rc::clone(&current_node));
+            let new_node = Rc::new(new_node);
+            self.open_set.insert(Rc::clone(&new_node));
+            self.open_heap.push(Rc::clone(&new_node));
         }
     }
 
     // WIP
     // Vertical and horizontal exploration
     // Return true if successor found, false otherwise
-    fn find_successor(&mut self, mut current_node: Node, x_dir: i32, y_dir: i32) -> bool{
-        while current_node != self.end_node {
+    fn find_successor(&mut self, current_node: &mut Node, x_dir: i32, y_dir: i32) -> bool{
+        while *current_node != self.end_node {
+            // println!("f_cost: {}", current_node.f_cost);
             current_node.advance(x_dir, y_dir);
             if self.obstacle_list.contains(&current_node) {
                 return false;
@@ -351,7 +380,7 @@ impl PathFinder {
 
         true
     }
-*/
+
     fn generate_path(&self, mut current_node: Rc<Node>) -> Vec<Waypoint>{
         let mut path = Vec::new();
         let mut node;
@@ -371,6 +400,7 @@ impl PathFinder {
             if x_dir != new_x_dir || y_dir != new_y_dir {
                 x_dir = new_x_dir;
                 y_dir = new_y_dir;
+                // println!("{} {}", node.x, node.y);
                 path.push(Waypoint::new(node.to_point(&self)));
             }
             current_node = node;
@@ -425,25 +455,25 @@ impl PathFinder {
         for obst in obstacle_list {
       			let radius = (((obst.radius + self.buffer)/(self.grid_size)) as i32) + 1;
                 //println!("radius: {}",radius);
-      			let n = Point::from_degrees(obst.coords.lon(),obst.coords.lat()).to_node(&self);
-                println!("center node: {:?}",n);
+      			let n = obst.coords.to_node(&self);
+                // println!("center node: {:?}",n);
       			let top_left = Node::new(n.x - radius, n.y + radius);
-      			println!("top left node: {:?}",top_left);
+      	// 		println!("top left node: {:?}",top_left);
       			let bottom_right = Node::new(n.x + radius, n.y - radius);
-      			println!("bottom right node: {:?}",bottom_right);
+      	// 		println!("bottom right node: {:?}",bottom_right);
       			let rsquared = (radius)*(radius);
-      			println!("radius = {}", radius);
-                println!("{:?}",self.obstacle_list);
+      	// 		println!("radius = {}", radius);
+                // println!("{:?}",self.obstacle_list);
       			for x in top_left.x .. bottom_right.x + 1 {
                     let newx = x - n.x;
-                    println!("x: {}",x);
-                    println!("x^2: {}",x*x);
-                    println!("rsquared: {}",rsquared);
-      				let temp = (rsquared as f32 - (newx as f32)*(newx as f32));
-                    println!("rsquared - x^2: {}",temp);
+                    // println!("x: {}",x);
+                    // println!("x^2: {}",x*x);
+                    // println!("rsquared: {}",rsquared);
+      				let temp = rsquared as f32 - (newx as f32)*(newx as f32);
+                    // println!("rsquared - x^2: {}",temp);
                     let y  = temp.abs().sqrt() as i32;
                     let negy = -y;
-                    if (x == top_left.x || x == bottom_right.x){
+                    if x == top_left.x || x == bottom_right.x {
                         for  difference in -radius/3 .. radius/3 + 1 {
                             self.obstacle_list.insert(Node::new(newx,y+difference));
                         }
@@ -458,9 +488,9 @@ impl PathFinder {
                     }
                     //println!("y: {}",y);
       			}
-                println!("{:?}",self.obstacle_list);
+                // println!("{:?}",self.obstacle_list);
 
-                let size : i32 = radius*2;
+                let size : i32 = radius*2+1;
                 // Base 1d array
                 let mut grid_raw = vec!['.'; (size*size) as usize];
 
@@ -468,20 +498,20 @@ impl PathFinder {
                 let mut grid_base: Vec<_> = grid_raw.as_mut_slice().chunks_mut((size) as usize).collect();
 
                 // Final 2d array
-                let mut arr: &mut [&mut [_]] = grid_base.as_mut_slice();
+                let arr: &mut [&mut [_]] = grid_base.as_mut_slice();
                 //println!("{:?}",arr);
                 //let mut arr : [[char; 20];20] = [['.';20];20];
-                println!("n.y: {}",n.y);
+                // println!("n.y: {}",n.y);
                 for node in &self.obstacle_list {
-                   println!("x: {}",(node.x - n.x) + size/2);
-                   println!("y: {}",(node.y - n.y) + size/2);
-                   if ((node.x) + size/2 < size && (node.x) + size/2 >= 0 && (node.y) + size/2  < size && (node.y) + size/2 >= 0){
+                //    println!("x: {}",(node.x - n.x) + size/2);
+                //    println!("y: {}",(node.y - n.y) + size/2);
+                   if (node.x) + size/2 < size && (node.x) + size/2 >= 0 && (node.y) + size/2  < size && (node.y) + size/2 >= 0 {
                         arr[(node.y + size/2) as usize][(node.x + size/2) as usize] = 'X';
                    }
                 }
                 arr[(size/2) as usize][(size/2) as usize] = 'O';
                 for row in arr {
-                    println!("{:?}",row);
+                    // println!("{:?}",row);
                 }
 		    }
 

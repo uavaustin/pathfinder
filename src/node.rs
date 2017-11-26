@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 
 use super::*;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Node {
     pub x: i32,
     pub y: i32,

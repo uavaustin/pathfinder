@@ -14,17 +14,23 @@ fn main() {
         Point::from_degrees(30.32473, -97.6041)
     );
     let obstacles = vec!(
-        Obstacle{coords: Point::from_degrees(30.32456, -97.60283), radius: 30.0, height: 1.0},
-        Obstacle{coords: Point::from_degrees(30.32447, -97.60157), radius: 30.0, height: 1.0},
-        Obstacle{coords: Point::from_degrees(30.32374, -97.60232), radius: 30.0, height: 1.0}
+        // Obstacle{coords: Point::from_degrees(30.32456, -97.60283), radius: 120.0, height: 1.0},
+        Obstacle{coords: Point::from_degrees(30.32447, -97.60157), radius: 120.0, height: 1.0},
+        Obstacle{coords: Point::from_degrees(30.32374, -97.60232), radius: 120.0, height: 1.0}
     );
     let waypoints = vec!(
         Waypoint::new(Point::from_degrees(30.32392, -97.60157))
     );
     let mut path_finder1 = PathFinder::new(10.0, flight_zone);
-    // path_finder1.set_obstacle_list(obstacles);
+    path_finder1.set_obstacle_list(obstacles);
     path_finder1.set_waypoint_list(waypoints);
-    let result = path_finder1.adjust_path(Plane::new(30.32456, -97.60283, 10.0));
+    let mut result = path_finder1.adjust_path(Plane::new(30.32456, -97.60283, 10.0));
+    if let Some(result) = result {
+        for node in result {
+            println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
+        }
+    }
+    result = path_finder1.adjust_path_jump_point(Plane::new(30.32456, -97.60283, 10.0));
     if let Some(result) = result {
         for node in result {
             println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
