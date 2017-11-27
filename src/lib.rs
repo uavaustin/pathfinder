@@ -1,20 +1,16 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::BTreeSet;
-use std::error::Error;
-use std::io::prelude::*;
-use std::fs::File;
-use std::path::Path;
 use std::collections::BinaryHeap;
 use std::rc::Rc;
 
 mod obj;
 mod node;
+mod debug;
 use node::*;
 pub use obj::*;
+pub use debug::*;
 
 const OFFSET:[(i32,i32,f32); 8] = [
     (-1,-1,1.4),(-1,0,1.0),
@@ -328,7 +324,7 @@ impl PathFinder {
         let mut valid_candidate = false;
         new_node.advance(x_dir, y_dir);
         while new_node != self.end_node {
-            // println!("f_cost: {}", current_node.f_cost);
+            println!("x: {}, y: {}", new_node.x, new_node.y);
             // Diagonal exploration
             if x_dir != 0 && y_dir != 0 {
                 if self.find_successor(&mut new_node, x_dir, 0) ||
@@ -372,7 +368,7 @@ impl PathFinder {
     // Return true if successor found, false otherwise
     fn find_successor(&mut self, current_node: &mut Node, x_dir: i32, y_dir: i32) -> bool{
         while *current_node != self.end_node {
-            // println!("f_cost: {}", current_node.f_cost);
+            println!("x: {}, y: {}", current_node.x, current_node.y);
             current_node.advance(x_dir, y_dir);
             if self.obstacle_list.contains(&current_node) {
                 return false;
@@ -414,60 +410,6 @@ impl PathFinder {
         path
     }
 
-
-    fn export_obstacle_list_to_file(&mut self)
-    {
-        let path = Path::new("obstacle_list_export.txt");
-        let display = path.display();
-
-        let mut file = match File::create(&path) {
-            Err(why) => panic!("couldn't create {}: {}",
-                               display,
-                               why.description()),
-            Ok(file) => file,
-        };
-
-        for Node in &self.obstacle_list {
-            let comma = ",";
-            let dash = "-";
-            let node_rep = format!("{}{}{}{}", Node.x.to_string(), comma, Node.y.to_string(), dash);
-
-            match file.write_all(node_rep.as_bytes()) {
-                Err(why) => {
-                    panic!("couldn't write to {}: {}", display,
-                                                       why.description())
-                },
-                Ok(_) => println!("successfully wrote to {}", display),
-            }
-        }
-    }
-
-    /*
-    Takes in the paramters of the max X and max Y you want to see, and displays obstacles
-    and non-obstacle nodes. Obstacle nodes are labeled "X" and non-obstacle nodes are
-    labeled as ".".
-    */
-    pub fn draw(&self, x_min : i32, x_max : i32, y_min : i32, y_max : i32)
-    {
-        for y in y_min..y_max
-        {
-            for x in x_min..x_max
-            {
-                let current : Node = Node::new(x, y_max - y);
-                //print!("XY {:?} {:?}", x, y);
-                //println!("", );
-                if self.obstacle_list.contains(&current)
-                {
-                    print!("X");
-                }
-                else {
-                    print!(".");
-                }
-            }
-            println!("",);
-        }
-    }
-
     pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
         self.wp_list = list;
     }
@@ -487,68 +429,67 @@ impl PathFinder {
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         for obst in obstacle_list {
-      			let radius = (((obst.radius + self.buffer)/(self.grid_size)) as i32) + 1;
-                //println!("radius: {}",radius);
-      			let n = obst.coords.to_node(&self);
-                // println!("center node: {:?}",n);
-      			let top_left = Node::new(n.x - radius, n.y + radius);
-      	// 		println!("top left node: {:?}",top_left);
-      			let bottom_right = Node::new(n.x + radius, n.y - radius);
-      	// 		println!("bottom right node: {:?}",bottom_right);
-      			let rsquared = (radius)*(radius);
-      	// 		println!("radius = {}", radius);
-                // println!("{:?}",self.obstacle_list);
-      			for x in top_left.x .. bottom_right.x + 1 {
-                    let newx = x - n.x;
-                    // println!("x: {}",x);
-                    // println!("x^2: {}",x*x);
-                    // println!("rsquared: {}",rsquared);
-      				let temp = rsquared as f32 - (newx as f32)*(newx as f32);
-                    // println!("rsquared - x^2: {}",temp);
-                    let y  = temp.abs().sqrt() as i32;
-                    let negy = -y;
-                    if x == top_left.x || x == bottom_right.x {
-                        for  difference in -radius/3 .. radius/3 + 1 {
-                            self.obstacle_list.insert(Node::new(newx,y+difference));
-                        }
+  			let radius = (((obst.radius + self.buffer)/(self.grid_size)) as i32) + 1;
+            //println!("radius: {}",radius);
+  			let n = obst.coords.to_node(&self);
+            // println!("center node: {:?}",n);
+  			let top_left = Node::new(n.x - radius, n.y + radius);
+  	// 		println!("top left node: {:?}",top_left);
+  			let bottom_right = Node::new(n.x + radius, n.y - radius);
+  	// 		println!("bottom right node: {:?}",bottom_right);
+  			let rsquared = (radius)*(radius);
+  	// 		println!("radius = {}", radius);
+            // println!("{:?}",self.obstacle_list);
+  			for x in top_left.x .. bottom_right.x + 1 {
+                let newx = x - n.x;
+                // println!("x: {}",x);
+                // println!("x^2: {}",x*x);
+                // println!("rsquared: {}",rsquared);
+  				let temp = rsquared as f32 - (newx as f32)*(newx as f32);
+                // println!("rsquared - x^2: {}",temp);
+                let y  = temp.abs().sqrt() as i32;
+                let negy = -y;
+                if x == top_left.x || x == bottom_right.x {
+                    for  difference in -radius/3 .. radius/3 + 1 {
+                        self.obstacle_list.insert(Node::new(newx,y+difference));
                     }
-                    else{
-                        self.obstacle_list.insert(Node::new(newx,y));
-                        self.obstacle_list.insert(Node::new(newx,y-1));
-                        self.obstacle_list.insert(Node::new(newx,y+1));
-                        self.obstacle_list.insert(Node::new(newx,negy));
-                        self.obstacle_list.insert(Node::new(newx,negy-1));
-                        self.obstacle_list.insert(Node::new(newx,negy+1));
-                    }
-                    //println!("y: {}",y);
-      			}
-                // println!("{:?}",self.obstacle_list);
-
-                let size : i32 = radius*2+1;
-                // Base 1d array
-                let mut grid_raw = vec!['.'; (size*size) as usize];
-
-                // Vector of 'width' elements slices
-                let mut grid_base: Vec<_> = grid_raw.as_mut_slice().chunks_mut((size) as usize).collect();
-
-                // Final 2d array
-                let arr: &mut [&mut [_]] = grid_base.as_mut_slice();
-                //println!("{:?}",arr);
-                //let mut arr : [[char; 20];20] = [['.';20];20];
-                // println!("n.y: {}",n.y);
-                for node in &self.obstacle_list {
-                //    println!("x: {}",(node.x - n.x) + size/2);
-                //    println!("y: {}",(node.y - n.y) + size/2);
-                   if (node.x) + size/2 < size && (node.x) + size/2 >= 0 && (node.y) + size/2  < size && (node.y) + size/2 >= 0 {
-                        arr[(node.y + size/2) as usize][(node.x + size/2) as usize] = 'X';
-                   }
                 }
-                arr[(size/2) as usize][(size/2) as usize] = 'O';
-                for row in arr {
-                    // println!("{:?}",row);
+                else{
+                    self.obstacle_list.insert(Node::new(newx,y));
+                    self.obstacle_list.insert(Node::new(newx,y-1));
+                    self.obstacle_list.insert(Node::new(newx,y+1));
+                    self.obstacle_list.insert(Node::new(newx,negy));
+                    self.obstacle_list.insert(Node::new(newx,negy-1));
+                    self.obstacle_list.insert(Node::new(newx,negy+1));
                 }
-		    }
+                //println!("y: {}",y);
+  			}
+            // println!("{:?}",self.obstacle_list);
 
+            let size : i32 = radius*2+1;
+            // Base 1d array
+            let mut grid_raw = vec!['.'; (size*size) as usize];
+
+            // Vector of 'width' elements slices
+            let mut grid_base: Vec<_> = grid_raw.as_mut_slice().chunks_mut((size) as usize).collect();
+
+            // Final 2d array
+            let arr: &mut [&mut [_]] = grid_base.as_mut_slice();
+            //println!("{:?}",arr);
+            //let mut arr : [[char; 20];20] = [['.';20];20];
+            // println!("n.y: {}",n.y);
+            for node in &self.obstacle_list {
+            //    println!("x: {}",(node.x - n.x) + size/2);
+            //    println!("y: {}",(node.y - n.y) + size/2);
+               if (node.x) + size/2 < size && (node.x) + size/2 >= 0 && (node.y) + size/2  < size && (node.y) + size/2 >= 0 {
+                    arr[(node.y + size/2) as usize][(node.x + size/2) as usize] = 'X';
+               }
+            }
+            arr[(size/2) as usize][(size/2) as usize] = 'O';
+            for row in arr {
+                // println!("{:?}",row);
+            }
+        }
     }
 
     pub fn get_grid_size(&self) -> f32 {

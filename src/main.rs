@@ -30,12 +30,12 @@ fn main() {
             println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
         }
     }
-    result = path_finder1.adjust_path_jump_point(Plane::new(30.32456, -97.60283, 10.0));
-    if let Some(result) = result {
-        for node in result {
-            println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
-        }
-    }
+    // result = path_finder1.adjust_path_jump_point(Plane::new(30.32456, -97.60283, 10.0));
+    // if let Some(result) = result {
+    //     for node in result {
+    //         println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
+    //     }
+    // }
     // for node in path_finder1.obstacle_list {
     //     println!("x: {} y: {}", node.x, node.y);
     // }
