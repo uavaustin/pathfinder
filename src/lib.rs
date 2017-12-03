@@ -426,6 +426,34 @@ impl PathFinder {
     pub fn set_plane(&mut self, new_plane: Plane) {
         self.plane = new_plane;
     }
+	
+    pub fn distance_between_points(&mut self, first_point: Point, second_point: Point) -> i64
+    {
+        let first_node : Node = first_point.to_node(&self);
+        let second_node : Node = second_point.to_node(&self);
+        let first_node_x : f64 = first_node.x as f64;
+        let first_node_y : f64 = first_node.y as f64;
+        let second_node_x : f64 = second_node.x as f64;
+        let second_node_y : f64 = second_node.y as f64;
+
+        let xDiff: f64 = ((first_node_x - second_node_x) * (first_node_x - second_node_x)) as f64;
+        let yDiff: f64 = ((first_node_y - second_node_y) * (first_node_y - second_node_y)) as f64;
+        let distance: i64 = ((xDiff + yDiff).sqrt() + 1f64) as i64;
+
+        return distance;
+    }
+
+    pub fn is_waypoint_inside_obstacle(&mut self, waypoint: Waypoint, obstacle_list: Vec<Obstacle>) -> bool
+    {
+        for obstacle in &obstacle_list
+        {
+            if self.distance_between_points(waypoint.location, obstacle.coords) <= (waypoint.radius as i64)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         for obst in obstacle_list {
@@ -594,5 +622,24 @@ mod tests {
         );
         let mut path_finder1 = PathFinder::new(1.0, flight_zone);
         path_finder1.export_obstacle_list_to_file();
+    }
+	
+    #[test]
+    fn is_waypoint_inside_obstacle()
+    {
+        let flight_zone = vec!(
+         Point::from_degrees(30.32247, -97.6009),
+         Point::from_degrees(30.32307, -97.6005),
+         Point::from_degrees(30.32373, -97.6012),
+         Point::from_degrees(30.32366, -97.6019),
+         Point::from_degrees(30.32321, -97.6025),
+        );
+        let obstacles = vec!(
+            Obstacle{coords: Point::from_degrees(30.32374, -97.60232), radius: 120.0, height: 1.0}
+        );
+        let point : Point = Point::from_degrees(31.32374, -97.60232);
+        let mut path_finder1 = PathFinder::new(1.0, flight_zone);
+        let waypoint : Waypoint = Waypoint::new(point);
+        println!("{}",path_finder1.is_waypoint_inside_obstacle(waypoint, obstacles));
     }
 }
