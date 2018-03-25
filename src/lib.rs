@@ -42,15 +42,12 @@ pub struct PathFinder {
 }
 
 impl PathFinder {
-    pub fn new(grid_size: f32, flyzone_points: Vec<Point>) -> PathFinder {
-        if flyzone_points.len() <= 2 {
-            panic!("Require at least 3 points to construct fly zone.");
-        }
+    pub fn new(grid_size: f32, flyzones: Vec<Vec<Point>>) -> PathFinder {
         let mut new_path_finder = PathFinder {
             grid_size: grid_size,
             buffer: 1.0,
             max_process_time: 10,
-            origin: PathFinder::find_origin(&flyzone_points),
+            origin: PathFinder::find_origin(&flyzones),
             plane: Plane::new(0.0,0.0,0.0),
             wp_list: Vec::new(),
             obstacle_list: HashSet::new(),
@@ -59,118 +56,130 @@ impl PathFinder {
             open_set: HashSet::new(),
             close_list: HashSet::new()
         };
-        new_path_finder.initialize(&flyzone_points);
+        new_path_finder.initialize(&flyzones);
         new_path_finder
     }
 
     // Initilization
-    fn find_origin(flyzone_points: &Vec<Point>) -> Point {
-        let mut min_lat = flyzone_points[0].lat();
-        let mut min_lon = flyzone_points[0].lon();
-        let mut max_lon = flyzone_points[0].lon();
-        let flyzone_points = &flyzone_points[1..];
-        for point in flyzone_points {
-            if point.lat() < min_lat {
-                min_lat = point.lat();
-            }
-            if point.lon() < min_lon {
-                min_lon = point.lon();
-            }
-            if point.lon() > max_lon {
-                max_lon = point.lon();
-            }
-        }
+    fn find_origin(flyzones: &Vec<Vec<Point>>) -> Point {
+        const MAX_RADIAN: f64 = 2f64*std::f64::consts::PI;
+        let mut min_lat = MAX_RADIAN;
+        let mut min_lon = MAX_RADIAN;
+        let mut max_lon = 0f64;
         let mut lon = min_lon;
-        if max_lon - min_lon > 2f64*std::f64::consts::PI {
-            lon = max_lon;
+
+        for i in 0..flyzones.len() {
+            let flyzone_points = &flyzones[i];
+            if flyzone_points.len() < 3 {
+                panic!("Require at least 3 points to construct fly zone.");
+            }
+
+            for point in flyzone_points {
+                if point.lat() < min_lat {
+                    min_lat = point.lat();
+                }
+                if point.lon() < min_lon {
+                    min_lon = point.lon();
+                }
+                if point.lon() > max_lon {
+                    max_lon = point.lon();
+                }
+            }
+            lon = min_lon;
+            if max_lon - min_lon > MAX_RADIAN {
+                lon = max_lon;
+            }
         }
 
         Point::from_radians(min_lat, lon)
     }
 
-    fn initialize(&mut self, flyzone_points: &Vec<Point>) {
-        let first_node : Node = flyzone_points[0].to_node(&self);
-        let mut pre_node : Node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
-        let mut end_node;
-        let mut index = 0;
+    fn initialize(&mut self, flyzones: &Vec<Vec<Point>>) {
+        for i in 0..flyzones.len() {
+            let flyzone_points = &flyzones[i];
+            let first_node : Node = flyzone_points[0].to_node(&self);
+            let mut pre_node : Node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
+            let mut end_node;
+            let mut index = 0;
 
-        for end_point in flyzone_points
-        {
-            // println!("{:.5}, {:.5}", end_point.lat_degree(), end_point.lon_degree());
-            end_node = end_point.to_node(&self);
-            let point = end_node.to_point(&self);
-            // println!("{:.5}, {:.5}", point.lat_degree(), point.lon_degree());
-
-            index += 1;
-
-            let mut cur_x = pre_node.x;
-            let mut cur_y = pre_node.y;
-
-            // println!("FIRST: {:?} {:?}", pre_node.x, pre_node.y);
-            // println!("SECOND: {:?} {:?}", end_node.x, end_node.y);
-
-            if pre_node.x == end_node.x
+            for end_point in flyzone_points
             {
-                while cur_y != end_node.y
+                // println!("{:.5}, {:.5}", end_point.lat_degree(), end_point.lon_degree());
+                end_node = end_point.to_node(&self);
+                let point = end_node.to_point(&self);
+                // println!("{:.5}, {:.5}", point.lat_degree(), point.lon_degree());
+
+                index += 1;
+
+                let mut cur_x = pre_node.x;
+                let mut cur_y = pre_node.y;
+
+                // println!("FIRST: {:?} {:?}", pre_node.x, pre_node.y);
+                // println!("SECOND: {:?} {:?}", end_node.x, end_node.y);
+
+                if pre_node.x == end_node.x
                 {
-                    //AddPoint cur_x, cur_x
-                    let to_add : Node = Node::new(cur_x, cur_y);
-                    self.obstacle_list.insert(to_add);
-
-                    if pre_node.y > end_node.y
+                    while cur_y != end_node.y
                     {
-                        cur_y -= 1;
-                    }
-                    else
-                    {
-                        cur_y += 1;
-                    }
-                }
-            }
-            else
-	        {
-                let top : f32 = (end_node.y - pre_node.y) as f32;
-                let bot : f32 = (end_node.x - pre_node.x) as f32;
-                let slope : f32 = top / bot;
-                let mut cur_x_f32 : f32 = cur_x as f32;
-                let mut cur_y_f32 : f32 = cur_y as f32;
-
-                while ((cur_x >= end_node.x && pre_node.x > end_node.x) || (cur_x <= end_node.x && pre_node.x < end_node.x)) && !(cur_x == end_node.x && cur_y == end_node.y)
-                {
-                    //println!("{:?} {:?}", cur_x, cur_y);
-                    if pre_node.x > end_node.x
-                    {
-                        cur_x_f32 = cur_x_f32 + (-1f32 * 0.1);
-                        cur_y_f32 = cur_y_f32 + (-1f32 * 0.1 * slope);
-                    }
-                    else
-		            {
-                        cur_x_f32 = cur_x_f32 + 0.1;
-                        cur_y_f32 = cur_y_f32 + (0.1f32 * slope);
-                    }
-
-                    if cur_x != cur_x_f32.floor() as i32 || cur_y != cur_y_f32.floor() as i32
-                    {
-                        cur_x = cur_x_f32.floor() as i32;
-                        cur_y = cur_y_f32.floor() as i32;
-
+                        //AddPoint cur_x, cur_x
                         let to_add : Node = Node::new(cur_x, cur_y);
                         self.obstacle_list.insert(to_add);
 
-                        if pre_node.x > end_node.x
+                        if pre_node.y > end_node.y
                         {
-                            let add_buffer : Node = Node::new(cur_x + 1, cur_y);
-                            self.obstacle_list.insert(add_buffer);
+                            cur_y -= 1;
                         }
                         else
-			            {
-                            let add_buffer : Node = Node::new(cur_x - 1, cur_y);
-                            self.obstacle_list.insert(add_buffer);
+                        {
+                            cur_y += 1;
                         }
                     }
                 }
+                else
+    	        {
+                    let top : f32 = (end_node.y - pre_node.y) as f32;
+                    let bot : f32 = (end_node.x - pre_node.x) as f32;
+                    let slope : f32 = top / bot;
+                    let mut cur_x_f32 : f32 = cur_x as f32;
+                    let mut cur_y_f32 : f32 = cur_y as f32;
+
+                    while ((cur_x >= end_node.x && pre_node.x > end_node.x) || (cur_x <= end_node.x && pre_node.x < end_node.x)) && !(cur_x == end_node.x && cur_y == end_node.y)
+                    {
+                        //println!("{:?} {:?}", cur_x, cur_y);
+                        if pre_node.x > end_node.x
+                        {
+                            cur_x_f32 = cur_x_f32 + (-1f32 * 0.1);
+                            cur_y_f32 = cur_y_f32 + (-1f32 * 0.1 * slope);
+                        }
+                        else
+    		            {
+                            cur_x_f32 = cur_x_f32 + 0.1;
+                            cur_y_f32 = cur_y_f32 + (0.1f32 * slope);
+                        }
+
+                        if cur_x != cur_x_f32.floor() as i32 || cur_y != cur_y_f32.floor() as i32
+                        {
+                            cur_x = cur_x_f32.floor() as i32;
+                            cur_y = cur_y_f32.floor() as i32;
+
+                            let to_add : Node = Node::new(cur_x, cur_y);
+                            self.obstacle_list.insert(to_add);
+
+                            if pre_node.x > end_node.x
+                            {
+                                let add_buffer : Node = Node::new(cur_x + 1, cur_y);
+                                self.obstacle_list.insert(add_buffer);
+                            }
+                            else
+    			            {
+                                let add_buffer : Node = Node::new(cur_x - 1, cur_y);
+                                self.obstacle_list.insert(add_buffer);
+                            }
+                        }
+                    }
+                }
+    	    pre_node = end_node;
             }
-	    pre_node = end_node;
         }
     }
 
@@ -222,6 +231,7 @@ impl PathFinder {
             // println!("new {} {}", new_node.x, new_node.y);
 
             if self.obstacle_list.contains(&new_node) || self.close_list.contains(&new_node) {
+                // println!("x: {}, y: {}", current_node.x, current_node.y);
                 continue;
             }
             new_node.g_cost = current_node.g_cost + g_cost;
@@ -284,6 +294,7 @@ impl PathFinder {
         }
         None
     }
+
     fn jump(&mut self, current_node: Rc<Node>) {
         if let Some(ref parent_node) = current_node.parent {
             let mut x_dir = 1;
@@ -324,7 +335,7 @@ impl PathFinder {
         let mut valid_candidate = false;
         new_node.advance(x_dir, y_dir);
         while new_node != self.end_node {
-            println!("x: {}, y: {}", new_node.x, new_node.y);
+            println!("x: {}, y: {}, x_dir: {}, y_dir: {}", new_node.x, new_node.y, x_dir, y_dir);
             // Diagonal exploration
             if x_dir != 0 && y_dir != 0 {
                 if self.find_successor(&mut new_node, x_dir, 0) ||
@@ -337,8 +348,8 @@ impl PathFinder {
                     break;
                 }
                 // Forced neightbors handler
-                if self.obstacle_list.contains(&Node::new(current_node.x-x_dir, current_node.y))
-                  || self.obstacle_list.contains(&Node::new(current_node.x, current_node.y-y_dir)) {
+                if self.obstacle_list.contains(&Node::new(new_node.x-x_dir, new_node.y)) ||
+                 self.obstacle_list.contains(&Node::new(new_node.x, new_node.y-y_dir)) {
                     valid_candidate = true;
                     break;
                 }
@@ -351,6 +362,7 @@ impl PathFinder {
         }
 
         if valid_candidate {
+            println!("open_set");
             new_node.g_cost = (((new_node.x-current_node.x).pow(2) +
                 (new_node.y-current_node.y).pow(2)) as f32).sqrt();
             new_node.f_cost = new_node.g_cost + (((self.end_node.x-new_node.x).pow(2) +
@@ -368,9 +380,10 @@ impl PathFinder {
     // Return true if successor found, false otherwise
     fn find_successor(&mut self, current_node: &mut Node, x_dir: i32, y_dir: i32) -> bool{
         while *current_node != self.end_node {
-            println!("x: {}, y: {}", current_node.x, current_node.y);
             current_node.advance(x_dir, y_dir);
-            if self.obstacle_list.contains(&current_node) {
+            // println!("x: {}, y: {}", current_node.x, current_node.y);
+            if self.obstacle_list.contains(current_node) {
+                // println!("x: {}, y: {}", current_node.x, current_node.y);
                 return false;
             }
             // Forced neighbors handler
@@ -426,7 +439,7 @@ impl PathFinder {
     pub fn set_plane(&mut self, new_plane: Plane) {
         self.plane = new_plane;
     }
-	
+
     pub fn distance_between_points(&mut self, first_point: Point, second_point: Point) -> i64
     {
         let first_node : Node = first_point.to_node(&self);
@@ -458,7 +471,7 @@ impl PathFinder {
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         for obst in obstacle_list {
   			let radius = (((obst.radius + self.buffer)/(self.grid_size)) as i32) + 1;
-            //println!("radius: {}",radius);
+            // println!("radius: {}",radius);
   			let n = obst.coords.to_node(&self);
             // println!("center node: {:?}",n);
   			let top_left = Node::new(n.x - radius, n.y + radius);
@@ -623,7 +636,7 @@ mod tests {
         let mut path_finder1 = PathFinder::new(1.0, flight_zone);
         path_finder1.export_obstacle_list_to_file();
     }
-	
+
     #[test]
     fn is_waypoint_inside_obstacle()
     {
