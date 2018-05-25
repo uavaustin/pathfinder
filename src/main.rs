@@ -19,32 +19,44 @@ fn main() {
     }
     println!();
     let obstacles = vec!(
-        Obstacle{coords: Point::from_degrees(30.32456, -97.60283), radius: 50.0, height: 1.0},
-        Obstacle{coords: Point::from_degrees(30.32447, -97.60157), radius: 50.0, height: 1.0},
-        Obstacle{coords: Point::from_degrees(30.32374, -97.60232), radius: 50.0, height: 1.0}
+        Obstacle{coords: Point::from_degrees(30.32457, -97.60254), radius: 50.0, height: 1.0},
+        Obstacle{coords: Point::from_degrees(30.32429, -97.60166), radius: 50.0, height: 1.0},
+        Obstacle{coords: Point::from_degrees(30.32405, -97.60015), radius: 50.0, height: 1.0},
+        Obstacle{coords: Point::from_degrees(30.32344, -97.60077), radius: 50.0, height: 1.0},
+        Obstacle{coords: Point::from_degrees(30.32466, -97.60327), radius: 50.0, height: 1.0}
     );
+
+
     let waypoints = vec!(
-        Waypoint::new(Point::from_degrees(30.32392, -97.60157))
+        Waypoint::new(Point::from_degrees(30.32271, -97.60035))
     );
     let flyzone = vec!(flight_zone);
-    let mut path_finder1 = PathFinder::new(10.0, flyzone);
+    let mut path_finder1 = PathFinder::new(5.0, flyzone);
     path_finder1.set_obstacle_list(obstacles);
     path_finder1.set_waypoint_list(waypoints);
-    let mut result = path_finder1.adjust_path(Plane::new(30.32456, -97.60283, 10.0));
+    let result = path_finder1.adjust_path(Plane::new(30.32491, -97.60159, 10.0));
     if let Some(result) = result {
         println!("A* Result");
         for node in result {
             println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
         }
+    } else {
+        println!("No path found");
     }
     println!();
 
     // path_finder1.draw(0,100,0,100);
-    result = path_finder1.adjust_path_jump_point(Plane::new(30.32456, -97.60283, 10.0));
-    if let Some(result) = result {
-        println!("Jump Result");
-        for node in result {
-            println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
-        }
-    }
+    // result = path_finder1.adjust_path_jump_point(Plane::new(30.32456, -97.60283, 10.0));
+    // if let Some(result) = result {
+    //     println!("Jump Result");
+    //     for node in result {
+    //         pr// result = path_finder1.adjust_path_jump_point(Plane::new(30.32456, -97.60283, 10.0));
+    // if let Some(result) = result {
+    //     println!("Jump Result");
+    //     for node in result {
+    //         println!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
+    //     }
+    // }intln!("{:.5}, {:.5}", node.location.lat_degree(), node.location.lon_degree());
+    //     }
+    // }
 }

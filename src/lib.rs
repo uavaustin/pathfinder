@@ -45,7 +45,7 @@ impl PathFinder {
     pub fn new(grid_size: f32, flyzones: Vec<Vec<Point>>) -> PathFinder {
         let mut new_path_finder = PathFinder {
             grid_size: grid_size,
-            buffer: 1.0,
+            buffer: grid_size,
             max_process_time: 10,
             origin: PathFinder::find_origin(&flyzones),
             plane: Plane::new(0.0,0.0,0.0),
@@ -404,6 +404,10 @@ impl PathFinder {
         let mut new_x_dir;
         let mut new_y_dir;
 
+        // Temp variable for debugging
+        let mut waypoints = HashSet::new();
+        let mut line = HashSet::new();
+
         #[allow(while_true)]
         while true {
             match current_node.parent {
@@ -416,10 +420,41 @@ impl PathFinder {
                 x_dir = new_x_dir;
                 y_dir = new_y_dir;
                 // println!("{} {}", node.x, node.y);
+                waypoints.insert(Rc::clone(&node));
                 path.push(Waypoint::new(node.to_point(&self)));
+            } else {
+                line.insert(Rc::clone(&node));
             }
             current_node = node;
         }
+        path.reverse();
+
+        // Graphical display for debugging
+        for y in 0 .. 150 {
+            print!("|");
+            for x in 0 .. 150 {
+                if waypoints.contains(&Node::new(x, y)) {
+                    print!("+");
+                    continue;
+                }
+                if line.contains(&Node::new(x, y)) {
+                    print!("*");
+                    continue;
+                }
+                if Node::new(x, y) == self.end_node {
+                    print!("E");
+                    continue;
+                }
+                if self.obstacle_list.contains(&Node::new(x, y)) {
+                    print!("X");
+                } else {
+                    print!(" ");
+                }
+            }
+            println!("|");
+        }
+        println!();
+
         path
     }
 
@@ -470,66 +505,28 @@ impl PathFinder {
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         for obst in obstacle_list {
-  			let radius = (((obst.radius + self.buffer)/(self.grid_size)) as i32) + 1;
+  			let radius = ((obst.radius + self.buffer)/(self.grid_size)) as i32;
             // println!("radius: {}",radius);
   			let n = obst.coords.to_node(&self);
-            // println!("center node: {:?}",n);
-  			let top_left = Node::new(n.x - radius, n.y + radius);
-  	// 		println!("top left node: {:?}",top_left);
-  			let bottom_right = Node::new(n.x + radius, n.y - radius);
-  	// 		println!("bottom right node: {:?}",bottom_right);
-  			let rsquared = (radius)*(radius);
-  	// 		println!("radius = {}", radius);
-            // println!("{:?}",self.obstacle_list);
-  			for x in top_left.x .. bottom_right.x + 1 {
-                let newx = x - n.x;
-                // println!("x: {}",x);
-                // println!("x^2: {}",x*x);
-                // println!("rsquared: {}",rsquared);
-  				let temp = rsquared as f32 - (newx as f32)*(newx as f32);
-                // println!("rsquared - x^2: {}",temp);
-                let y  = temp.abs().sqrt() as i32;
-                let negy = -y;
-                if x == top_left.x || x == bottom_right.x {
-                    for  difference in -radius/3 .. radius/3 + 1 {
-                        self.obstacle_list.insert(Node::new(newx,y+difference));
-                    }
-                }
-                else{
-                    self.obstacle_list.insert(Node::new(newx,y));
-                    self.obstacle_list.insert(Node::new(newx,y-1));
-                    self.obstacle_list.insert(Node::new(newx,y+1));
-                    self.obstacle_list.insert(Node::new(newx,negy));
-                    self.obstacle_list.insert(Node::new(newx,negy-1));
-                    self.obstacle_list.insert(Node::new(newx,negy+1));
-                }
-                //println!("y: {}",y);
+
+  			for x in n.x - radius .. n.x + radius {
+  				let dy = ((radius.pow(2) - (x - n.x).pow(2)) as f32).sqrt() as i32;
+                self.obstacle_list.insert(Node::new(x, n.y + dy));
+                self.obstacle_list.insert(Node::new(x, n.y + dy - 1));
+                // self.obstacle_list.insert(Node::new(x, n.y + dy - 2));
+                self.obstacle_list.insert(Node::new(x, n.y - dy));
+                self.obstacle_list.insert(Node::new(x, n.y - dy - 1));
+                // self.obstacle_list.insert(Node::new(x, n.y - dy - 2));
   			}
-            // println!("{:?}",self.obstacle_list);
-
-            let size : i32 = radius*2+1;
-            // Base 1d array
-            let mut grid_raw = vec!['.'; (size*size) as usize];
-
-            // Vector of 'width' elements slices
-            let mut grid_base: Vec<_> = grid_raw.as_mut_slice().chunks_mut((size) as usize).collect();
-
-            // Final 2d array
-            let arr: &mut [&mut [_]] = grid_base.as_mut_slice();
-            //println!("{:?}",arr);
-            //let mut arr : [[char; 20];20] = [['.';20];20];
-            // println!("n.y: {}",n.y);
-            for node in &self.obstacle_list {
-            //    println!("x: {}",(node.x - n.x) + size/2);
-            //    println!("y: {}",(node.y - n.y) + size/2);
-               if (node.x) + size/2 < size && (node.x) + size/2 >= 0 && (node.y) + size/2  < size && (node.y) + size/2 >= 0 {
-                    arr[(node.y + size/2) as usize][(node.x + size/2) as usize] = 'X';
-               }
-            }
-            arr[(size/2) as usize][(size/2) as usize] = 'O';
-            for row in arr {
-                // println!("{:?}",row);
-            }
+            for y in n.y - radius .. n.y + radius {
+  				let dx = ((radius.pow(2) - (y - n.y).pow(2)) as f32).sqrt() as i32;
+                self.obstacle_list.insert(Node::new(n.x + dx, y));
+                self.obstacle_list.insert(Node::new(n.x + dx - 1, y));
+                // self.obstacle_list.insert(Node::new(n.x + dx - 2, y));
+                self.obstacle_list.insert(Node::new(n.x - dx, y));
+                self.obstacle_list.insert(Node::new(n.x - dx - 1, y));
+                // self.obstacle_list.insert(Node::new(n.x - dx - 2, y));
+  			}
         }
     }
 
