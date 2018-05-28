@@ -44,7 +44,7 @@ pub struct Obstacle {
 
 #[derive(Clone, Copy)]
 pub struct Plane {
-	pub coords: Point,
+	pub location: Point,
 	pub alt: f32,  // In meters
 	pub yaw: f32,  // In degrees
 	pub pitch: f32,    // In degrees
@@ -57,7 +57,7 @@ pub struct Plane {
 impl Plane {
     pub fn new(lat:f64, lon:f64, alt:f32) -> Plane {
         Plane {
-            coords: Point::from_degrees(lat, lon),
+            location: Point::from_degrees(lat, lon),
             alt: alt,
             yaw: 0f32,
             pitch: 0f32,
@@ -78,12 +78,21 @@ pub struct Waypoint {
 }
 
 impl Waypoint {
-    pub fn new(location: Point) -> Waypoint {
+    pub fn new(index: i32, location: Point, alt: f32, radius: f32) -> Waypoint {
         Waypoint {
-            index: 0,
+            index: index,
             location: location,
-            alt: 0f32,
-            radius: 1f32
+            alt: alt,
+            radius: radius
         }
+    }
+
+    pub fn extend(&self, location: Point) -> Waypoint {
+        Waypoint::new(
+            self.index,
+            location,
+            self.alt,
+            self.radius
+        )
     }
 }

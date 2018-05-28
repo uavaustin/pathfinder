@@ -3,6 +3,7 @@
 
 use std::collections::HashSet;
 use std::collections::BinaryHeap;
+use std::collections::LinkedList;
 use std::rc::Rc;
 
 mod obj;
@@ -28,12 +29,13 @@ const POLAR_RADIUS:f64 = 6356752.0;
 const RADIUS:f64 = 6371000.0;
 
 pub struct PathFinder {
+    initialized: bool,
 	grid_size: f32,   // In meters
 	buffer: f32,   // In meters
 	max_process_time: u32,   // In seconds
 	origin: Point,
-	plane: Plane,
-	wp_list: Vec<Waypoint>,
+    current_wp: Waypoint,
+	wp_list: LinkedList<Waypoint>,
     obstacle_list: HashSet<Node>,
     end_node: Node,
     open_heap: BinaryHeap<Rc<Node>>,
@@ -42,22 +44,29 @@ pub struct PathFinder {
 }
 
 impl PathFinder {
-    pub fn new(grid_size: f32, flyzones: Vec<Vec<Point>>) -> PathFinder {
-        let mut new_path_finder = PathFinder {
-            grid_size: grid_size,
-            buffer: grid_size,
+    pub fn new() -> PathFinder {
+        PathFinder {
+            initialized: false,
+            grid_size: 1f32,
+            buffer: 1f32,
             max_process_time: 10,
-            origin: PathFinder::find_origin(&flyzones),
-            plane: Plane::new(0.0,0.0,0.0),
-            wp_list: Vec::new(),
+            origin: Point::from_degrees(0f64, 0f64),
+            current_wp: Waypoint::new(0, Point::from_degrees(0f64, 0f64), 0f32, 0f32),
+            wp_list: LinkedList::new(),
             obstacle_list: HashSet::new(),
             end_node: Node::new(0,0),
             open_heap: BinaryHeap::new(),
             open_set: HashSet::new(),
             close_list: HashSet::new()
-        };
-        new_path_finder.initialize(&flyzones);
-        new_path_finder
+        }
+    }
+
+    pub fn init(&mut self, grid_size: f32, flyzones: Vec<Vec<Point>>) {
+        self.grid_size = grid_size;
+        self.buffer = grid_size;
+        self.origin = PathFinder::find_origin(&flyzones);
+        self.generate_fly_zone(&flyzones);
+        self.initialized = true;
     }
 
     // Initilization
@@ -94,7 +103,7 @@ impl PathFinder {
         Point::from_radians(min_lat, lon)
     }
 
-    fn initialize(&mut self, flyzones: &Vec<Vec<Point>>) {
+    fn generate_fly_zone(&mut self, flyzones: &Vec<Vec<Point>>) {
         for i in 0..flyzones.len() {
             let flyzone_points = &flyzones[i];
             let first_node : Node = flyzone_points[0].to_node(&self);
@@ -183,14 +192,40 @@ impl PathFinder {
         }
     }
 
+    pub fn get_adjust_path(mut self, plane: Plane, mut wp_list: LinkedList<Waypoint>) -> LinkedList<Waypoint> {
+        assert!(self.initialized);
+        self.wp_list = LinkedList::new();
+        let mut current_loc: Point;
+        let mut next_wp: Waypoint;
+        match wp_list.pop_front() {
+            Some(wp) => next_wp = wp,
+            None => return wp_list
+        }
+        self.current_wp = next_wp;   // First destination if first waypoint
+        current_loc = self.current_wp.location;
+        self.adjust_path(plane.location, current_loc);
+        #[allow(while_true)]
+        while true {
+            match wp_list.pop_front() {
+                Some(wp) => next_wp = wp,
+                None => break
+            }
+
+            current_loc = self.current_wp.location;
+            self.adjust_path(current_loc, next_wp.location);
+            self.current_wp = next_wp;
+        }
+        self.wp_list
+    }
+
     // Find best path using the a* algorithm
-	pub fn adjust_path(&mut self, plane: Plane) -> Option<Vec<Waypoint>> {
-	    self.plane = plane;
+    // #TODO: handle altitude change
+	fn adjust_path(&mut self, start: Point, end: Point) {
         self.open_heap = BinaryHeap::new();
         self.open_set = HashSet::new();
         self.close_list = HashSet::new();
-        self.end_node = self.wp_list[0].location.to_node(&self);
-        let start_node = plane.coords.to_node(&self);
+        self.end_node = start.to_node(&self);
+        let start_node = end.to_node(&self);    // Reverse because backtracking at the end
         let start_node = Rc::new(Node {
             x: start_node.x,
             y: start_node.y,
@@ -212,7 +247,8 @@ impl PathFinder {
             }
             // println!("f_cost: {}", current_node.f_cost);
             if *current_node == self.end_node {
-                return Some(self.generate_path(Rc::clone(&current_node)));
+                self.generate_path(Rc::clone(&current_node));
+                return;
             }
             self.open_set.take(&current_node);
             self.close_list.insert(Rc::clone(&current_node));
@@ -220,7 +256,7 @@ impl PathFinder {
             // Regular a* node discovery
             self.discover_node(Rc::clone(&current_node));
         }
-        None
+        eprintln!("No path found!");
  	}
 
     fn discover_node(&mut self, current_node: Rc<Node>) {
@@ -255,6 +291,7 @@ impl PathFinder {
     }
 
 // Jump Point Search
+/*
     // Find best path using the jump point search algorithm in combination with a*
     pub fn adjust_path_jump_point(&mut self, plane: Plane) -> Option<Vec<Waypoint>> {
         self.plane = plane;
@@ -395,10 +432,11 @@ impl PathFinder {
 
         true
     }
+*/
 
-    fn generate_path(&self, mut current_node: Rc<Node>) -> Vec<Waypoint>{
-        let mut path = Vec::new();
-        let mut node;
+    fn generate_path(&mut self, mut current_node: Rc<Node>) {
+        let mut previous_node;
+        let mut last_wp = current_node.clone();
         let mut x_dir = 0;
         let mut y_dir = 0;
         let mut new_x_dir;
@@ -408,31 +446,55 @@ impl PathFinder {
         let mut waypoints = HashSet::new();
         let mut line = HashSet::new();
 
+        let location = current_node.to_point(&self);
+        current_node = match current_node.parent {
+            Some(ref parent) => Rc::clone(&parent),
+            None => Rc::clone(&current_node)
+        };
+        let location = current_node.to_point(&self);
+
         #[allow(while_true)]
         while true {
-            match current_node.parent {
-                Some(ref parent) => node = Rc::clone(&parent),
+            previous_node = current_node;
+            current_node = match previous_node.parent {
+                Some(ref parent) => Rc::clone(&parent),
                 None => break,
-            }
-            new_x_dir = node.x - current_node.x;
-            new_y_dir = node.y - current_node.y;
+            };
+            new_x_dir = current_node.x - previous_node.x;
+            new_y_dir = current_node.y - previous_node.y;
             if x_dir != new_x_dir || y_dir != new_y_dir {
                 x_dir = new_x_dir;
                 y_dir = new_y_dir;
-                // println!("{} {}", node.x, node.y);
-                waypoints.insert(Rc::clone(&node));
-                path.push(Waypoint::new(node.to_point(&self)));
+
+                if self.distance_between_nodes(&current_node, &last_wp)
+                    < (self.current_wp.radius * 2f32) as i64 {
+                    self.wp_list.pop_back();
+                    let midpoint = Node::new(
+                        (current_node.x + last_wp.x) / 2,
+                        (current_node.y + last_wp.y) / 2
+                    );
+                    waypoints.remove(&last_wp);
+                    let waypoint = self.current_wp.extend(midpoint.to_point(&self));
+                    self.wp_list.push_back(waypoint);
+                    last_wp = Rc::new(midpoint);
+                    waypoints.insert(Rc::clone(&last_wp));
+                } else {
+                    last_wp = Rc::clone(&current_node);
+                    waypoints.insert(Rc::clone(&current_node));
+                    let waypoint = self.current_wp.extend(current_node.to_point(&self));
+                    self.wp_list.push_back(waypoint);
+                }
             } else {
-                line.insert(Rc::clone(&node));
+                line.insert(Rc::clone(&current_node));
             }
-            current_node = node;
         }
-        path.reverse();
+        // self.wp_list.pop_back();
 
         // Graphical display for debugging
-        for y in 0 .. 150 {
+        /*
+        for y in 0 .. 50 {
             print!("|");
-            for x in 0 .. 150 {
+            for x in 0 .. 50 {
                 if waypoints.contains(&Node::new(x, y)) {
                     print!("+");
                     continue;
@@ -454,12 +516,7 @@ impl PathFinder {
             println!("|");
         }
         println!();
-
-        path
-    }
-
-    pub fn set_waypoint_list(&mut self, list: Vec<Waypoint>) {
-        self.wp_list = list;
+        */
     }
 
     pub fn set_buffer(&mut self, new_buffer: f32) {
@@ -471,37 +528,31 @@ impl PathFinder {
         self.max_process_time = new_time;
     }
 
-    pub fn set_plane(&mut self, new_plane: Plane) {
-        self.plane = new_plane;
+    fn distance_between_nodes(&self, first_node: &Node, second_node: &Node) -> i64 {
+        let x_diff: f64 = (first_node.x - second_node.x).pow(2) as f64;
+        let y_diff: f64 = (first_node.y - second_node.y).pow(2) as f64;
+        ((x_diff + y_diff).sqrt() * self.grid_size as f64).ceil() as i64
     }
 
-    pub fn distance_between_points(&mut self, first_point: Point, second_point: Point) -> i64
-    {
-        let first_node : Node = first_point.to_node(&self);
-        let second_node : Node = second_point.to_node(&self);
-        let first_node_x : f64 = first_node.x as f64;
-        let first_node_y : f64 = first_node.y as f64;
-        let second_node_x : f64 = second_node.x as f64;
-        let second_node_y : f64 = second_node.y as f64;
-
-        let xDiff: f64 = ((first_node_x - second_node_x) * (first_node_x - second_node_x)) as f64;
-        let yDiff: f64 = ((first_node_y - second_node_y) * (first_node_y - second_node_y)) as f64;
-        let distance: i64 = ((xDiff + yDiff).sqrt() + 1f64) as i64;
-
-        return distance;
-    }
-
-    pub fn is_waypoint_inside_obstacle(&mut self, waypoint: Waypoint, obstacle_list: Vec<Obstacle>) -> bool
-    {
-        for obstacle in &obstacle_list
-        {
-            if self.distance_between_points(waypoint.location, obstacle.coords) <= (waypoint.radius as i64)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+    // Likely useless
+    // fn distance_between_points(&mut self, first_point: Point, second_point: Point) -> i64
+    // {
+    //     let first_node : Node = first_point.to_node(&self);
+    //     let second_node : Node = second_point.to_node(&self);
+    //     return distance_between_nodes(first_node, second_node)
+    // }
+    //
+    // fn is_waypoint_inside_obstacle(&mut self, waypoint: Waypoint, obstacle_list: Vec<Obstacle>) -> bool
+    // {
+    //     for obstacle in &obstacle_list
+    //     {
+    //         if self.distance_between_points(waypoint.location, obstacle.coords) <= (waypoint.radius as i64)
+    //         {
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         for obst in obstacle_list {
@@ -545,12 +596,9 @@ impl PathFinder {
     pub fn get_process_time(&self) -> u32 {
         self.max_process_time
     }
-
-    pub fn get_plane(&self) -> Plane {
-        self.plane
-    }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -653,3 +701,4 @@ mod tests {
         println!("{}",path_finder1.is_waypoint_inside_obstacle(waypoint, obstacles));
     }
 }
+*/
