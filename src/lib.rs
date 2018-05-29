@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::collections::BinaryHeap;
 use std::collections::LinkedList;
 use std::rc::Rc;
+use std::time::{Duration, SystemTime};
 
 mod obj;
 mod node;
@@ -32,7 +33,8 @@ pub struct PathFinder {
     initialized: bool,
 	grid_size: f32,   // In meters
 	buffer: f32,   // In meters
-	max_process_time: u32,   // In seconds
+    start_time: SystemTime,
+	max_process_time: Duration,   // In seconds
 	origin: Point,
     current_wp: Waypoint,
 	wp_list: LinkedList<Waypoint>,
@@ -49,7 +51,8 @@ impl PathFinder {
             initialized: false,
             grid_size: 1f32,
             buffer: 1f32,
-            max_process_time: 10,
+            start_time: SystemTime::now(),
+            max_process_time: Duration::from_secs(10u64),
             origin: Point::from_degrees(0f64, 0f64),
             current_wp: Waypoint::new(0, Point::from_degrees(0f64, 0f64), 0f32, 0f32),
             wp_list: LinkedList::new(),
@@ -194,6 +197,7 @@ impl PathFinder {
 
     pub fn get_adjust_path(mut self, plane: Plane, mut wp_list: LinkedList<Waypoint>) -> LinkedList<Waypoint> {
         assert!(self.initialized);
+        self.start_time = SystemTime::now();
         self.wp_list = LinkedList::new();
         let mut current_loc: Point;
         let mut next_wp: Waypoint;
@@ -212,15 +216,18 @@ impl PathFinder {
             }
 
             current_loc = self.current_wp.location;
-            self.adjust_path(current_loc, next_wp.location);
+            if !self.adjust_path(current_loc, next_wp.location) {
+                break;
+            }
             self.current_wp = next_wp;
         }
         self.wp_list
     }
 
     // Find best path using the a* algorithm
+    // Return true if path found and false if any error occured or no path found
     // #TODO: handle altitude change
-	fn adjust_path(&mut self, start: Point, end: Point) {
+	fn adjust_path(&mut self, start: Point, end: Point) -> bool {
         self.open_heap = BinaryHeap::new();
         self.open_set = HashSet::new();
         self.close_list = HashSet::new();
@@ -240,6 +247,14 @@ impl PathFinder {
         let mut current_node:Rc<Node>;
         #[allow(while_true)]
         while true {
+            if let Ok(elapsed) = self.start_time.elapsed() {
+                if elapsed > self.max_process_time {
+                    return false;
+                }
+            } else {
+                    return false;
+            }
+
             if let Some(node) = self.open_heap.pop() {
                 current_node = node;
             } else {
@@ -248,7 +263,7 @@ impl PathFinder {
             // println!("f_cost: {}", current_node.f_cost);
             if *current_node == self.end_node {
                 self.generate_path(Rc::clone(&current_node));
-                return;
+                return true;
             }
             self.open_set.take(&current_node);
             self.close_list.insert(Rc::clone(&current_node));
@@ -257,6 +272,7 @@ impl PathFinder {
             self.discover_node(Rc::clone(&current_node));
         }
         eprintln!("No path found!");
+        return false;
  	}
 
     fn discover_node(&mut self, current_node: Rc<Node>) {
@@ -447,6 +463,7 @@ impl PathFinder {
         let mut line = HashSet::new();
 
         let location = current_node.to_point(&self);
+        // TODO: Beautify
         current_node = match current_node.parent {
             Some(ref parent) => Rc::clone(&parent),
             None => Rc::clone(&current_node)
@@ -524,8 +541,8 @@ impl PathFinder {
         // TODO: regenerate node map
     }
 
-    pub fn set_process_time(&mut self, new_time: u32) {
-        self.max_process_time = new_time;
+    pub fn set_process_time(&mut self, max_process_time: u32) {
+        self.max_process_time = Duration::from_secs(max_process_time as u64);
     }
 
     fn distance_between_nodes(&self, first_node: &Node, second_node: &Node) -> i64 {
@@ -594,7 +611,7 @@ impl PathFinder {
 	}
 
     pub fn get_process_time(&self) -> u32 {
-        self.max_process_time
+        self.max_process_time.as_secs() as u32
     }
 }
 
