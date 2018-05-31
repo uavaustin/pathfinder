@@ -195,7 +195,8 @@ impl PathFinder {
         }
     }
 
-    pub fn get_adjust_path(mut self, plane: Plane, mut wp_list: LinkedList<Waypoint>) -> LinkedList<Waypoint> {
+    pub fn get_adjust_path(&mut self, plane: Plane, mut wp_list: LinkedList<Waypoint>)
+     -> &LinkedList<Waypoint> {
         assert!(self.initialized);
         self.start_time = SystemTime::now();
         self.wp_list = LinkedList::new();
@@ -203,13 +204,13 @@ impl PathFinder {
         let mut next_wp: Waypoint;
         match wp_list.pop_front() {
             Some(wp) => next_wp = wp,
-            None => return wp_list
+            None => return &self.wp_list
         }
         self.current_wp = next_wp;   // First destination if first waypoint
         current_loc = self.current_wp.location;
         self.adjust_path(plane.location, current_loc);
-        #[allow(while_true)]
-        while true {
+
+        loop {
             match wp_list.pop_front() {
                 Some(wp) => next_wp = wp,
                 None => break
@@ -221,7 +222,7 @@ impl PathFinder {
             }
             self.current_wp = next_wp;
         }
-        self.wp_list
+        &self.wp_list
     }
 
     // Find best path using the a* algorithm
@@ -245,8 +246,8 @@ impl PathFinder {
         self.open_heap.push(Rc::clone(&start_node));
 
         let mut current_node:Rc<Node>;
-        #[allow(while_true)]
-        while true {
+
+        loop {
             if let Ok(elapsed) = self.start_time.elapsed() {
                 if elapsed > self.max_process_time {
                     return false;
@@ -328,8 +329,8 @@ impl PathFinder {
         self.open_heap.push(Rc::clone(&start_node));
 
         let mut current_node:Rc<Node>;
-        #[allow(while_true)]
-        while true {
+
+        loop {
             if let Some(node) = self.open_heap.pop() {
                 current_node = node;
             } else {
@@ -470,8 +471,7 @@ impl PathFinder {
         };
         let location = current_node.to_point(&self);
 
-        #[allow(while_true)]
-        while true {
+        loop {
             previous_node = current_node;
             current_node = match previous_node.parent {
                 Some(ref parent) => Rc::clone(&parent),
