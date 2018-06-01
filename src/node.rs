@@ -9,7 +9,8 @@ pub struct Node {
     pub y: i32,
     pub g_cost: f32,
     pub f_cost: f32,
-    pub parent: Option<Rc<Node>>
+    pub parent: Option<Rc<Node>>,
+    pub depth: i32,
 }
 
 impl Hash for Node {
@@ -51,7 +52,8 @@ impl Node {
             y: y,
             g_cost: std::f32::MAX,
             f_cost: std::f32::MAX,
-            parent: None
+            parent: None,
+            depth: 0
         }
     }
     pub fn to_point(&self, path_finder: &PathFinder) -> Point {
@@ -59,7 +61,7 @@ impl Node {
         let lat = self.y as f64 * path_finder.grid_size as f64 / RADIUS + path_finder.origin.lat();
         let lon = ((self.x as f64 * path_finder.grid_size as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64
             + path_finder.origin.lon();
-        Point::from_radians(lat, lon)
+        Point::from_radians(lat, lon, 0f32)
     }
     pub fn advance(&mut self, x_dir: i32, y_dir: i32) {
         self.x += x_dir;

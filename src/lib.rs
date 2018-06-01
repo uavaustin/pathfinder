@@ -42,7 +42,8 @@ pub struct PathFinder {
     end_node: Node,
     open_heap: BinaryHeap<Rc<Node>>,
     open_set: HashSet<Rc<Node>>,
-    close_list: HashSet<Rc<Node>>
+    close_list: HashSet<Rc<Node>>,
+    obstacle_found: bool
 }
 
 impl PathFinder {
@@ -53,14 +54,15 @@ impl PathFinder {
             buffer: 1f32,
             start_time: SystemTime::now(),
             max_process_time: Duration::from_secs(10u64),
-            origin: Point::from_degrees(0f64, 0f64),
-            current_wp: Waypoint::new(0, Point::from_degrees(0f64, 0f64), 0f32, 0f32),
+            origin: Point::from_degrees(0f64, 0f64, 0f32),
+            current_wp: Waypoint::new(0, Point::from_degrees(0f64, 0f64, 0f32), 0f32),
             wp_list: LinkedList::new(),
             obstacle_list: HashSet::new(),
             end_node: Node::new(0,0),
             open_heap: BinaryHeap::new(),
             open_set: HashSet::new(),
-            close_list: HashSet::new()
+            close_list: HashSet::new(),
+            obstacle_found: false
         }
     }
 
@@ -103,7 +105,7 @@ impl PathFinder {
             }
         }
 
-        Point::from_radians(min_lat, lon)
+        Point::from_radians(min_lat, lon, 0f32)
     }
 
     fn generate_fly_zone(&mut self, flyzones: &Vec<Vec<Point>>) {
@@ -201,14 +203,17 @@ impl PathFinder {
         self.start_time = SystemTime::now();
         self.wp_list = LinkedList::new();
         let mut current_loc: Point;
+        let mut next_loc: Point;
         let mut next_wp: Waypoint;
         match wp_list.pop_front() {
             Some(wp) => next_wp = wp,
             None => return &self.wp_list
         }
+
         self.current_wp = next_wp;   // First destination if first waypoint
         current_loc = self.current_wp.location;
         self.adjust_path(plane.location, current_loc);
+        self.wp_list.push_back(self.current_wp.clone());
 
         loop {
             match wp_list.pop_front() {
@@ -217,22 +222,25 @@ impl PathFinder {
             }
 
             current_loc = self.current_wp.location;
-            if !self.adjust_path(current_loc, next_wp.location) {
+            next_loc = next_wp.location;
+            self.current_wp = next_wp;
+            if !self.adjust_path(current_loc, next_loc) {
                 break;
             }
-            self.current_wp = next_wp;
+            self.wp_list.push_back(self.current_wp.clone());
         }
         &self.wp_list
     }
 
     // Find best path using the a* algorithm
     // Return true if path found and false if any error occured or no path found
-    // #TODO: handle altitude change
 	fn adjust_path(&mut self, start: Point, end: Point) -> bool {
         self.open_heap = BinaryHeap::new();
         self.open_set = HashSet::new();
         self.close_list = HashSet::new();
         self.end_node = start.to_node(&self);
+        self.obstacle_found = false;
+
         let start_node = end.to_node(&self);    // Reverse because backtracking at the end
         let start_node = Rc::new(Node {
             x: start_node.x,
@@ -240,7 +248,8 @@ impl PathFinder {
             g_cost: 0f32,
             f_cost: (((self.end_node.x-start_node.x).pow(2) +
                 (self.end_node.y-start_node.y).pow(2)) as f32).sqrt(),
-            parent: None
+            parent: None,
+            depth: 0
         });
         self.open_set.insert(Rc::clone(&start_node));
         self.open_heap.push(Rc::clone(&start_node));
@@ -261,9 +270,11 @@ impl PathFinder {
             } else {
                 break;
             }
-            // println!("f_cost: {}", current_node.f_cost);
+
             if *current_node == self.end_node {
-                self.generate_path(Rc::clone(&current_node));
+                if self.obstacle_found {
+                    self.generate_path(Rc::clone(&current_node), end.alt() - start.alt());
+                }
                 return true;
             }
             self.open_set.take(&current_node);
@@ -277,14 +288,15 @@ impl PathFinder {
  	}
 
     fn discover_node(&mut self, current_node: Rc<Node>) {
-        // println!("{} {}", current_node.x, current_node.y);
         for &(x_offset, y_offset, g_cost) in OFFSET.into_iter() {
             let mut new_node;
             new_node = Node::new(current_node.x + x_offset, current_node.y + y_offset);
-            // println!("new {} {}", new_node.x, new_node.y);
 
-            if self.obstacle_list.contains(&new_node) || self.close_list.contains(&new_node) {
-                // println!("x: {}, y: {}", current_node.x, current_node.y);
+            if self.obstacle_list.contains(&new_node) {
+                self.obstacle_found = true;
+                continue;
+            }
+            if self.close_list.contains(&new_node) {
                 continue;
             }
             new_node.g_cost = current_node.g_cost + g_cost;
@@ -301,6 +313,7 @@ impl PathFinder {
             new_node.f_cost = new_node.g_cost + (((self.end_node.x-new_node.x).pow(2) +
                 (self.end_node.y-new_node.y).pow(2)) as f32).sqrt();
             new_node.parent = Some(Rc::clone(&current_node));
+            new_node.depth = current_node.depth + 1;
             let new_node = Rc::new(new_node);
             self.open_set.insert(Rc::clone(&new_node));
             self.open_heap.push(Rc::clone(&new_node));
@@ -451,26 +464,30 @@ impl PathFinder {
     }
 */
 
-    fn generate_path(&mut self, mut current_node: Rc<Node>) {
+    fn generate_path(&mut self, mut current_node: Rc<Node>, alt_diff: f32) {
         let mut previous_node;
+        let mut wp_cluster_count = 1;
+        // Node representing the sum of a cluster of nodes
+        let mut wp_cluster = Node::new(current_node.x, current_node.y);
         let mut last_wp = current_node.clone();
         let mut x_dir = 0;
         let mut y_dir = 0;
         let mut new_x_dir;
         let mut new_y_dir;
+        let mut initial_reached = false;      // Used to skip first point
+        let current_alt = self.current_wp.location.alt();
+        let alt_increment = alt_diff / current_node.depth as f32;
 
         // Temp variable for debugging
-        let mut waypoints = HashSet::new();
-        let mut line = HashSet::new();
+        // let mut waypoints = HashSet::new();
+        // let mut line = HashSet::new();
 
-        let location = current_node.to_point(&self);
-        // TODO: Beautify
-        current_node = match current_node.parent {
-            Some(ref parent) => Rc::clone(&parent),
-            None => Rc::clone(&current_node)
-        };
-        let location = current_node.to_point(&self);
+        if let Some(ref parent) = current_node.parent {
+            x_dir = current_node.x - parent.x;
+            y_dir = current_node.y - parent.y;
+        }
 
+        //#TODO perform secondary processing for more accurate path
         loop {
             previous_node = current_node;
             current_node = match previous_node.parent {
@@ -479,31 +496,48 @@ impl PathFinder {
             };
             new_x_dir = current_node.x - previous_node.x;
             new_y_dir = current_node.y - previous_node.y;
+            // let point = current_node.to_point(&self);
+            // println!("{:.5}, {:.5}", point.lat_degree(), point.lon_degree());
             if x_dir != new_x_dir || y_dir != new_y_dir {
                 x_dir = new_x_dir;
                 y_dir = new_y_dir;
 
-                if self.distance_between_nodes(&current_node, &last_wp)
-                    < (self.current_wp.radius * 2f32) as i64 {
+                if initial_reached && self.distance_between_nodes(&current_node, &last_wp)
+                    < 2*self.current_wp.radius as i64 {
                     self.wp_list.pop_back();
-                    let midpoint = Node::new(
-                        (current_node.x + last_wp.x) / 2,
-                        (current_node.y + last_wp.y) / 2
+                    wp_cluster_count += 1;
+                    wp_cluster.advance(current_node.x, current_node.y);
+                    wp_cluster.depth += current_node.depth;
+                    let mut midpoint = Node::new(
+                        wp_cluster.x / wp_cluster_count,
+                        wp_cluster.y / wp_cluster_count
                     );
-                    waypoints.remove(&last_wp);
-                    let waypoint = self.current_wp.extend(midpoint.to_point(&self));
+                    midpoint.depth = wp_cluster.depth / wp_cluster_count;
+                    // println!("mid-depth {}", midpoint.depth);
+                    // waypoints.remove(&last_wp);
+                    let waypoint = self.current_wp.extend(
+                        midpoint.to_point(&self),
+                        current_alt - alt_increment * midpoint.depth as f32
+                    );
                     self.wp_list.push_back(waypoint);
                     last_wp = Rc::new(midpoint);
-                    waypoints.insert(Rc::clone(&last_wp));
+                    // waypoints.insert(Rc::clone(&last_wp));
                 } else {
+                    initial_reached = true;
+                    wp_cluster_count = 1;
+                    wp_cluster = Node::new(current_node.x, current_node.y);
                     last_wp = Rc::clone(&current_node);
-                    waypoints.insert(Rc::clone(&current_node));
-                    let waypoint = self.current_wp.extend(current_node.to_point(&self));
+                    // waypoints.insert(Rc::clone(&current_node));
+                    let waypoint = self.current_wp.extend(
+                        current_node.to_point(&self),
+                        current_alt - alt_increment * current_node.depth as f32
+                    );
                     self.wp_list.push_back(waypoint);
                 }
-            } else {
-                line.insert(Rc::clone(&current_node));
             }
+            // else {
+            //     line.insert(Rc::clone(&current_node));
+            // }
         }
         // self.wp_list.pop_back();
 

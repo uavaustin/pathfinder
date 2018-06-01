@@ -4,15 +4,16 @@ use super::*;
 pub struct Point {
     lat: f64,  //In radians
     lon: f64,  //In radians
+    alt: f32,  //In meters
 }
 
 impl Point {
-    pub fn from_degrees(lat:f64, lon:f64) -> Point {
+    pub fn from_degrees(lat:f64, lon:f64, alt: f32) -> Point {
         const FACTOR:f64 = std::f64::consts::PI/180f64;
-        Point{lat: lat*FACTOR, lon: lon*FACTOR}
+        Point{lat: lat*FACTOR, lon: lon*FACTOR, alt: alt}
     }
-    pub fn from_radians(lat:f64, lon:f64) -> Point{
-        Point{lat: lat, lon: lon}
+    pub fn from_radians(lat:f64, lon:f64, alt: f32) -> Point{
+        Point{lat: lat, lon: lon, alt: alt}
     }
 
     pub fn to_node(&self, path_finder: &PathFinder) -> Node {
@@ -27,6 +28,9 @@ impl Point {
     }
     pub fn lon(&self) -> f64 {
         self.lon
+    }
+    pub fn alt(&self) -> f32 {
+        self.alt
     }
     pub fn lat_degree(&self) -> f64 {
         self.lat * 180f64 / std::f64::consts::PI
@@ -45,7 +49,6 @@ pub struct Obstacle {
 #[derive(Clone, Copy)]
 pub struct Plane {
 	pub location: Point,
-	pub alt: f32,  // In meters
 	pub yaw: f32,  // In degrees
 	pub pitch: f32,    // In degrees
 	pub roll: f32, // In degrees
@@ -57,8 +60,7 @@ pub struct Plane {
 impl Plane {
     pub fn new(lat:f64, lon:f64, alt:f32) -> Plane {
         Plane {
-            location: Point::from_degrees(lat, lon),
-            alt: alt,
+            location: Point::from_degrees(lat, lon, alt),
             yaw: 0f32,
             pitch: 0f32,
             roll: 0f32,
@@ -73,25 +75,23 @@ impl Plane {
 pub struct Waypoint {
     pub index: i32,
 	pub location: Point,
-	pub alt: f32,  // In meters
 	pub radius: f32,   // In meters
 }
 
 impl Waypoint {
-    pub fn new(index: i32, location: Point, alt: f32, radius: f32) -> Waypoint {
+    pub fn new(index: i32, location: Point, radius: f32) -> Waypoint {
         Waypoint {
             index: index,
             location: location,
-            alt: alt,
             radius: radius
         }
     }
 
-    pub fn extend(&self, location: Point) -> Waypoint {
+    pub fn extend(&self, mut location: Point, alt: f32) -> Waypoint {
+        location.alt = alt;
         Waypoint::new(
             self.index,
             location,
-            self.alt,
             self.radius
         )
     }
