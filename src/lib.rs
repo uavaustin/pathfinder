@@ -36,6 +36,8 @@ pub struct PathFinder {
     start_time: SystemTime,
 	max_process_time: Duration,   // In seconds
 	origin: Point,
+    fly_zones: Vec<Vec<Point>>,
+    obstacles: Vec<Obstacle>,
     current_wp: Waypoint,
 	wp_list: LinkedList<Waypoint>,
     obstacle_list: HashSet<Node>,
@@ -55,6 +57,8 @@ impl PathFinder {
             start_time: SystemTime::now(),
             max_process_time: Duration::from_secs(10u64),
             origin: Point::from_degrees(0f64, 0f64, 0f32),
+            fly_zones: Vec::new(),
+            obstacles: Vec::new(),
             current_wp: Waypoint::new(0, Point::from_degrees(0f64, 0f64, 0f32), 0f32),
             wp_list: LinkedList::new(),
             obstacle_list: HashSet::new(),
@@ -66,11 +70,13 @@ impl PathFinder {
         }
     }
 
-    pub fn init(&mut self, grid_size: f32, flyzones: Vec<Vec<Point>>) {
+    pub fn init(&mut self, grid_size: f32, flyzones: Vec<Vec<Point>>, obstacles: Vec<Obstacle>) {
         self.grid_size = grid_size;
         self.buffer = grid_size;
         self.origin = PathFinder::find_origin(&flyzones);
-        self.generate_fly_zone(&flyzones);
+        self.fly_zones = flyzones;
+        self.obstacles = obstacles;
+        self.populate_map();
         self.initialized = true;
     }
 
@@ -108,9 +114,15 @@ impl PathFinder {
         Point::from_radians(min_lat, lon, 0f32)
     }
 
-    fn generate_fly_zone(&mut self, flyzones: &Vec<Vec<Point>>) {
-        for i in 0..flyzones.len() {
-            let flyzone_points = &flyzones[i];
+    fn populate_map(&mut self) {
+        self.obstacle_list.clear();
+        self.generate_fly_zone();
+        self.generate_obstacles();
+    }
+
+    fn generate_fly_zone(&mut self) {
+        for i in 0..self.fly_zones.len() {
+            let flyzone_points = &self.fly_zones[i];
             let first_node : Node = flyzone_points[0].to_node(&self);
             let mut pre_node : Node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
             let mut end_node;
@@ -197,6 +209,33 @@ impl PathFinder {
         }
     }
 
+    fn generate_obstacles(&mut self) {
+        for obst in &self.obstacles {
+  			let radius = ((obst.radius + self.buffer)/(self.grid_size)) as i32;
+            // println!("radius: {}",radius);
+  			let n = obst.coords.to_node(&self);
+
+  			for x in n.x - radius .. n.x + radius {
+  				let dy = ((radius.pow(2) - (x - n.x).pow(2)) as f32).sqrt() as i32;
+                self.obstacle_list.insert(Node::new(x, n.y + dy));
+                self.obstacle_list.insert(Node::new(x, n.y + dy - 1));
+                // self.obstacle_list.insert(Node::new(x, n.y + dy - 2));
+                self.obstacle_list.insert(Node::new(x, n.y - dy));
+                self.obstacle_list.insert(Node::new(x, n.y - dy - 1));
+                // self.obstacle_list.insert(Node::new(x, n.y - dy - 2));
+  			}
+            for y in n.y - radius .. n.y + radius {
+  				let dx = ((radius.pow(2) - (y - n.y).pow(2)) as f32).sqrt() as i32;
+                self.obstacle_list.insert(Node::new(n.x + dx, y));
+                self.obstacle_list.insert(Node::new(n.x + dx - 1, y));
+                // self.obstacle_list.insert(Node::new(n.x + dx - 2, y));
+                self.obstacle_list.insert(Node::new(n.x - dx, y));
+                self.obstacle_list.insert(Node::new(n.x - dx - 1, y));
+                // self.obstacle_list.insert(Node::new(n.x - dx - 2, y));
+  			}
+        }
+    }
+
     pub fn get_adjust_path(&mut self, plane: Plane, mut wp_list: LinkedList<Waypoint>)
      -> &LinkedList<Waypoint> {
         assert!(self.initialized);
@@ -262,7 +301,7 @@ impl PathFinder {
                     return false;
                 }
             } else {
-                    return false;
+                return false;
             }
 
             if let Some(node) = self.open_heap.pop() {
@@ -572,7 +611,7 @@ impl PathFinder {
 
     pub fn set_buffer(&mut self, new_buffer: f32) {
         self.buffer = new_buffer;
-        // TODO: regenerate node map
+        self.populate_map();
     }
 
     pub fn set_process_time(&mut self, max_process_time: u32) {
@@ -605,31 +644,10 @@ impl PathFinder {
     //     return false;
     // }
 
-    pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
-        for obst in obstacle_list {
-  			let radius = ((obst.radius + self.buffer)/(self.grid_size)) as i32;
-            // println!("radius: {}",radius);
-  			let n = obst.coords.to_node(&self);
 
-  			for x in n.x - radius .. n.x + radius {
-  				let dy = ((radius.pow(2) - (x - n.x).pow(2)) as f32).sqrt() as i32;
-                self.obstacle_list.insert(Node::new(x, n.y + dy));
-                self.obstacle_list.insert(Node::new(x, n.y + dy - 1));
-                // self.obstacle_list.insert(Node::new(x, n.y + dy - 2));
-                self.obstacle_list.insert(Node::new(x, n.y - dy));
-                self.obstacle_list.insert(Node::new(x, n.y - dy - 1));
-                // self.obstacle_list.insert(Node::new(x, n.y - dy - 2));
-  			}
-            for y in n.y - radius .. n.y + radius {
-  				let dx = ((radius.pow(2) - (y - n.y).pow(2)) as f32).sqrt() as i32;
-                self.obstacle_list.insert(Node::new(n.x + dx, y));
-                self.obstacle_list.insert(Node::new(n.x + dx - 1, y));
-                // self.obstacle_list.insert(Node::new(n.x + dx - 2, y));
-                self.obstacle_list.insert(Node::new(n.x - dx, y));
-                self.obstacle_list.insert(Node::new(n.x - dx - 1, y));
-                // self.obstacle_list.insert(Node::new(n.x - dx - 2, y));
-  			}
-        }
+    pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
+        self.obstacles = obstacle_list;
+        self.populate_map();
     }
 
     pub fn get_grid_size(&self) -> f32 {

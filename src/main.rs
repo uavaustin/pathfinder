@@ -39,8 +39,7 @@ fn main() {
     // );
     let flyzone = vec!(flight_zone);
     let mut path_finder1 = PathFinder::new();
-    path_finder1.init(5.0, flyzone);
-    path_finder1.set_obstacle_list(obstacles);
+    path_finder1.init(5.0, flyzone, obstacles);
     let result = path_finder1.get_adjust_path(
         Plane::new(30.32491, -97.60159, 10.0),
         waypoints);

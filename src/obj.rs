@@ -46,7 +46,7 @@ pub struct Obstacle {
 	pub height: f32,   // In meters
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Plane {
 	pub location: Point,
 	pub yaw: f32,  // In degrees
@@ -71,15 +71,15 @@ impl Plane {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Waypoint {
-    pub index: i32,
+    pub index: u32,
 	pub location: Point,
 	pub radius: f32,   // In meters
 }
 
 impl Waypoint {
-    pub fn new(index: i32, location: Point, radius: f32) -> Waypoint {
+    pub fn new(index: u32, location: Point, radius: f32) -> Waypoint {
         Waypoint {
             index: index,
             location: location,
