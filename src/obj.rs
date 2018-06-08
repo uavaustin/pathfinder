@@ -40,10 +40,29 @@ impl Point {
     }
 }
 
+#[derive(Debug)]
 pub struct Obstacle {
 	pub coords: Point,
 	pub radius: f32,   // In meters
 	pub height: f32,   // In meters
+}
+
+impl Obstacle {
+    pub fn from_degrees(lat:f64, lon:f64, radius:f32, height:f32) -> Obstacle{
+        Obstacle{
+            coords: Point::from_degrees(lat, lon, 0f32),
+            radius: radius,
+            height: height
+        }
+    }
+
+    pub fn from_radians(lat:f64, lon:f64, radius:f32, height:f32) -> Obstacle{
+        Obstacle{
+            coords: Point::from_radians(lat, lon, 0f32),
+            radius: radius,
+            height: height
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -58,9 +77,9 @@ pub struct Plane {
 }
 
 impl Plane {
-    pub fn new(lat:f64, lon:f64, alt:f32) -> Plane {
+    pub fn new(location: Point) -> Plane {
         Plane {
-            location: Point::from_degrees(lat, lon, alt),
+            location: location,
             yaw: 0f32,
             pitch: 0f32,
             roll: 0f32,
@@ -68,6 +87,14 @@ impl Plane {
             groundspeed: 0f32,
             wind_dir: 0f32,
         }
+    }
+
+    pub fn from_degrees(lat:f64, lon:f64, alt:f32) -> Plane {
+        Plane::new(Point::from_degrees(lat, lon, alt))
+    }
+
+    pub fn from_radians(lat:f64, lon:f64, alt:f32) -> Plane {
+        Plane::new(Point::from_radians(lat, lon, alt))
     }
 }
 
@@ -85,6 +112,14 @@ impl Waypoint {
             location: location,
             radius: radius
         }
+    }
+
+    pub fn from_degrees(index: u32, lat: f64, lon: f64, alt: f32, radius: f32) -> Waypoint {
+        Waypoint::new(index, Point::from_degrees(lat, lon, alt), radius)
+    }
+
+    pub fn from_radians(index: u32, lat: f64, lon: f64, alt: f32, radius: f32) -> Waypoint {
+        Waypoint::new(index, Point::from_radians(lat, lon, alt), radius)
     }
 
     pub fn extend(&self, mut location: Point, alt: f32) -> Waypoint {

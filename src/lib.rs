@@ -249,10 +249,10 @@ impl PathFinder {
             None => return &self.wp_list
         }
 
-        self.current_wp = next_wp;   // First destination if first waypoint
+        self.current_wp = next_wp;   // First destination is first waypoint
         current_loc = self.current_wp.location;
         self.adjust_path(plane.location, current_loc);
-        self.wp_list.push_back(self.current_wp.clone());
+        // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
 
         loop {
             match wp_list.pop_front() {
@@ -266,7 +266,7 @@ impl PathFinder {
             if !self.adjust_path(current_loc, next_loc) {
                 break;
             }
-            self.wp_list.push_back(self.current_wp.clone());
+            // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
         }
         &self.wp_list
     }
@@ -358,150 +358,6 @@ impl PathFinder {
             self.open_heap.push(Rc::clone(&new_node));
         }
     }
-
-// Jump Point Search
-/*
-    // Find best path using the jump point search algorithm in combination with a*
-    pub fn adjust_path_jump_point(&mut self, plane: Plane) -> Option<Vec<Waypoint>> {
-        self.plane = plane;
-        self.open_heap = BinaryHeap::new();
-        self.open_set = HashSet::new();
-        self.close_list = HashSet::new();
-        self.end_node = self.wp_list[0].location.to_node(&self);
-        let start_node = plane.coords.to_node(&self);
-        let start_node = Rc::new(Node {
-            x: start_node.x,
-            y: start_node.y,
-            g_cost: 0f32,
-            f_cost: (((self.end_node.x-start_node.x).pow(2) +
-                (self.end_node.y-start_node.y).pow(2)) as f32).sqrt(),
-            parent: None
-        });
-        self.open_set.insert(Rc::clone(&start_node));
-        self.open_heap.push(Rc::clone(&start_node));
-
-        let mut current_node:Rc<Node>;
-
-        loop {
-            if let Some(node) = self.open_heap.pop() {
-                current_node = node;
-            } else {
-                break;
-            }
-            // println!("f_cost: {}", current_node.f_cost);
-            if *current_node == self.end_node {
-                return Some(self.generate_path(Rc::clone(&current_node)));
-            }
-            self.open_set.take(&current_node);
-            self.close_list.insert(Rc::clone(&current_node));
-
-            // Regular a* node discovery
-            self.jump(Rc::clone(&current_node));
-        }
-        None
-    }
-
-    fn jump(&mut self, current_node: Rc<Node>) {
-        if let Some(ref parent_node) = current_node.parent {
-            let mut x_dir = 1;
-            let mut y_dir = 1;
-            if current_node.x < parent_node.x {
-                x_dir = 0;
-            } else if current_node.x < parent_node.x {
-                x_dir = -1;
-            }
-            if current_node.y < parent_node.y {
-                y_dir = 0;
-            } else if current_node.y < parent_node.y {
-                y_dir = -1;
-            }
-
-            // Diagonal case
-            if x_dir != 0 && y_dir != 0 {
-                if self.obstacle_list.contains(&Node::new(current_node.x-x_dir, current_node.y)) {
-                    self.jump_forward(Rc::clone(&current_node), -x_dir, y_dir);
-                }
-                if self.obstacle_list.contains(&Node::new(current_node.x, current_node.y-y_dir)) {
-                    self.jump_forward(Rc::clone(&current_node), x_dir, -y_dir);
-                }
-            } else {
-                self.jump_forward(Rc::clone(&current_node), x_dir, y_dir);
-            }
-        } else {
-            // Case for root node, possibly overwrite with yaw in the future
-            for &(x_dir, y_dir) in DIR.into_iter() {
-                self.jump_forward(Rc::clone(&current_node), x_dir, y_dir);
-            }
-        }
-    }
-
-    // Discover nodes by jumping until forced neighbors are encountered
-    fn jump_forward(&mut self, current_node: Rc<Node>, x_dir: i32, y_dir: i32) {
-        let mut new_node = Node::clone(&current_node);
-        let mut valid_candidate = false;
-        new_node.advance(x_dir, y_dir);
-        while new_node != self.end_node {
-            println!("x: {}, y: {}, x_dir: {}, y_dir: {}", new_node.x, new_node.y, x_dir, y_dir);
-            // Diagonal exploration
-            if x_dir != 0 && y_dir != 0 {
-                if self.find_successor(&mut new_node, x_dir, 0) ||
-                  self.find_successor(&mut new_node, 0, y_dir) {
-                    valid_candidate = true;
-                    break;
-                }
-                new_node.advance(x_dir, y_dir);
-                if self.obstacle_list.contains(&new_node) || self.close_list.contains(&new_node) {
-                    break;
-                }
-                // Forced neightbors handler
-                if self.obstacle_list.contains(&Node::new(new_node.x-x_dir, new_node.y)) ||
-                 self.obstacle_list.contains(&Node::new(new_node.x, new_node.y-y_dir)) {
-                    valid_candidate = true;
-                    break;
-                }
-            } else {
-                if self.find_successor(&mut new_node, x_dir, y_dir) {
-                    valid_candidate = true;
-                    break;
-                }
-            }
-        }
-
-        if valid_candidate {
-            println!("open_set");
-            new_node.g_cost = (((new_node.x-current_node.x).pow(2) +
-                (new_node.y-current_node.y).pow(2)) as f32).sqrt();
-            new_node.f_cost = new_node.g_cost + (((self.end_node.x-new_node.x).pow(2) +
-                (self.end_node.y-new_node.y).pow(2)) as f32).sqrt();
-
-            new_node.parent = Some(Rc::clone(&current_node));
-            let new_node = Rc::new(new_node);
-            self.open_set.insert(Rc::clone(&new_node));
-            self.open_heap.push(Rc::clone(&new_node));
-        }
-    }
-
-    // WIP
-    // Vertical and horizontal exploration
-    // Return true if successor found, false otherwise
-    fn find_successor(&mut self, current_node: &mut Node, x_dir: i32, y_dir: i32) -> bool{
-        while *current_node != self.end_node {
-            current_node.advance(x_dir, y_dir);
-            // println!("x: {}, y: {}", current_node.x, current_node.y);
-            if self.obstacle_list.contains(current_node) {
-                // println!("x: {}, y: {}", current_node.x, current_node.y);
-                return false;
-            }
-            // Forced neighbors handler
-            if self.obstacle_list.contains(&Node::new(current_node.x + y_dir, current_node.y + x_dir)) ||
-            self.obstacle_list.contains(&Node::new(current_node.x - y_dir, current_node.y - x_dir)) {
-              return true;
-            }
-        }
-
-        true
-    }
-*/
 
     fn generate_path(&mut self, mut current_node: Rc<Node>, alt_diff: f32) {
         let mut previous_node;
