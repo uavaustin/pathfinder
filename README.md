@@ -1,4 +1,5 @@
 # Pathfinder
+[![Build Status](https://travis-ci.org/uavaustin/pathfinder.svg?branch=master)](https://travis-ci.org/uavaustin/pathfinder)
 
 pathfinder is a rust crate that adjusts a list of waypoints for a plane to avoid obstacles.  Given the plane position and the waypoints, the pathfinder will determine if there are any obstacles between waypoints and if so, attempt to add additional waypoints between them to avoid the obstacles.  Pathfinder currently runs on A* algorithm.
 
