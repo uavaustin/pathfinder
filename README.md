@@ -6,7 +6,7 @@ pathfinder is a rust crate that adjusts a list of waypoints for a plane to avoid
 
 Creating a new Pathfinder
 
-`let mut pathfinder = Pathfinder::new();`
+```let mut pathfinder = Pathfinder::new();```
 
 If not initialized, Pathfinder will not do anything.  Initialization requires a grid size which determines the speed and accuracy of the path and a list of flight zones.for initialization.  Larger grid size adjusts the path faster at the cost of being less accurate.  A valid flight zone is a list of at least three Points in order representing the zone.  Obstacles can be provided at initialization or added later.
 
@@ -27,7 +27,7 @@ let flyzone = vec!(vec!(
 ```
 
 Initialization without obstacles
-`pathfinder.init(5.0, flyzone, Vec::new());`
+```pathfinder.init(5.0, flyzone, Vec::new());```
 
 The pathfinder expects the list of waypoints to be represented by a LinkedList from the rust standard library and returns the adjusted path also as a LinkedList.
 
