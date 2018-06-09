@@ -5,7 +5,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::path::Path;
 
-impl PathFinder {
+impl Pathfinder {
     pub fn export_obstacle_list_to_file(&mut self)
     {
         let path = Path::new("obstacle_list_export.txt");

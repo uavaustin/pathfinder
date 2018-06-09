@@ -29,7 +29,7 @@ const EQUATORIAL_RADIUS:f64 = 63781370.0;
 const POLAR_RADIUS:f64 = 6356752.0;
 const RADIUS:f64 = 6371000.0;
 
-pub struct PathFinder {
+pub struct Pathfinder {
     initialized: bool,
 	grid_size: f32,   // In meters
 	buffer: f32,   // In meters
@@ -48,9 +48,9 @@ pub struct PathFinder {
     obstacle_found: bool
 }
 
-impl PathFinder {
-    pub fn new() -> PathFinder {
-        PathFinder {
+impl Pathfinder {
+    pub fn new() -> Pathfinder {
+        Pathfinder {
             initialized: false,
             grid_size: 1f32,
             buffer: 1f32,
@@ -73,7 +73,7 @@ impl PathFinder {
     pub fn init(&mut self, grid_size: f32, flyzones: Vec<Vec<Point>>, obstacles: Vec<Obstacle>) {
         self.grid_size = grid_size;
         self.buffer = grid_size;
-        self.origin = PathFinder::find_origin(&flyzones);
+        self.origin = Pathfinder::find_origin(&flyzones);
         self.fly_zones = flyzones;
         self.obstacles = obstacles;
         self.populate_map();
@@ -373,10 +373,6 @@ impl PathFinder {
         let current_alt = self.current_wp.location.alt();
         let alt_increment = alt_diff / current_node.depth as f32;
 
-        // Temp variable for debugging
-        // let mut waypoints = HashSet::new();
-        // let mut line = HashSet::new();
-
         if let Some(ref parent) = current_node.parent {
             x_dir = current_node.x - parent.x;
             y_dir = current_node.y - parent.y;
@@ -391,8 +387,6 @@ impl PathFinder {
             };
             new_x_dir = current_node.x - previous_node.x;
             new_y_dir = current_node.y - previous_node.y;
-            // let point = current_node.to_point(&self);
-            // println!("{:.5}, {:.5}", point.lat_degree(), point.lon_degree());
             if x_dir != new_x_dir || y_dir != new_y_dir {
                 x_dir = new_x_dir;
                 y_dir = new_y_dir;
@@ -408,21 +402,18 @@ impl PathFinder {
                         wp_cluster.y / wp_cluster_count
                     );
                     midpoint.depth = wp_cluster.depth / wp_cluster_count;
-                    // println!("mid-depth {}", midpoint.depth);
-                    // waypoints.remove(&last_wp);
+
                     let waypoint = self.current_wp.extend(
                         midpoint.to_point(&self),
                         current_alt - alt_increment * midpoint.depth as f32
                     );
                     self.wp_list.push_back(waypoint);
                     last_wp = Rc::new(midpoint);
-                    // waypoints.insert(Rc::clone(&last_wp));
                 } else {
                     initial_reached = true;
                     wp_cluster_count = 1;
                     wp_cluster = Node::new(current_node.x, current_node.y);
                     last_wp = Rc::clone(&current_node);
-                    // waypoints.insert(Rc::clone(&current_node));
                     let waypoint = self.current_wp.extend(
                         current_node.to_point(&self),
                         current_alt - alt_increment * current_node.depth as f32
@@ -430,39 +421,7 @@ impl PathFinder {
                     self.wp_list.push_back(waypoint);
                 }
             }
-            // else {
-            //     line.insert(Rc::clone(&current_node));
-            // }
         }
-        // self.wp_list.pop_back();
-
-        // Graphical display for debugging
-        /*
-        for y in 0 .. 50 {
-            print!("|");
-            for x in 0 .. 50 {
-                if waypoints.contains(&Node::new(x, y)) {
-                    print!("+");
-                    continue;
-                }
-                if line.contains(&Node::new(x, y)) {
-                    print!("*");
-                    continue;
-                }
-                if Node::new(x, y) == self.end_node {
-                    print!("E");
-                    continue;
-                }
-                if self.obstacle_list.contains(&Node::new(x, y)) {
-                    print!("X");
-                } else {
-                    print!(" ");
-                }
-            }
-            println!("|");
-        }
-        println!();
-        */
     }
 
     pub fn set_buffer(&mut self, new_buffer: f32) {
@@ -479,27 +438,6 @@ impl PathFinder {
         let y_diff: f64 = (first_node.y - second_node.y).pow(2) as f64;
         ((x_diff + y_diff).sqrt() * self.grid_size as f64).ceil() as i64
     }
-
-    // Likely useless
-    // fn distance_between_points(&mut self, first_point: Point, second_point: Point) -> i64
-    // {
-    //     let first_node : Node = first_point.to_node(&self);
-    //     let second_node : Node = second_point.to_node(&self);
-    //     return distance_between_nodes(first_node, second_node)
-    // }
-    //
-    // fn is_waypoint_inside_obstacle(&mut self, waypoint: Waypoint, obstacle_list: Vec<Obstacle>) -> bool
-    // {
-    //     for obstacle in &obstacle_list
-    //     {
-    //         if self.distance_between_points(waypoint.location, obstacle.coords) <= (waypoint.radius as i64)
-    //         {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
-
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         self.obstacles = obstacle_list;
@@ -523,107 +461,42 @@ impl PathFinder {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn conversion_test() {
-        let flight_zone = vec!(
-        //  Point::from_degrees(30.32247, -97.6009),
-        //  Point::from_degrees(30.32307, -97.6005),
-        //  Point::from_degrees(30.32373, -97.6012),
-        //  Point::from_degrees(30.32366, -97.6019),
-        //  Point::from_degrees(30.32321, -97.6025),
-        Point::from_degrees(30.32521, -97.60230),
-        Point::from_degrees(30.32466, -97.59856),
-        Point::from_degrees(30.32107, -97.60032),
-        Point::from_degrees(30.32247, -97.60325),
-        Point::from_degrees(30.32473, -97.60410)
+    fn origin_test() {
+        let mut pathfinder = Pathfinder::new();
+        pathfinder.init(
+            1.0,
+            vec!(vec!(
+                Point::from_degrees(50.06638888888889,-5.714722222222222, 0f32),
+                Point::from_degrees(58.64388888888889,-5.714722222222222, 0f32),
+                Point::from_degrees(50.06638888888889,-3.0700000000000003, 0f32)
+            )),
+            Vec::new()
         );
-        let path_finder1 = PathFinder::new(1.0, flight_zone);
-        let test_points = vec!(
-         Point::from_degrees(30.32247, -97.6009),
-         Point::from_degrees(30.32307, -97.6005),
-         Point::from_degrees(30.32373, -97.6012),
-         Point::from_degrees(30.32366, -97.6019),
-         Point::from_degrees(30.32321, -97.6025),
-         Point::from_degrees(30.32521, -97.60230),
-         Point::from_degrees(30.32466, -97.59856),
-         Point::from_degrees(30.32107, -97.60032),
-         Point::from_degrees(30.32247, -97.60325),
-         Point::from_degrees(30.32473, -97.60410)
-        );
-        for point in test_points {
-            let node1 = point.to_node(&path_finder1);
-            let point1 = node1.to_point(&path_finder1);
-            // print!("{:.5}, {:.5} => ", point.lat_degree(), point.lon_degree());
-            println!("{:.5}, {:.5}", point1.lat_degree(), point1.lon_degree());
-            assert!(point.lat_degree()-point1.lat_degree() < 0.001);
-            assert!(point.lon_degree()-point1.lon_degree() < 0.001);
-        }
+        let origin = pathfinder.get_origin();
+        println!("Origin: {}, {}", origin.lat_degree(), origin.lon_degree());
+        assert_eq!(origin.lat_degree(), 50.06638888888889);
+        assert_eq!(origin.lon_degree(), -5.714722222222222);
     }
 
     #[test]
-    fn hav_test() {
-        println!("---------------");
-        println!("test1");
-        let path_finder1 = PathFinder::new(1.0, vec!(
-            Point::from_degrees(50.06638888888889,-5.714722222222222),
-            Point::from_degrees(58.64388888888889,-5.714722222222222),
-            Point::from_degrees(50.06638888888889,-3.0700000000000003)
-        ));
-        println!("Origin: {}, {}", path_finder1.origin.lat(), path_finder1.origin.lon());
-        for node in path_finder1.obstacle_list {
-            println!("x: {} y: {}", node.x, node.y);
-        }
-    }
-
-    #[test]
-    fn hav_test_draw() {
-        println!("test_draw");
-        let flight_zone = vec!(
-         Point::from_degrees(30.32247, -97.6009),
-         Point::from_degrees(30.32307, -97.6005),
-         Point::from_degrees(30.32373, -97.6012),
-         Point::from_degrees(30.32366, -97.6019),
-         Point::from_degrees(30.32321, -97.6025),
+    fn irregular_origin_test() {
+        let mut pathfinder = Pathfinder::new();
+        pathfinder.init(
+            1.0,
+            vec!(vec!(
+                Point::from_degrees(30.32276, -97.60398, 0f32),
+                Point::from_degrees(30.32173, -97.60008, 0f32),
+                Point::from_degrees(30.32082, -97.60368, 0f32)
+            )),
+            Vec::new()
         );
-        let path_finder1 = PathFinder::new(1.0, flight_zone);
-        path_finder1.draw(0, 200, 0, 200);
-    }
-
-    #[test]
-    fn export_obstacle_list_to_file_test()
-    {
-        let flight_zone = vec!(
-         Point::from_degrees(30.32247, -97.6009),
-         Point::from_degrees(30.32307, -97.6005),
-         Point::from_degrees(30.32373, -97.6012),
-         Point::from_degrees(30.32366, -97.6019),
-         Point::from_degrees(30.32321, -97.6025),
-        );
-        let mut path_finder1 = PathFinder::new(1.0, flight_zone);
-        path_finder1.export_obstacle_list_to_file();
-    }
-
-    #[test]
-    fn is_waypoint_inside_obstacle()
-    {
-        let flight_zone = vec!(
-         Point::from_degrees(30.32247, -97.6009),
-         Point::from_degrees(30.32307, -97.6005),
-         Point::from_degrees(30.32373, -97.6012),
-         Point::from_degrees(30.32366, -97.6019),
-         Point::from_degrees(30.32321, -97.6025),
-        );
-        let obstacles = vec!(
-            Obstacle{coords: Point::from_degrees(30.32374, -97.60232), radius: 120.0, height: 1.0}
-        );
-        let point : Point = Point::from_degrees(31.32374, -97.60232);
-        let mut path_finder1 = PathFinder::new(1.0, flight_zone);
-        let waypoint : Waypoint = Waypoint::new(point);
-        println!("{}",path_finder1.is_waypoint_inside_obstacle(waypoint, obstacles));
+        let origin = pathfinder.get_origin();
+        println!("Origin: {}, {}", origin.lat_degree(), origin.lon_degree());
+        assert_eq!(origin.lat_degree(), 30.32082);
+        assert_eq!(origin.lon_degree(), -97.60398);
     }
 }
-*/

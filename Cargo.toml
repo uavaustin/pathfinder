@@ -1,10 +1,11 @@
 [package]
-name = "Obstacle-Path-Finder"
+name = "pathfinder"
 version = "0.0.0"
 authors = ["UAV Austin <uavaustin@gmail.com>"]
 license = "MIT"
 
 [badges]
-travis-ci = { repository = "uavaustin/Obstacle-Path-Finder", branch = "master" }
+travis-ci = { repository = "uavaustin/pathfinder", branch = "master" }
 
-[dependencies]
+[dev-dependencies]
+rand = "0.5.1"
