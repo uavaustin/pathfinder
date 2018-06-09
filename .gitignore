@@ -1,7 +1,3 @@
-node_modules/
-
-build/
-
-.npm
-*.log
-npm-debug.log*
+target/
+**/*.rs.bk
+Cargo.lock
