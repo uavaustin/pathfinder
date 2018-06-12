@@ -7,5 +7,13 @@ license = "MIT"
 [badges]
 travis-ci = { repository = "uavaustin/pathfinder", branch = "master" }
 
+[dependencies]
+conrod = { version = "0.60.0", features = ["glium", "winit"], optional = true }
+
 [dev-dependencies]
 rand = "0.5.1"
+
+# debug flag
+[features]
+# default = ["debug"]
+debug = ["conrod"]
