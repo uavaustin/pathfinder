@@ -160,7 +160,7 @@ impl Debugger {
         let res = awk_cmd.wait_with_output()?.stdout;
         let res_str = match str::from_utf8(&res) {
             Ok(res) => res,
-            Err(err) => return Err(io::Error::last_os_error()),
+            Err(_) => return Err(io::Error::last_os_error()),
         };
         let resolutions: Vec<&str> = res_str.trim().split('x').collect();
         match (

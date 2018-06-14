@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![allow(unused_variables)]
 
 #[cfg(feature = "debug")]
 #[macro_use]
@@ -247,67 +246,79 @@ impl Pathfinder {
         self.generate_obstacles();
     }
 
+    fn draw_line(
+        &mut self,
+        mut indep: f32,
+        mut dep: f32,
+        indep_goal: f32,
+        dep_goal: f32,
+        slope: f32,
+        invert: bool,
+    ) {
+        const INCREMENT: f32 = 0.1;
+        if indep > indep_goal {
+            while indep > indep_goal && !(indep == indep_goal && dep == dep_goal) {
+                indep -= INCREMENT;
+                dep -= INCREMENT * slope;
+                let buffer;
+                if invert {
+                    self.obstacle_list
+                        .insert(Node::new(dep.floor() as i32, indep.floor() as i32));
+                    buffer = Node::new(dep as i32, indep as i32 + 1);
+                } else {
+                    self.obstacle_list
+                        .insert(Node::new(indep.floor() as i32, dep.floor() as i32));
+                    buffer = Node::new(indep as i32 + 1, dep as i32);
+                }
+                self.obstacle_list.insert(buffer);
+            }
+        } else {
+            while indep < indep_goal && !(indep == indep_goal && dep == dep_goal) {
+                indep += INCREMENT;
+                dep += INCREMENT * slope;
+                let buffer;
+                if invert {
+                    self.obstacle_list
+                        .insert(Node::new(dep.floor() as i32, indep.floor() as i32));
+                    buffer = Node::new(dep as i32, indep as i32 - 1);
+                } else {
+                    self.obstacle_list
+                        .insert(Node::new(indep.floor() as i32, dep.floor() as i32));
+                    buffer = Node::new(indep as i32 - 1, dep as i32);
+                }
+                self.obstacle_list.insert(buffer);
+            }
+        }
+    }
+
     fn generate_fly_zone(&mut self) {
         for i in 0..self.fly_zones.len() {
-            let flyzone_points = &self.fly_zones[i];
-            let first_node: Node = flyzone_points[0].to_node(&self);
+            let flyzone_points = self.fly_zones[i].clone();
             let mut pre_node: Node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
             let mut end_node;
-            let mut index = 0;
 
             for end_point in flyzone_points {
                 end_node = end_point.to_node(&self);
-                let point = end_node.to_point(&self);
 
-                index += 1;
-                let mut cur_x = pre_node.x;
-                let mut cur_y = pre_node.y;
-
-                if pre_node.x == end_node.x {
-                    while cur_y != end_node.y {
-                        //AddPoint cur_x, cur_x
-                        self.obstacle_list.insert(Node::new(cur_x, cur_y));
-
-                        if pre_node.y > end_node.y {
-                            cur_y -= 1;
-                        } else {
-                            cur_y += 1;
-                        }
-                    }
+                let slope = (end_node.y - pre_node.y) as f32 / (end_node.x - pre_node.x) as f32;
+                if slope.abs() <= 1f32 {
+                    self.draw_line(
+                        pre_node.x as f32,
+                        pre_node.y as f32,
+                        end_node.x as f32,
+                        end_node.y as f32,
+                        slope,
+                        false,
+                    );
                 } else {
-                    let top: f32 = (end_node.y - pre_node.y) as f32;
-                    let bot: f32 = (end_node.x - pre_node.x) as f32;
-                    let slope: f32 = top / bot;
-                    let mut cur_x_f32: f32 = cur_x as f32;
-                    let mut cur_y_f32: f32 = cur_y as f32;
-
-                    while ((cur_x >= end_node.x && pre_node.x > end_node.x)
-                        || (cur_x <= end_node.x && pre_node.x < end_node.x))
-                        && !(cur_x == end_node.x && cur_y == end_node.y)
-                    {
-                        if pre_node.x > end_node.x {
-                            cur_x_f32 = cur_x_f32 + (-1f32 * 0.1);
-                            cur_y_f32 = cur_y_f32 + (-1f32 * 0.1 * slope);
-                        } else {
-                            cur_x_f32 = cur_x_f32 + 0.1;
-                            cur_y_f32 = cur_y_f32 + (0.1f32 * slope);
-                        }
-
-                        if cur_x != cur_x_f32.floor() as i32 || cur_y != cur_y_f32.floor() as i32 {
-                            cur_x = cur_x_f32.floor() as i32;
-                            cur_y = cur_y_f32.floor() as i32;
-
-                            self.obstacle_list.insert(Node::new(cur_x, cur_y));
-
-                            if pre_node.x > end_node.x {
-                                let add_buffer: Node = Node::new(cur_x + 1, cur_y);
-                                self.obstacle_list.insert(add_buffer);
-                            } else {
-                                let add_buffer: Node = Node::new(cur_x - 1, cur_y);
-                                self.obstacle_list.insert(add_buffer);
-                            }
-                        }
-                    }
+                    self.draw_line(
+                        pre_node.y as f32,
+                        pre_node.x as f32,
+                        end_node.y as f32,
+                        end_node.x as f32,
+                        1f32 / slope,
+                        true,
+                    );
                 }
                 pre_node = end_node;
             }
@@ -484,15 +495,23 @@ impl Pathfinder {
             let dy = (self.end_node.y - new_node.y).abs() as f64;
 
             let direct_path_modifier = cross_product(
-                node_vector(&new_node, &self.end_node),
                 node_vector(&self.start_node, &self.end_node),
+                node_vector(&new_node, &self.end_node),
             ).abs();
             // Signs flipped because heading is start -> end whereas path backtracks
             // (except flipping start and end doesn't work??? WTF geometry????)
             // #TODO: figure out how the math is working
+            /*
+            // Experimental vector normalization using matrices
+            let (v_x, v_y) = node_vector(&new_node, &self.end_node);
+            let cross = cross_product(self.heading, (v_x, v_y));
+            let dot = dot_product(self.heading, (v_x, v_y));
+            let dir_vector = (dot * v_x - cross * v_y, cross * v_x + dot * v_y);
+            let heading_modifier = cross_product(self.heading, dir_vector).abs();
+            */
             let heading_modifier =
-                if dot_product(node_vector(&new_node, &self.end_node), self.heading) < 0f32 {
-                    cross_product(node_vector(&new_node, &self.end_node), self.heading).abs()
+                if dot_product(self.heading, node_vector(&new_node, &self.end_node)) < 0f32 {
+                    cross_product(self.heading, node_vector(&new_node, &self.end_node)).abs()
                 } else {
                     node_distance(&new_node, &self.end_node)
                 };
@@ -564,11 +583,11 @@ impl Pathfinder {
                 if node_distance(&current_node, &last_critical_node) * self.grid_size
                     < 2f32 * self.current_wp.radius
                 {
-                    let old = wp_list.pop_back();
+                    let _old = wp_list.pop_back();
 
                     #[cfg(feature = "debug")]
                     DEBUGGER.with(|debugger| {
-                        if let Some(old) = old {
+                        if let Some(_old) = _old {
                             debugger.borrow_mut().remove_from_wp(&last_critical_node);
                         }
                     });
