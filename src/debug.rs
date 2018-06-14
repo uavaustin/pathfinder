@@ -9,7 +9,7 @@ use node::Node;
 
 use super::conrod::backend::glium::glium;
 use super::conrod::backend::glium::glium::Surface;
-use super::conrod::{self, color, widget, Positionable, Sizeable, Widget};
+use super::conrod::{self, color, widget, Positionable, Widget};
 
 pub struct Debugger {
     width: u32,
@@ -66,7 +66,7 @@ impl Debugger {
         let height = (self.height * 10).min(resolution.1);
 
         // Build the window.
-        let events_loop = glium::glutin::EventsLoop::new();
+        let mut events_loop = glium::glutin::EventsLoop::new();
         let window = glium::glutin::WindowBuilder::new()
             .with_title("Canvas")
             .with_dimensions(width, height);
@@ -88,27 +88,62 @@ impl Debugger {
         // Generate a unique `WidgetId` for each widget.
         widget_ids! {
             struct Ids {
-                canvas,
                 matrix
             }
         }
 
         // Instantiate the generated list of widget identifiers.
         let ids = &mut Ids::new(ui.widget_id_generator());
+        let mut events = Vec::new();
 
         'main: loop {
-            {
-                let ui_cell = &mut ui.set_widgets();
-                // Instantiate all widgets in the GUI.
-                widget::Canvas::new().set(ids.canvas, ui_cell);
+            events.clear();
+            // Event handler
+            events_loop.poll_events(|event| {
+                events.push(event);
+            });
 
-                let canvas_wh = ui_cell.wh_of(ids.canvas).unwrap();
+            // If there are no new events, wait for one.
+            if events.is_empty() {
+                events_loop.run_forever(|event| {
+                    events.push(event);
+                    glium::glutin::ControlFlow::Break
+                });
+            }
+
+            for event in events.drain(..) {
+                // Break from the loop upon `Escape` or closed window.
+                match event.clone() {
+                    glium::glutin::Event::WindowEvent { event, .. } => match event {
+                        glium::glutin::WindowEvent::Closed
+                        | glium::glutin::WindowEvent::KeyboardInput {
+                            input:
+                                glium::glutin::KeyboardInput {
+                                    virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
+                                    ..
+                                },
+                            ..
+                        } => break 'main,
+                        _ => (),
+                    },
+                    _ => (),
+                };
+                // Use the `winit` backend feature to convert the winit event to a conrod input.
+                let input = match conrod::backend::winit::convert_event(event, &display) {
+                    None => continue,
+                    Some(input) => input,
+                };
+
+                // Handle the input with the `Ui`.
+                ui.handle_event(input);
+
+                let ui = &mut ui.set_widgets();
+                // Instantiate all widgets in the GUI.
                 let mut elements = widget::Matrix::new(self.width as usize, self.height as usize)
-                    .w_h(canvas_wh[0], canvas_wh[1])
                     .cell_padding(0.2f64, 0.2f64)
-                    .mid_top_of(ids.canvas)
-                    .set(ids.matrix, ui_cell);
-                while let Some(elem) = elements.next(ui_cell) {
+                    .middle_of(ui.window)
+                    .set(ids.matrix, ui);
+                while let Some(elem) = elements.next(ui) {
                     let cell;
                     let node = Node::new(elem.col as i32, self.height as i32 - elem.row as i32);
 
@@ -124,7 +159,7 @@ impl Debugger {
                         cell = widget::Rectangle::fill_with([elem.w, elem.h], color::WHITE);
                     }
 
-                    elem.set(cell, ui_cell);
+                    elem.set(cell, ui);
                 }
             }
 
