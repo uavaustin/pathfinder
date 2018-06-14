@@ -1,7 +1,9 @@
 // Adapted from conrod/example/canvas.rs
 // https://github.com/PistonDevelopers/conrod/blob/master/examples/canvas.rs
-
 use std::collections::HashSet;
+use std::io::{self, Read, Write};
+use std::process::{Command, Stdio};
+use std::str;
 
 use node::Node;
 
@@ -56,21 +58,25 @@ impl Debugger {
     }
 
     pub fn draw(&self) {
-        const WIDTH: u32 = 1600;
-        const HEIGHT: u32 = 1000;
+        const DEFAULT_WIDTH: u32 = 1920;
+        const DEFAULT_HEIGHT: u32 = 1080;
+        let resolution = Debugger::get_resolution().unwrap_or((DEFAULT_WIDTH, DEFAULT_HEIGHT));
+
+        let width = (self.width * 10).min(resolution.0);
+        let height = (self.height * 10).min(resolution.1);
 
         // Build the window.
         let events_loop = glium::glutin::EventsLoop::new();
         let window = glium::glutin::WindowBuilder::new()
             .with_title("Canvas")
-            .with_dimensions(WIDTH, HEIGHT);
+            .with_dimensions(width, height);
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
             .with_multisampling(4);
         let display = glium::Display::new(window, context, &events_loop).unwrap();
 
         // construct our `Ui`.
-        let mut ui = conrod::UiBuilder::new([WIDTH as f64, HEIGHT as f64]).build();
+        let mut ui = conrod::UiBuilder::new([width as f64, height as f64]).build();
 
         // A type used for converting `conrod::render::Primitives` into `Command`s that can be used
         // for drawing to the glium `Surface`.
@@ -104,7 +110,7 @@ impl Debugger {
                     .set(ids.matrix, ui_cell);
                 while let Some(elem) = elements.next(ui_cell) {
                     let cell;
-                    let node = Node::new(elem.row as i32, elem.col as i32);
+                    let node = Node::new(elem.col as i32, self.height as i32 - elem.row as i32);
 
                     if self.obstacles.contains(&node) {
                         cell = widget::Rectangle::fill_with([elem.w, elem.h], color::BLACK);
@@ -130,6 +136,39 @@ impl Debugger {
                 renderer.draw(&display, &mut target, &image_map).unwrap();
                 target.finish().unwrap();
             }
+        }
+    }
+
+    // #TODO use custom error wrapper for cleaner error handling
+    fn get_resolution() -> Result<(u32, u32), io::Error> {
+        let mut xdpyinfo_cmd = Command::new("xdpyinfo").stdout(Stdio::piped()).spawn()?;
+
+        let mut awk_cmd = Command::new("awk")
+            .arg("/dimensions/{print $2}")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()?;
+
+        if let (Some(stdout), Some(stdin)) = (&mut xdpyinfo_cmd.stdout, &mut awk_cmd.stdin) {
+            let mut buf: Vec<u8> = Vec::new();
+            stdout.read_to_end(&mut buf)?;
+            stdin.write_all(&buf)?;
+        } else {
+            return Err(io::Error::last_os_error());
+        }
+
+        let res = awk_cmd.wait_with_output()?.stdout;
+        let res_str = match str::from_utf8(&res) {
+            Ok(res) => res,
+            Err(err) => return Err(io::Error::last_os_error()),
+        };
+        let resolutions: Vec<&str> = res_str.trim().split('x').collect();
+        match (
+            str::parse::<u32>(resolutions[0]),
+            str::parse::<u32>(resolutions[1]),
+        ) {
+            (Ok(w), Ok(h)) => Ok((w, h)),
+            _ => Err(io::Error::last_os_error()),
         }
     }
 }

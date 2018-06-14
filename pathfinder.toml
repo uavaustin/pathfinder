@@ -1,0 +1,2 @@
+direct_path_modifier_weight = 0.001
+heading_modifier_weight = 0.35

@@ -1,5 +1,6 @@
 use super::node::Node;
 use super::{std, Pathfinder, RADIUS};
+use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point {
@@ -8,16 +9,22 @@ pub struct Point {
     alt: f32, //In meters
 }
 
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({:.5}, {:.5})", self.lat_degree(), self.lon_degree())
+    }
+}
+
 impl Point {
-    pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Point {
+    pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
         const FACTOR: f64 = std::f64::consts::PI / 180f64;
         Point {
-            lat: lat * FACTOR,
-            lon: lon * FACTOR,
+            lat: lat.to_radians(),
+            lon: lon.to_radians(),
             alt: alt,
         }
     }
-    pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Point {
+    pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Self {
         Point {
             lat: lat,
             lon: lon,
@@ -59,7 +66,7 @@ pub struct Obstacle {
 }
 
 impl Obstacle {
-    pub fn from_degrees(lat: f64, lon: f64, radius: f32, height: f32) -> Obstacle {
+    pub fn from_degrees(lat: f64, lon: f64, radius: f32, height: f32) -> Self {
         Obstacle {
             coords: Point::from_degrees(lat, lon, 0f32),
             radius: radius,
@@ -67,7 +74,7 @@ impl Obstacle {
         }
     }
 
-    pub fn from_radians(lat: f64, lon: f64, radius: f32, height: f32) -> Obstacle {
+    pub fn from_radians(lat: f64, lon: f64, radius: f32, height: f32) -> Self {
         Obstacle {
             coords: Point::from_radians(lat, lon, 0f32),
             radius: radius,
@@ -76,36 +83,45 @@ impl Obstacle {
     }
 }
 
+// #TODO: standarize location name
+// #TODO: fully implement builder pattern for greater flexibility
 #[derive(Clone, Copy, Debug)]
 pub struct Plane {
     pub location: Point,
-    pub yaw: f32,         // In degrees
-    pub pitch: f32,       // In degrees
-    pub roll: f32,        // In degrees
-    pub airspeed: f32,    // In meters per second
-    pub groundspeed: f32, // In meters per second
-    pub wind_dir: f32,    // In degrees
+    pub yaw: f32,         // In degrees, -1 if not provided
+    pub pitch: f32,       // In degrees, -1 if not provided
+    pub roll: f32,        // In degrees, -1 if not provided
+    pub airspeed: f32,    // In meters per second, -1 if not provided
+    pub groundspeed: f32, // In meters per second, -1 if not provided
+    pub wind_dir: f32,    // In degrees, -1 if not provided
 }
 
 impl Plane {
-    pub fn new(location: Point) -> Plane {
+    pub fn new(location: Point) -> Self {
         Plane {
             location: location,
-            yaw: 0f32,
-            pitch: 0f32,
-            roll: 0f32,
-            airspeed: 0f32,
-            groundspeed: 0f32,
-            wind_dir: 0f32,
+            yaw: -1f32,
+            pitch: -1f32,
+            roll: -1f32,
+            airspeed: -1f32,
+            groundspeed: -1f32,
+            wind_dir: -1f32,
         }
     }
 
-    pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Plane {
+    pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
         Plane::new(Point::from_degrees(lat, lon, alt))
     }
 
-    pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Plane {
+    pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Self {
         Plane::new(Point::from_radians(lat, lon, alt))
+    }
+
+    pub fn yaw(mut self, yaw: f32) -> Self {
+        if yaw >= 0f32 && yaw < 360f32 {
+            self.yaw = yaw;
+        }
+        self
     }
 }
 
@@ -117,7 +133,7 @@ pub struct Waypoint {
 }
 
 impl Waypoint {
-    pub fn new(index: u32, location: Point, radius: f32) -> Waypoint {
+    pub fn new(index: u32, location: Point, radius: f32) -> Self {
         Waypoint {
             index: index,
             location: location,
@@ -125,15 +141,15 @@ impl Waypoint {
         }
     }
 
-    pub fn from_degrees(index: u32, lat: f64, lon: f64, alt: f32, radius: f32) -> Waypoint {
+    pub fn from_degrees(index: u32, lat: f64, lon: f64, alt: f32, radius: f32) -> Self {
         Waypoint::new(index, Point::from_degrees(lat, lon, alt), radius)
     }
 
-    pub fn from_radians(index: u32, lat: f64, lon: f64, alt: f32, radius: f32) -> Waypoint {
+    pub fn from_radians(index: u32, lat: f64, lon: f64, alt: f32, radius: f32) -> Self {
         Waypoint::new(index, Point::from_radians(lat, lon, alt), radius)
     }
 
-    pub fn extend(&self, mut location: Point, alt: f32) -> Waypoint {
+    pub fn extend(&self, mut location: Point, alt: f32) -> Self {
         location.alt = alt;
         Waypoint::new(self.index, location, self.radius)
     }

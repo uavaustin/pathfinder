@@ -26,7 +26,7 @@ fn test0() {
 
     let mut pathfinder = Pathfinder::new();
     pathfinder.init(5.0, flyzone, obstacles);
-    let plane = Plane::from_degrees(30.32298, -97.60310, 100.0);
+    let plane = Plane::from_degrees(30.32298, -97.60310, 100.0).yaw(170f32);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());
     output_result(waypoints, result, plane);
 }

@@ -47,7 +47,7 @@ impl Ord for Node {
 }
 
 impl Node {
-    pub fn new(x: i32, y: i32) -> Node {
+    pub fn new(x: i32, y: i32) -> Self {
         Node {
             x: x,
             y: y,

@@ -50,3 +50,10 @@ let result = pathfinder.get_adjust_path(
     Plane::from_degrees(30.32298, -97.60310, 100.0),
     waypoints);
 ```      
+
+## Configuring
+The weights used to calculate path preferences can be configured. Pathfinder will first look for environment variables.  If not found, it will search for a config file instead.  You can create a TOML file called `pathfinder.toml` in the project directory root and Pathfinder will use the weights in the configuration to calculate paths. **Parameters in toml file MUST be a float (i.e have a decimal point) or it will be ignored.**
+
+### Parameters
+* `direct_path_modifier_weight` - high value makes Pathfinder prefer direct paths
+* `heading_modifier_weight` - high value makes Pathfinder prefer paths that maintains current heading
