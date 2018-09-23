@@ -16,8 +16,10 @@ use toml::Value;
 
 mod node;
 mod obj;
+mod util;
 use node::*;
 pub use obj::*;
+use util::*;
 
 #[cfg(feature = "debug")]
 #[path = ""]
@@ -61,18 +63,18 @@ const DEFAULT_HEADING_MODIFIER_WEIGHT: f64 = 0.15;
 #[allow(non_snake_case)]
 pub struct Pathfinder {
     // exposed API
-    grid_size: f32, // In meters
-    buffer: f32,    // In meters
-    start_time: SystemTime,
+    grid_size: f32,             // In meters
+    buffer: f32,                // In meters
     max_process_time: Duration, // In seconds
-    fly_zones: Vec<Vec<Point>>,
+    flyzones: Vec<Vec<Point>>,
     obstacles: Vec<Obstacle>,
-    wp_list: LinkedList<Waypoint>,
     // private
     initialized: bool,
+    start_time: SystemTime,
     origin: Point,
     heading: (f32, f32),
     current_wp: Waypoint,
+    wp_list: LinkedList<Waypoint>,
     obstacle_list: HashSet<Node>,
     start_node: Node,
     end_node: Node,
@@ -87,23 +89,6 @@ pub struct Pathfinder {
 }
 
 // utility functions
-#[inline]
-fn cross_product(v: (f32, f32), u: (f32, f32)) -> f32 {
-    v.0 * u.1 - u.0 * v.1
-}
-#[inline]
-fn node_vector(v: &Node, u: &Node) -> (f32, f32) {
-    ((u.x - v.x) as f32, (u.y - v.y) as f32)
-}
-#[inline]
-fn dot_product(v: (f32, f32), u: (f32, f32)) -> f32 {
-    v.0 * u.0 + v.1 * u.1
-}
-#[inline]
-fn node_distance(v: &Node, u: &Node) -> f32 {
-    let (dx, dy) = node_vector(v, u);
-    dx.hypot(dy)
-}
 fn load_config() -> Result<String, Box<std::error::Error>> {
     let mut p = env::current_dir()?;
     p.push(CFG_FILE_NAME);
@@ -155,7 +140,7 @@ impl Pathfinder {
             buffer: 1f32,
             start_time: SystemTime::now(),
             max_process_time: Duration::from_secs(10u64),
-            fly_zones: Vec::new(),
+            flyzones: Vec::new(),
             obstacles: Vec::new(),
             wp_list: LinkedList::new(),
             // private
@@ -180,7 +165,7 @@ impl Pathfinder {
         self.grid_size = grid_size;
         self.buffer = grid_size.max(MIN_BUFFER);
         self.origin = Pathfinder::find_origin(&flyzones);
-        self.fly_zones = flyzones;
+        self.flyzones = flyzones;
         self.obstacles = obstacles;
         self.populate_map();
         self.initialized = true;
@@ -214,11 +199,13 @@ impl Pathfinder {
         let mut max_lon = 0f64;
         let mut lon = min_lon;
 
+        assert!(flyzones.len() > 0, "Require at least one flyzone");
         for i in 0..flyzones.len() {
             let flyzone_points = &flyzones[i];
-            if flyzone_points.len() < 3 {
-                panic!("Require at least 3 points to construct fly zone.");
-            }
+            assert!(
+                flyzone_points.len() > 2,
+                "Require at least 3 points to construct fly zone."
+            );
 
             for point in flyzone_points {
                 if point.lat() < min_lat {
@@ -292,8 +279,8 @@ impl Pathfinder {
     }
 
     fn generate_fly_zone(&mut self) {
-        for i in 0..self.fly_zones.len() {
-            let flyzone_points = self.fly_zones[i].clone();
+        for i in 0..self.flyzones.len() {
+            let flyzone_points = self.flyzones[i].clone();
             let mut pre_node: Node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
             let mut end_node;
 
@@ -358,6 +345,10 @@ impl Pathfinder {
         let mut current_loc: Point;
         let mut next_loc: Point;
 
+        #[cfg(feature = "debug")]
+        DEBUGGER.with(|debugger| {
+            debugger.borrow().draw();
+        });
         // First destination is first waypoint
         match wp_list.pop_front() {
             Some(wp) => self.current_wp = wp,
@@ -415,8 +406,8 @@ impl Pathfinder {
         self.open_heap = BinaryHeap::new();
         self.open_set = HashSet::new();
         self.close_list = HashSet::new();
-        self.start_node = end.to_node(&self);
-        self.end_node = start.to_node(&self);
+        self.start_node = start.to_node(&self);
+        self.end_node = end.to_node(&self);
         self.obstacle_found = false;
 
         let dx = (self.end_node.x - self.start_node.x).abs();
@@ -491,34 +482,45 @@ impl Pathfinder {
                 }
             }
 
-            let dx = (self.end_node.x - new_node.x).abs() as f64;
-            let dy = (self.end_node.y - new_node.y).abs() as f64;
+            let v = node_vector(&new_node, &self.end_node);
+            let (dx, dy) = (v.0.abs() as f64, v.1.abs() as f64);
+            let base_f_cost = dx + dy + (SQRT_2 - 2f64 * UNIT_COST) * dx.min(dy);
 
-            let direct_path_modifier = cross_product(
-                node_vector(&self.start_node, &self.end_node),
-                node_vector(&new_node, &self.end_node),
-            ).abs();
+            let direct_path_modifier =
+                cross_product(node_vector(&self.start_node, &self.end_node), v).abs();
             // Signs flipped because heading is start -> end whereas path backtracks
             // (except flipping start and end doesn't work??? WTF geometry????)
             // #TODO: figure out how the math is working
             /*
-            // Experimental vector normalization using matrices
-            let (v_x, v_y) = node_vector(&new_node, &self.end_node);
-            let cross = cross_product(self.heading, (v_x, v_y));
-            let dot = dot_product(self.heading, (v_x, v_y));
-            let dir_vector = (dot * v_x - cross * v_y, cross * v_x + dot * v_y);
-            let heading_modifier = cross_product(self.heading, dir_vector).abs();
+                Experimental vector normalization using matrices
+                #BUG: should not be using self.heading as it is not an accurate representation
+                    of the heading of the node
+                    Solution 1: use immediate parent
+                    Solution 2: trace back to last critical node
+                        - Memoizing vs dynamic traceback
+                    currently using solution 1
             */
-            let heading_modifier =
-                if dot_product(self.heading, node_vector(&new_node, &self.end_node)) < 0f32 {
-                    cross_product(self.heading, node_vector(&new_node, &self.end_node)).abs()
-                } else {
-                    node_distance(&new_node, &self.end_node)
-                };
+            let current_heading = match current_node.parent {
+                Some(ref parent) => node_vector(&parent, &current_node),
+                None => self.heading,
+            };
+            println!("current heading: {:?}", current_heading);
+            let dir_vector = halve_vector(current_heading, (x_offset as f32, y_offset as f32));
+            println!("offset: {:?}", (x_offset, y_offset));
+            println!("dir vector: {:?}", dir_vector);
+            let heading_modifier = cross_product(current_heading, dir_vector).abs();
+            println!("heading modifier: {:?}\n", heading_modifier);
+            //*/
+            // let heading_modifier =
+            // if dot_product(self.heading, node_vector(&new_node, &self.end_node)) < 0f32 {
+            //     cross_product(self.heading, node_vector(&new_node, &self.end_node)).abs()
+            // } else {
+            //     node_distance(&new_node, &self.end_node)
+            // };
             new_node.f_cost = new_node.g_cost
                 + direct_path_modifier as f64 * self.DIRECT_PATH_MODIFIER_WEIGHT
-                + heading_modifier as f64 * self.HEADING_MODIFIER_WEIGHT
-                + dx + dy + (SQRT_2 - 2f64 * UNIT_COST) * dx.min(dy);
+                // + heading_modifier as f64 * self.HEADING_MODIFIER_WEIGHT
+                + base_f_cost;
 
             new_node.parent = Some(current_node.clone());
             new_node.depth = current_node.depth + 1;
@@ -583,7 +585,7 @@ impl Pathfinder {
                 if node_distance(&current_node, &last_critical_node) * self.grid_size
                     < 2f32 * self.current_wp.radius
                 {
-                    let _old = wp_list.pop_back();
+                    let _old = wp_list.pop_front();
 
                     #[cfg(feature = "debug")]
                     DEBUGGER.with(|debugger| {
@@ -626,11 +628,16 @@ impl Pathfinder {
                         current_alt - alt_increment * current_node.depth as f32,
                     );
                 }
-                wp_list.push_back(waypoint);
+                wp_list.push_front(waypoint);
             }
         }
 
         wp_list
+    }
+
+    pub fn set_grid_size(&mut self, grid_size: f32) {
+        self.grid_size = grid_size;
+        self.populate_map();
     }
 
     pub fn set_buffer(&mut self, new_buffer: f32) {
@@ -640,6 +647,11 @@ impl Pathfinder {
 
     pub fn set_process_time(&mut self, max_process_time: u32) {
         self.max_process_time = Duration::from_secs(max_process_time as u64);
+    }
+
+    pub fn set_flyzone(&mut self, flyzone: Vec<Vec<Point>>) {
+        self.flyzones = flyzone;
+        self.populate_map();
     }
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
@@ -658,11 +670,32 @@ impl Pathfinder {
     pub fn get_process_time(&self) -> u32 {
         self.max_process_time.as_secs() as u32
     }
+
+    pub fn get_flyzone(&mut self) -> &Vec<Vec<Point>> {
+        &self.flyzones
+    }
+
+    pub fn get_obstacle_list(&self) -> &Vec<Obstacle> {
+        &self.obstacles
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[should_panic]
+    fn invalid_flyzones_test() {
+        Pathfinder::new().init(1f32, vec![], Vec::new())
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_flyzone_test() {
+        Pathfinder::new().init(1f32, vec![vec![]], Vec::new())
+    }
+
     #[test]
     fn origin_test() {
         let mut pathfinder = Pathfinder::new();
@@ -698,4 +731,5 @@ mod tests {
         assert_eq!(origin.lat_degree(), 30.32082);
         assert_eq!(origin.lon_degree(), -97.60398);
     }
+
 }
