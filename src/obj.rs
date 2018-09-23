@@ -1,4 +1,3 @@
-use super::node::Node;
 use super::{std, Pathfinder, RADIUS};
 use std::fmt;
 
@@ -30,16 +29,6 @@ impl Point {
             lon: lon,
             alt: alt,
         }
-    }
-
-    pub fn to_node(&self, path_finder: &Pathfinder) -> Node {
-        let origin = path_finder.origin;
-        let x = 2f64 * RADIUS * (self.lat.cos() * ((self.lon - origin.lon) / 2f64).sin()).asin();
-        let y = RADIUS * (self.lat - origin.lat);
-        Node::new(
-            (x / path_finder.grid_size as f64).floor() as i32,
-            (y / path_finder.grid_size as f64).floor() as i32,
-        )
     }
     pub fn lat(&self) -> f64 {
         self.lat
