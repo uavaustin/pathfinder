@@ -39,7 +39,13 @@ fn conversion_test() {
 #[test]
 fn random_test() {
     let mut pathfinder = Pathfinder::new();
-    pathfinder.init(1.0, Vec::new(), Vec::new());
+    let flight_zone = vec![vec![
+        Point::from_degrees(0.3, 0.6, 0f32),
+        Point::from_degrees(0.0, 0.6, 0f32),
+        Point::from_degrees(0.0, 0.0, 0f32),
+        Point::from_degrees(0.3, 0.0, 0f32),
+    ]];
+    pathfinder.init(1.0, flight_zone, Vec::new());
     let mut rng = thread_rng();
     for _ in 1..100 {
         let point = Point::from_degrees(
@@ -49,9 +55,9 @@ fn random_test() {
         );
         let node1 = point.to_node(&pathfinder);
         let point1 = node1.to_point(&pathfinder);
-        // print!("{:.5}, {:.5} => ", point.lat_degree(), point.lon_degree());
+        print!("{:.5}, {:.5} => ", point.lat_degree(), point.lon_degree());
         println!("{:.5}, {:.5}", point1.lat_degree(), point1.lon_degree());
-        assert!(point.lat_degree() - point1.lat_degree() < 0.001);
-        assert!(point.lon_degree() - point1.lon_degree() < 0.001);
+        assert!(point.lat_degree() - point1.lat_degree() < 0.01);
+        assert!(point.lon_degree() - point1.lon_degree() < 0.01);
     }
 }
