@@ -1,11 +1,11 @@
-use super::{std, Pathfinder, RADIUS};
+use super::{std, ordered_float::OrderedFloat};
 use std::fmt;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Point {
-    lat: f64, //In radians
-    lon: f64, //In radians
-    alt: f32, //In meters
+    lat: OrderedFloat<f64>, //In radians
+    lon: OrderedFloat<f64>, //In radians
+    alt: OrderedFloat<f32>, //In meters
 }
 
 impl fmt::Display for Point {
@@ -18,36 +18,36 @@ impl Point {
     pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
         const FACTOR: f64 = std::f64::consts::PI / 180f64;
         Point {
-            lat: lat.to_radians(),
-            lon: lon.to_radians(),
-            alt: alt,
+            lat: lat.to_radians().into(),
+            lon: lon.to_radians().into(),
+            alt: alt.into(),
         }
     }
     pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Self {
         Point {
-            lat: lat,
-            lon: lon,
-            alt: alt,
+            lat: lat.into(),
+            lon: lon.into(),
+            alt: alt.into(),
         }
     }
     pub fn lat(&self) -> f64 {
-        self.lat
+        self.lat.into()
     }
     pub fn lon(&self) -> f64 {
-        self.lon
+        self.lon.into()
     }
     pub fn alt(&self) -> f32 {
-        self.alt
+        self.alt.into()
     }
     pub fn lat_degree(&self) -> f64 {
-        self.lat * 180f64 / std::f64::consts::PI
+        Into::<f64>::into(self.lat) * 180f64 / std::f64::consts::PI
     }
     pub fn lon_degree(&self) -> f64 {
-        self.lon * 180f64 / std::f64::consts::PI
+        Into::<f64>::into(self.lon) * 180f64 / std::f64::consts::PI
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Obstacle {
     pub coords: Point,
     pub radius: f32, // In meters
@@ -139,7 +139,7 @@ impl Waypoint {
     }
 
     pub fn extend(&self, mut location: Point, alt: f32) -> Self {
-        location.alt = alt;
+        location.alt = alt.into();
         Waypoint::new(self.index, location, self.radius)
     }
 }
