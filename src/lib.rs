@@ -412,9 +412,13 @@ impl Pathfinder {
 
         let dx = (self.end_node.x - self.start_node.x).abs();
         let dy = (self.end_node.y - self.start_node.y).abs();
+	// here we define the new dz variable
+	let dz = (self.end_node.z - self.start_node.z).abs();
         let start_node = Rc::new(Node {
             x: self.start_node.x,
             y: self.start_node.y,
+	    // here we define the z variable 
+	    z: self.start_node.z,
             g_cost: 0f64,
             f_cost: (dx + dy) as f64 + (SQRT_2 - 2f64 * UNIT_COST) * dx.min(dy) as f64,
             parent: None,
