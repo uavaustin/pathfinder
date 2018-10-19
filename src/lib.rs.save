@@ -57,8 +57,6 @@ const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
 const RADIUS: f64 = 6371000.0;
 const MIN_BUFFER: f32 = 5f32;
-const MAX_ASCENT_ANGLE: f32 = 30.0;
-const MAX_DESCENT_ANGLE: f32 = -25.0;
 const DEFAULT_DIRECT_PATH_MODIFIER_WEIGHT: f64 = 0.001;
 const DEFAULT_HEADING_MODIFIER_WEIGHT: f64 = 0.15;
 
@@ -415,10 +413,12 @@ impl Pathfinder {
         let dx = (self.end_node.x - self.start_node.x).abs();
         let dy = (self.end_node.y - self.start_node.y).abs();
 	// here we define the new dz variable
-	let dz = (self.end_node.z - self.start_node.z).abs();
+	let dz = (self.end_node.z - self.start.node.z).abs()
         let start_node = Rc::new(Node {
             x: self.start_node.x,
             y: self.start_node.y,
+	    // here we define a z variable
+	    z: self.start_node.z,
             g_cost: 0f64,
             f_cost: (dx + dy) as f64 + (SQRT_2 - 2f64 * UNIT_COST) * dx.min(dy) as f64,
             parent: None,
@@ -427,20 +427,6 @@ impl Pathfinder {
         self.open_set.insert(start_node.clone());
         self.open_heap.push(start_node.clone());
         let mut current_node: Rc<Node>;
-
-	// find the minimum/threshold of the start and end node.
-	self.start_node = start.to_node(&self);
-	self.end_node = end.to_node(&self);
-
-	if self.start_node.z < self.end_node.z {
-		let threshold = self.start_node.z;
-	}
-
-	else {
-		let threshold = self.end_node.z
-	}
-
-	// use this minimum/threshold to add a new test case
 
         loop {
             if let Ok(elapsed) = self.start_time.elapsed() {
@@ -467,14 +453,14 @@ impl Pathfinder {
             self.close_list.insert(current_node.clone());
 
             // Regular a* node discovery
-            self.discover_node(current_node.clone(), threshold);
+            self.discover_node(current_node.clone());
         }
         eprintln!("No path found!");
         return None;
     }
 
-    fn discover_node(&mut self, current_node: Rc<Node>, height_threshold: f32) {
-        for &(x_offset, y_offset, g_cost) in OFFSET.into_iter() {
+    fn discover_node(&mut self, current_node: Rc<Node>) {
+        for &(x_offset, y_offset, g_cost) in OFFSET.into_iteFr() {
             let mut new_node;
             new_node = Node::new(current_node.x + x_offset, current_node.y + y_offset);
 
@@ -483,17 +469,7 @@ impl Pathfinder {
                 debugger.borrow_mut().add_to_explored(new_node.clone());
             });
 
-            // we  want to work defining the triangle.
-            let z_var = ((end_node.z + buffer) - (start_node.z));
-            let x_var = g_cost * grid_size;
-            let angle = arctan(z_var / x_var);
-            if angle < MAX_ASCENT_ANGLE || angle > MAX_DESCENT_ANGLE {
-                // if the angle is less than 30 degrees
-                bool can_fly_over = true;
-            }
-
-
-            if self.obstacle_list.contains(&new_node) && height_threshold < self.new_node.z {
+            if self.obstacle_list.contains(&new_node) {
                 self.critical_nodes.insert(current_node.clone());
                 self.obstacle_found = true;
                 continue;

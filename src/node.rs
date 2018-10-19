@@ -8,22 +8,24 @@ use std::rc::Rc;
 pub struct Node {
     pub x: i32,
     pub y: i32,
+    pub z: i32, // added a z variable
     pub g_cost: f64,
     pub f_cost: f64,
     pub parent: Option<Rc<Node>>,
-    pub depth: i32,
+    pub depth: i32, 
 }
 
 impl Hash for Node {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.x.hash(state);
         self.y.hash(state);
+	self.z.hash(state); //added, this is saying if two nodes have same x, y, z then they are the same node.
     }
 }
 
 impl PartialEq for Node {
     fn eq(&self, other: &Node) -> bool {
-        self.x == other.x && self.y == other.y
+        self.x == other.x && self.y == other.y && self.z == other.z // added the self.z == other.z, this is doing the actual equating logic for same node.
     }
 }
 
@@ -47,10 +49,11 @@ impl Ord for Node {
 }
 
 impl Node {
-    pub fn new(x: i32, y: i32) -> Self {
+    pub fn new(x: i32, y: i32, z: i32) -> Self {	// z added
         Node {
             x: x,
             y: y,
+	    z: z,	// z added
             g_cost: std::f64::MAX,
             f_cost: std::f64::MAX,
             parent: None,
