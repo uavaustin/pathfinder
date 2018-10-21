@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime};
 
 mod node;
 mod obj;
-pub use node::{Vertex, Node};
+pub use node::{Connection, Node};
 pub use obj::{Obstacle, Plane, Point, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
@@ -33,7 +33,7 @@ pub struct Pathfinder {
     start_time: SystemTime,
     current_wp: Waypoint,
     wp_list: LinkedList<Waypoint>,
-    nodes: HashMap<Rc<Node>, HashSet<Vertex>>,
+    nodes: HashMap<Rc<Node>, HashSet<Connection>>,
 }
 
 impl Pathfinder {
@@ -85,7 +85,7 @@ impl Pathfinder {
 
     // Generate all possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
-    fn find_path(&self, a: &Rc<Node>, b: &Rc<Node>) -> Option<Vertex> {
+    fn find_path(&self, a: &Rc<Node>, b: &Rc<Node>) -> Option<Connection> {
         unimplemented!();
     }
 

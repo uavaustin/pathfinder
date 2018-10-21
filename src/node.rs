@@ -11,15 +11,15 @@ pub enum Direction {
 }
 
 #[derive(Clone, Eq, Hash, PartialEq)]
-pub struct Port {
+pub struct Vertex {
     reference: Rc<Node>,
     angle: OrderedFloat<f32>,
     side: Direction
 }
 
-impl Port {
-    pub fn new(reference: Rc<Node>, angle: OrderedFloat<f32>, side: Direction) -> Port{
-        Port {
+impl Vertex {
+    pub fn new(reference: Rc<Node>, angle: OrderedFloat<f32>, side: Direction) -> Vertex{
+        Vertex {
             reference: reference.clone(),
             angle: angle,
             side: side
@@ -27,7 +27,7 @@ impl Port {
     }
 
     pub fn reciprocal(&self) -> Self {
-        Port {
+        Vertex {
             reference: self.reference.clone(),
             angle: self.angle,
             side: if self.side == Direction::Right {Direction::Left} else {Direction::Right}
@@ -35,31 +35,31 @@ impl Port {
     }
 }
 
-// Represent a vertex that's half of a connection between two nodes
+// Represent a connection between two nodes
 // Contains the coordinate of tangent line and distance
 #[derive(Clone, Eq, Hash, PartialEq)]
-pub struct Vertex {
-    start: Port,
-    end: Port,
+pub struct Connection {
+    start: Vertex,
+    end: Vertex,
     distance: OrderedFloat<f32>,
 }
 
-impl Vertex {
-    pub fn new(start: Port, end: Port, distance: f32) -> Self {
-        Vertex {
+impl Connection {
+    pub fn new(start: Vertex, end: Vertex, distance: f32) -> Self {
+        Connection {
             start: start,
             end: end,
             distance: distance.into(),
         }
     }
 
-    pub fn set_path(&mut self, start: Port, end: Port) {
+    pub fn set_path(&mut self, start: Vertex, end: Vertex) {
         self.start = start;
         self.end = end;
     }
 
     pub fn reciprocal(&self) -> Self {
-        Vertex {
+        Connection {
             start: self.end.reciprocal(),
             end: self.start.reciprocal(),
             distance: self.distance,
