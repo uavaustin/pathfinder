@@ -4,37 +4,65 @@ use obj::{Obstacle, Plane, Point, Waypoint};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-// Represent a connection between two nodes
-// Contains the coordinate of tangent line and distance
 #[derive(Clone, Eq, Hash, PartialEq)]
-pub struct Connection {
-    start: Point,
-    end: Point,
-    distance: OrderedFloat<f32>,
-    neighbor: Rc<Node>,         // Keep reference to neighbor
+pub enum Direction {
+    Left,
+    Right
 }
 
-impl Connection {
-    pub fn new(start: Point, end: Point, distance: f32, neighbor: Rc<Node>) -> Self {
-        Connection {
-            start: start,
-            end: end,
-            distance: distance.into(),
-            neighbor: neighbor,
+#[derive(Clone, Eq, Hash, PartialEq)]
+pub struct Port {
+    reference: Rc<Node>,
+    angle: OrderedFloat<f32>,
+    side: Direction
+}
+
+impl Port {
+    pub fn new(reference: Rc<Node>, angle: OrderedFloat<f32>, side: Direction) -> Port{
+        Port {
+            reference: reference.clone(),
+            angle: angle,
+            side: side
         }
     }
 
-    pub fn set_path(&mut self, start: Point, end: Point) {
+    pub fn reciprocal(&self) -> Self {
+        Port {
+            reference: self.reference.clone(),
+            angle: self.angle,
+            side: if self.side == Direction::Right {Direction::Left} else {Direction::Right}
+        }
+    }
+}
+
+// Represent a vertex that's half of a connection between two nodes
+// Contains the coordinate of tangent line and distance
+#[derive(Clone, Eq, Hash, PartialEq)]
+pub struct Vertex {
+    start: Port,
+    end: Port,
+    distance: OrderedFloat<f32>,
+}
+
+impl Vertex {
+    pub fn new(start: Port, end: Port, distance: f32) -> Self {
+        Vertex {
+            start: start,
+            end: end,
+            distance: distance.into(),
+        }
+    }
+
+    pub fn set_path(&mut self, start: Port, end: Port) {
         self.start = start;
         self.end = end;
     }
 
-    pub fn reciprocal(&self, start: Rc<Node>) -> Self {
-        Connection {
-            start: self.end,
-            end: self.start,
+    pub fn reciprocal(&self) -> Self {
+        Vertex {
+            start: self.end.reciprocal(),
+            end: self.start.reciprocal(),
             distance: self.distance,
-            neighbor: start
         }
     }
 }

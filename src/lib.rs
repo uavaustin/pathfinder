@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime};
 
 mod node;
 mod obj;
-pub use node::{Connection, Node};
+pub use node::{Vertex, Node};
 pub use obj::{Obstacle, Plane, Point, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
@@ -33,7 +33,7 @@ pub struct Pathfinder {
     start_time: SystemTime,
     current_wp: Waypoint,
     wp_list: LinkedList<Waypoint>,
-    nodes: HashMap<Rc<Node>, HashSet<Connection>>,
+    nodes: HashMap<Rc<Node>, HashSet<Vertex>>,
 }
 
 impl Pathfinder {
@@ -85,17 +85,17 @@ impl Pathfinder {
 
     // Generate all possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
-    fn find_path(&self, a: &Rc<Node>, b: &Rc<Node>) -> Option<Connection> {
+    fn find_path(&self, a: &Rc<Node>, b: &Rc<Node>) -> Option<Vertex> {
         unimplemented!();
     }
 
     fn build_graph(&mut self) {
         let mut candidates = self.nodes.clone();
-        for (a, a_connections) in &mut self.nodes.clone(){
-            for (b, b_connections) in &mut candidates {
+        for (a, x) in &mut self.nodes.clone(){
+            for (b, y) in &mut candidates {
                 if let Some(path) = self.find_path(a, b) {
-                    b_connections.insert(path.reciprocal(Rc::clone(a)));
-                    a_connections.insert(path);
+                    x.insert(path.reciprocal());
+                    y.insert(path);
                 }
             }
             candidates.remove(a);   // Remove a from candidate pool
