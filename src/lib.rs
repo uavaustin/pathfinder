@@ -80,90 +80,76 @@ impl Pathfinder {
 
     // check if a path is valid (i.e not block by obstacle or flightzone)
     fn valid_path(&mut self, a: &Point, b: &Point) -> bool {
-
-		// latitude is y, longitude is x
+        // latitude is y, longitude is x
         // flyzone is array connected by each index
-		// implementing intersect code in: http://developer.classpath.org/doc/java/awt/geom/Line2D-source.html
-		for flyzone in &self.flyzones {
-			 
-		}
-		false
-
-	
+        // implementing intersect code in: http://developer.classpath.org/doc/java/awt/geom/Line2D-source.html
+        for flyzone in &self.flyzones {}
+        false
     }
 
-	// helper function for intersection calculation
-	// returns the area between three points
-	fn area(a: &Point, b: &Point, c: &Point) -> f64 {
-		(b.lon() - a.lon()) * (c.lat() - a.lat()) - (c.lon() - a.lon()) * (b.lat() - a.lat())
-	}
+    // helper function for intersection calculation
+    // returns the area between three points
+    fn area(a: &Point, b: &Point, c: &Point) -> f64 {
+        (b.lon() - a.lon()) * (c.lat() - a.lat()) - (c.lon() - a.lon()) * (b.lat() - a.lat())
+    }
 
-	// helper function for intersection calculation
-	// return strue if point c is between a and b, false otherwise
-	fn between(a: &Point, b: &Point, c: &Point) -> bool {
-		if a.lon() != b.lon() {
-			(a.lon() <= c.lon() && c.lon() <= b.lon()) || (a.lon() >= c.lon() && c.lon() >= b.lon())
-		}
-		else {
-			(a.lat() <= c.lat() && c.lat() <= b.lat()) || (a.lat() >= c.lat() && c.lat() >= b.lat())
-		}
-	}
+    // helper function for intersection calculation
+    // returns true if point c is between a and b, false otherwise
+    fn between(a: &Point, b: &Point, c: &Point) -> bool {
+        if a.lon() != b.lon() {
+            (a.lon() <= c.lon() && c.lon() <= b.lon()) || (a.lon() >= c.lon() && c.lon() >= b.lon())
+        } else {
+            (a.lat() <= c.lat() && c.lat() <= b.lat()) || (a.lat() >= c.lat() && c.lat() >= b.lat())
+        }
+    }
 
-	// calculate the intersection between four given points
-	// implement: http://developer.classpath.org/doc/java/awt/geom/Line2D-source.html
-	// returns true if a line segment a to b and another segment c to d intersect
-	fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
-		let (a1, a2, a3, a4) = (0f64, 0f64, 0f64, 0f64);
-		// special cases of intersection
-		let a1 = Self::area(a, b, c);
-		let a2 = Self::area(a, b, d);
-		let a3 = Self::area(c, d, a);
-		let a4 = Self::area(c, d, b);
-		if a1 == 0f64 {
-			// checks if c is between a and b OR
-			// d is colinear also AND between a and b or at opposite ends?
-			if Self::between(a, b, c) {
-				return true;
-			}
-			else {
-				if Self::area(a, b, d) == 0f64 {
-					return Self::between(c, d, a) || Self::between(c, d, b);
-				}
-				else  {
-					return false;
-				}
-			}
-		}
-		else if a2 == 0f64 {
-			// check if d is between a and b since c is not colinear
-			return Self::between(a, b, d);
-		}
-		if a3 == 0f64 {
-			// checks if a is between c and d OR
-			// b is colinear AND either between a and b or at opposite ends?
-			if Self::between(c, d, a) {
-				return true;
-			}
-			else {
-				if Self::area(c, d, b) == 0f64 {
-					return Self::between(a, b, c) || Self::between(a, b, d);
-				}
-				else {
-					return false;
-				}
-			}
-		}
-		else if a4 == 0f64 {
-			// check if b is between c and d since we know a is not colinear
-			return Self::between(c, d, b)
-		}
-		//tests for regular intersection
-		else {
-			((a1 > 0f64) ^ (a2 > 0f64)) && ((a3 > 0f64) ^ (a4 > 0f64))
-		}
-	}
-	
-	
+    // calculate the intersection between four given points
+    // implement: http://developer.classpath.org/doc/java/awt/geom/Line2D-source.html
+    // returns true if a line segment a to b and another segment c to d intersect
+    fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
+        let (a1, a2, a3, a4) = (0f64, 0f64, 0f64, 0f64);
+        // special cases of intersection
+        let a1 = Self::area(a, b, c);
+        let a2 = Self::area(a, b, d);
+        let a3 = Self::area(c, d, a);
+        let a4 = Self::area(c, d, b);
+        if a1 == 0f64 {
+            // checks if c is between a and b OR
+            // d is colinear also AND between a and b or at opposite ends?
+            if Self::between(a, b, c) {
+                return true;
+            } else {
+                if Self::area(a, b, d) == 0f64 {
+                    return Self::between(c, d, a) || Self::between(c, d, b);
+                } else {
+                    return false;
+                }
+            }
+        } else if a2 == 0f64 {
+            // check if d is between a and b since c is not colinear
+            return Self::between(a, b, d);
+        }
+        if a3 == 0f64 {
+            // checks if a is between c and d OR
+            // b is colinear AND either between a and b or at opposite ends?
+            if Self::between(c, d, a) {
+                return true;
+            } else {
+                if Self::area(c, d, b) == 0f64 {
+                    return Self::between(a, b, c) || Self::between(a, b, d);
+                } else {
+                    return false;
+                }
+            }
+        } else if a4 == 0f64 {
+            // check if b is between c and d since we know a is not colinear
+            return Self::between(c, d, b);
+        }
+        //tests for regular intersection
+        else {
+            ((a1 > 0f64) ^ (a2 > 0f64)) && ((a3 > 0f64) ^ (a4 > 0f64))
+        }
+    }
 
     // Generate all possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
@@ -173,14 +159,14 @@ impl Pathfinder {
 
     fn build_graph(&mut self) {
         let mut candidates = self.nodes.clone();
-        for (a, x) in &mut self.nodes.clone(){
+        for (a, x) in &mut self.nodes.clone() {
             for (b, y) in &mut candidates {
                 if let Some(path) = self.find_path(a, b) {
                     x.insert(path.reciprocal());
                     y.insert(path);
                 }
             }
-            candidates.remove(a);   // Remove a from candidate pool
+            candidates.remove(a); // Remove a from candidate pool
         }
     }
 
@@ -280,38 +266,38 @@ mod tests {
         Pathfinder::new().init(1f32, vec![vec![]], Vec::new())
     }
 
-	#[test]
-	fn is_between() {
-		let a = Point::from_radians(40f64, 40f64, 10f32);
-		let b = Point::from_radians(40f64, 50f64, 10f32);
-		let c = Point::from_radians(40f64, 60f64, 10f32);
-		assert_eq!(Pathfinder::between(&a, &c, &b), true);
-	}
+    #[test]
+    fn is_between() {
+        let a = Point::from_radians(40f64, 40f64, 10f32);
+        let b = Point::from_radians(40f64, 50f64, 10f32);
+        let c = Point::from_radians(40f64, 60f64, 10f32);
+        assert_eq!(Pathfinder::between(&a, &c, &b), true);
+    }
 
-	#[test]
-	fn is_colinear() {
-		let a = Point::from_radians(40f64, 40f64, 10f32);
-		let b = Point::from_radians(40f64, 50f64, 10f32);
-		let c = Point::from_radians(40f64, 60f64, 10f32);
-		assert_eq!(Pathfinder::area(&a, &b, &c), 0f64);
-	}
-	
-	#[test]
-	fn yes_intersect() {
-		let a = Point::from_radians(40f64, 0f64, 10f32);
-		let b = Point::from_radians(40f64, 40f64, 10f32);
-		let c = Point::from_radians(0f64, 0f64, 10f32);
-		let d = Point::from_radians(0f64, 40f64, 10f32);
-		assert_eq!(Pathfinder::intersect(&a, &d, &b, &c), true);
-	}
-	
-	#[test]
-	fn no_intersect() {
-		let a = Point::from_radians(40f64, 0f64, 10f32);
-		let b = Point::from_radians(40f64, 40f64, 10f32);
-		let c = Point::from_radians(0f64, 0f64, 10f32);
-		let d = Point::from_radians(0f64, 40f64, 10f32);
-		assert_eq!(Pathfinder::intersect(&a, &c, &b, &d), false);
-	}
-		
+    #[test]
+    fn is_colinear() {
+        let a = Point::from_radians(40f64, 40f64, 10f32);
+        let b = Point::from_radians(40f64, 50f64, 10f32);
+        let c = Point::from_radians(40f64, 60f64, 10f32);
+        assert_eq!(Pathfinder::area(&a, &b, &c), 0f64);
+    }
+
+    #[test]
+    fn yes_intersect() {
+        let a = Point::from_radians(40f64, 0f64, 10f32);
+        let b = Point::from_radians(40f64, 40f64, 10f32);
+        let c = Point::from_radians(0f64, 0f64, 10f32);
+        let d = Point::from_radians(0f64, 40f64, 10f32);
+        assert_eq!(Pathfinder::intersect(&a, &d, &b, &c), true);
+    }
+
+    #[test]
+    fn no_intersect() {
+        let a = Point::from_radians(40f64, 0f64, 10f32);
+        let b = Point::from_radians(40f64, 40f64, 10f32);
+        let c = Point::from_radians(0f64, 0f64, 10f32);
+        let d = Point::from_radians(0f64, 40f64, 10f32);
+        assert_eq!(Pathfinder::intersect(&a, &c, &b, &d), false);
+    }
+
 }

@@ -1,4 +1,4 @@
-use super::{std, ordered_float::OrderedFloat};
+use super::{ordered_float::OrderedFloat, std};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]

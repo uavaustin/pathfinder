@@ -1,4 +1,4 @@
-use super::{std, TURNING_RADIUS, ordered_float::OrderedFloat};
+use super::{ordered_float::OrderedFloat, std, TURNING_RADIUS};
 use obj::{Obstacle, Plane, Point, Waypoint};
 
 use std::hash::{Hash, Hasher};
@@ -7,22 +7,22 @@ use std::rc::Rc;
 #[derive(Clone, Eq, Hash, PartialEq)]
 pub enum Direction {
     Left,
-    Right
+    Right,
 }
 
 #[derive(Clone, Eq, Hash, PartialEq)]
 pub struct Vertex {
     reference: Rc<Node>,
     angle: OrderedFloat<f32>,
-    side: Direction
+    side: Direction,
 }
 
 impl Vertex {
-    pub fn new(reference: Rc<Node>, angle: OrderedFloat<f32>, side: Direction) -> Vertex{
+    pub fn new(reference: Rc<Node>, angle: OrderedFloat<f32>, side: Direction) -> Vertex {
         Vertex {
             reference: reference.clone(),
             angle: angle,
-            side: side
+            side: side,
         }
     }
 
@@ -30,7 +30,11 @@ impl Vertex {
         Vertex {
             reference: self.reference.clone(),
             angle: self.angle,
-            side: if self.side == Direction::Right {Direction::Left} else {Direction::Right}
+            side: if self.side == Direction::Right {
+                Direction::Left
+            } else {
+                Direction::Right
+            },
         }
     }
 }
