@@ -4,37 +4,65 @@ use obj::{Obstacle, Plane, Point, Waypoint};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+#[derive(Clone, Eq, Hash, PartialEq)]
+pub enum Direction {
+    Left,
+    Right
+}
+
+#[derive(Clone, Eq, Hash, PartialEq)]
+pub struct Vertex {
+    reference: Rc<Node>,
+    angle: OrderedFloat<f32>,
+    side: Direction
+}
+
+impl Vertex {
+    pub fn new(reference: Rc<Node>, angle: OrderedFloat<f32>, side: Direction) -> Vertex{
+        Vertex {
+            reference: reference.clone(),
+            angle: angle,
+            side: side
+        }
+    }
+
+    pub fn reciprocal(&self) -> Self {
+        Vertex {
+            reference: self.reference.clone(),
+            angle: self.angle,
+            side: if self.side == Direction::Right {Direction::Left} else {Direction::Right}
+        }
+    }
+}
+
 // Represent a connection between two nodes
 // Contains the coordinate of tangent line and distance
 #[derive(Clone, Eq, Hash, PartialEq)]
 pub struct Connection {
-    start: Point,
-    end: Point,
+    start: Vertex,
+    end: Vertex,
     distance: OrderedFloat<f32>,
-    neighbor: Rc<Node>,         // Keep reference to neighbor
 }
 
 impl Connection {
-    pub fn new(start: Point, end: Point, distance: f32, neighbor: Rc<Node>) -> Self {
+    pub fn new(start: Vertex, end: Vertex, distance: f32) -> Self {
         Connection {
             start: start,
             end: end,
             distance: distance.into(),
-            neighbor: neighbor,
         }
     }
 
-    pub fn set_path(&mut self, start: Point, end: Point) {
+    pub fn set_path(&mut self, start: Vertex, end: Vertex) {
         self.start = start;
         self.end = end;
     }
 
-    pub fn reciprocal(&self, start: Rc<Node>) -> Self {
+    pub fn reciprocal(&self) -> Self {
         Connection {
-            start: self.end,
-            end: self.start,
+            start: self.end.reciprocal(),
+            end: self.start.reciprocal(),
             distance: self.distance,
-            neighbor: start
         }
     }
 }

@@ -173,11 +173,11 @@ impl Pathfinder {
 
     fn build_graph(&mut self) {
         let mut candidates = self.nodes.clone();
-        for (a, a_connections) in &mut self.nodes.clone(){
-            for (b, b_connections) in &mut candidates {
+        for (a, x) in &mut self.nodes.clone(){
+            for (b, y) in &mut candidates {
                 if let Some(path) = self.find_path(a, b) {
-                    b_connections.insert(path.reciprocal(Rc::clone(a)));
-                    a_connections.insert(path);
+                    x.insert(path.reciprocal());
+                    y.insert(path);
                 }
             }
             candidates.remove(a);   // Remove a from candidate pool
