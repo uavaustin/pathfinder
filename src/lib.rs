@@ -85,15 +85,17 @@ impl Pathfinder {
         // some messy code to link flyzone points, can definitely be better
         for flyzone in &self.flyzones {
 			let mut tempzone = flyzone.clone();
-			let first = tempzone.swap_remove(0);
+			let first = tempzone.remove(0);
 			let mut temp = first;
-			for point in flyzone {
-				if Self::intersect(a, b, &temp, point) == false {
+			for point in tempzone {
+				//println!("test intersect for {} {} {} {}", a, b, &temp, &point);
+				if Self::intersect(a, b, &temp, &point) {
 					return false;
 				}
-				let temp = *point;
+				temp = point;
 			}
-			if Self::intersect(a, b, &temp, &first) == false {
+			//println!("test intersect for {} {} {} {}", a, b, &temp, &first);
+			if Self::intersect(a, b, &temp, &first) {
 					return false;
 			}
 		}
@@ -312,5 +314,25 @@ mod tests {
         let d = Point::from_radians(0f64, 40f64, 10f32);
         assert_eq!(Pathfinder::intersect(&a, &c, &b, &d), false);
     }
+
+	#[test]
+	fn flyzone_pathing() {
+		let a = Point::from_radians(40f64, 0f64, 10f32);
+        let b = Point::from_radians(40f64, 40f64, 10f32);
+        let c = Point::from_radians(0f64, 0f64, 10f32);
+        let d = Point::from_radians(0f64, 40f64, 10f32);
+		let flyzone = vec![a, b, d, c];
+		let flyzones = vec![flyzone];
+		
+		let mut pathfinder = Pathfinder::new();
+		pathfinder.init(1f32, flyzones, Vec::new());
+		
+		let e = Point::from_radians(20f64, 20f64, 10f32);
+		let f = Point::from_radians(30f64, 30f64, 10f32);
+		let g = Point::from_radians(20f64, 50f64, 10f32);
+		
+		assert_eq!(pathfinder.valid_path(&e, &f), true);
+		assert_eq!(pathfinder.valid_path(&e, &g), false);
+	}
 
 }
