@@ -350,11 +350,45 @@ mod tests {
 		assert_eq!(pathfinder.valid_path(&e, &g), false);
 		assert_eq!(pathfinder.valid_path(&f, &g), false);
 		assert_eq!(pathfinder.valid_path(&a, &b), false);
+		assert_eq!(pathfinder.valid_path(&a, &h), false);
 		
 		//here some points are outside of the flyzone; should this be a special case?
 		//should we assume that the points we evaluate will always be inside the flyzone?
 		assert_eq!(pathfinder.valid_path(&h, &i), true);
 		assert_eq!(pathfinder.valid_path(&h, &e), false);
+	}
+	
+	#[test]
+	fn flyzones_pathing() {
+		let a = Point::from_radians(40f64, 0f64, 10f32);
+        let b = Point::from_radians(40f64, 40f64, 10f32);
+        let c = Point::from_radians(0f64, 0f64, 10f32);
+        let d = Point::from_radians(0f64, 40f64, 10f32);
+		
+		let e = Point::from_radians(30f64, 10f64, 10f32);
+		let f = Point::from_radians(30f64, 30f64, 10f32);
+		let g = Point::from_radians(10f64, 10f64, 10f32);
+		let h = Point::from_radians(10f64, 30f64, 10f32);
+		
+		let flyzone1 = vec![a, b, d, c];
+		let flyzone2 = vec![e, f, h, g];
+		
+		let flyzones = vec![flyzone1, flyzone2];
+		
+		let mut pathfinder = Pathfinder::new();
+		pathfinder.init(1f32, flyzones, Vec::new());
+		
+		let i = Point::from_radians(15f64, 15f64, 10f32);
+		let j = Point::from_radians(25f64, 25f64, 10f32);
+		let k = Point::from_radians(35f64, 5f64, 10f32);
+		let l = Point::from_radians(50f64, 50f64, 10f32);
+		let m = Point::from_radians(35f64, 25f64, 10f32);
+		
+		assert_eq!(pathfinder.valid_path(&i, &j), true);
+		assert_eq!(pathfinder.valid_path(&i, &k), false);
+		assert_eq!(pathfinder.valid_path(&i, &l), false);
+		assert_eq!(pathfinder.valid_path(&k, &l), false);
+		assert_eq!(pathfinder.valid_path(&k, &m), true);
 	}
 
 }
