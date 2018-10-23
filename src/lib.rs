@@ -287,6 +287,7 @@ mod tests {
         let b = Point::from_radians(40f64, 50f64, 10f32);
         let c = Point::from_radians(40f64, 60f64, 10f32);
         assert_eq!(Pathfinder::between(&a, &c, &b), true);
+		assert_eq!(Pathfinder::between(&a, &b, &c), false);
     }
 
     #[test]
@@ -295,7 +296,7 @@ mod tests {
         let b = Point::from_radians(40f64, 50f64, 10f32);
         let c = Point::from_radians(40f64, 60f64, 10f32);
         assert_eq!(Pathfinder::area(&a, &b, &c), 0f64);
-    }
+	}
 
     #[test]
     fn yes_intersect() {
@@ -313,7 +314,18 @@ mod tests {
         let c = Point::from_radians(0f64, 0f64, 10f32);
         let d = Point::from_radians(0f64, 40f64, 10f32);
         assert_eq!(Pathfinder::intersect(&a, &c, &b, &d), false);
+		assert_eq!(Pathfinder::intersect(&c, &d, &a, &b), false);
     }
+
+	#[test]
+	fn special_intersect() {
+		let a = Point::from_radians(0f64, 0f64, 10f32);
+		let b = Point::from_radians(10f64, 5f64, 10f32);
+		let c = Point::from_radians(20f64, 10f64, 10f32);
+		let d = Point::from_radians(30f64, 15f64, 10f32);
+		assert_eq!(Pathfinder::intersect(&a, &b, &c, &d), false);
+		assert_eq!(Pathfinder::intersect(&a, &c, &b, &d), true);
+	}
 
 	#[test]
 	fn flyzone_pathing() {
@@ -331,8 +343,18 @@ mod tests {
 		let f = Point::from_radians(30f64, 30f64, 10f32);
 		let g = Point::from_radians(20f64, 50f64, 10f32);
 		
+		let h = Point::from_radians(50f64, 50f64, 10f32);
+		let i = Point::from_radians(50f64, 0f64, 10f32);
+		
 		assert_eq!(pathfinder.valid_path(&e, &f), true);
 		assert_eq!(pathfinder.valid_path(&e, &g), false);
+		assert_eq!(pathfinder.valid_path(&f, &g), false);
+		assert_eq!(pathfinder.valid_path(&a, &b), false);
+		
+		//here some points are outside of the flyzone; should this be a special case?
+		//should we assume that the points we evaluate will always be inside the flyzone?
+		assert_eq!(pathfinder.valid_path(&h, &i), true);
+		assert_eq!(pathfinder.valid_path(&h, &e), false);
 	}
 
 }
