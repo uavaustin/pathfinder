@@ -82,9 +82,22 @@ impl Pathfinder {
     fn valid_path(&mut self, a: &Point, b: &Point) -> bool {
         // latitude is y, longitude is x
         // flyzone is array connected by each index
-        // implementing intersect code in: http://developer.classpath.org/doc/java/awt/geom/Line2D-source.html
-        for flyzone in &self.flyzones {}
-        false
+        // some messy code to link flyzone points, can definitely be better
+        for flyzone in &self.flyzones {
+			let mut tempzone = flyzone.clone();
+			let first = tempzone.swap_remove(0);
+			let mut temp = first;
+			for point in flyzone {
+				if Self::intersect(a, b, &temp, point) == false {
+					return false;
+				}
+				let temp = *point;
+			}
+			if Self::intersect(a, b, &temp, &first) == false {
+					return false;
+			}
+		}
+		true
     }
 
     // helper function for intersection calculation
