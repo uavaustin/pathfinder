@@ -78,7 +78,7 @@ impl Pathfinder {
         self.nodes.insert(Rc::new(node), HashSet::new());
     }
 
-    // check if a path is valid (i.e not block by obstacle or flightzone)
+    // check if a path is valid (not blocked by flightzone)
     fn valid_path(&mut self, a: &Point, b: &Point) -> bool {
         // latitude is y, longitude is x
         // flyzone is array connected by each index
@@ -101,6 +101,22 @@ impl Pathfinder {
 		}
 		true
     }
+
+	// check if path is valid (not blocked by obstacle)
+	fn valid_path_obs(&mut self, a:&Point, b: &Point) -> bool {
+		for obstacle in &self.obstacles {
+			//reciprocals of dy and dx in terms of unit vector
+			let mag = ((a.lat() - b.lat()).powf(2.0) + (a.lon() - b.lon()).powf(2.0)).sqrt();
+			let dx = -(a.lat() - b.lat()) / mag;
+			let dy = a.lon() - b.lon() / mag;
+			let mut c = Point::from_radians(obstacle.coords.lat() + dy * obstacle.radius as f64, obstacle.coords.lon() + dx * obstacle.radius as f64, obstacle.height);
+			let mut d = Point::from_radians(obstacle.coords.lat() - dy * obstacle.radius as f64, obstacle.coords.lon() - dx * obstacle.radius as f64, obstacle.height);
+			if Self::intersect(a, b, &c, &d) == false {
+				return false
+			}		
+		}
+		true
+	}
 
     // helper function for intersection calculation
     // returns the area between three points
