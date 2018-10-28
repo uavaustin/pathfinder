@@ -1,55 +1,51 @@
-use super::{ordered_float::OrderedFloat, std, TURNING_RADIUS};
+use super::{std, TURNING_RADIUS, ordered_float::OrderedFloat, PI};
 use obj::{Obstacle, Plane, Point, Waypoint};
 
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 #[derive(Clone, Eq, Hash, PartialEq)]
-pub enum Direction {
-    Left,
-    Right,
-}
-
-#[derive(Clone, Eq, Hash, PartialEq)]
 pub struct Vertex {
-    reference: Rc<Node>,
-    angle: OrderedFloat<f32>,
-    side: Direction,
+    pub reference: Rc<Node>,
+    pub angle: OrderedFloat<f32>
 }
 
 impl Vertex {
-    pub fn new(reference: Rc<Node>, angle: OrderedFloat<f32>, side: Direction) -> Vertex {
+    pub fn new(reference: Rc<Node>, angle: f32) -> Vertex{
         Vertex {
             reference: reference.clone(),
-            angle: angle,
-            side: side,
+            angle: OrderedFloat(angle)
         }
     }
 
+    pub fn to_point(&self) -> Point {
+        let a1: f32 = self.angle.into();
+        Point::from_radians(self.reference.location.lat() + (self.reference.radius * a1.sin()) as f64,
+                self.reference.location.lon() + (self.reference.radius * a1.cos()) as f64,
+                0f32)
+    }
+
     pub fn reciprocal(&self) -> Self {
+        let theta: f32 = self.angle.into();
         Vertex {
             reference: self.reference.clone(),
-            angle: self.angle,
-            side: if self.side == Direction::Right {
-                Direction::Left
-            } else {
-                Direction::Right
-            },
+            angle: OrderedFloat((2f32 * PI - theta) % (2f32 * PI)),
         }
     }
+
 }
 
 // Represent a connection between two nodes
 // Contains the coordinate of tangent line and distance
 #[derive(Clone, Eq, Hash, PartialEq)]
 pub struct Connection {
-    start: Vertex,
-    end: Vertex,
+    pub start: Rc<Vertex>,
+    pub end: Rc<Vertex>,
     distance: OrderedFloat<f32>,
 }
 
 impl Connection {
-    pub fn new(start: Vertex, end: Vertex, distance: f32) -> Self {
+    pub fn new(start: Rc<Vertex>, end: Rc<Vertex>, distance: f32) -> Self {
         Connection {
             start: start,
             end: end,
@@ -57,15 +53,10 @@ impl Connection {
         }
     }
 
-    pub fn set_path(&mut self, start: Vertex, end: Vertex) {
-        self.start = start;
-        self.end = end;
-    }
-
     pub fn reciprocal(&self) -> Self {
         Connection {
-            start: self.end.reciprocal(),
-            end: self.start.reciprocal(),
+            start: Rc::new(self.end.reciprocal()),
+            end: Rc::new(self.start.reciprocal()),
             distance: self.distance,
         }
     }
@@ -74,8 +65,8 @@ impl Connection {
 #[derive(Clone)]
 pub struct Node {
     index: u32,
-    location: Point,
-    radius: f32,
+    pub location: Point,
+    pub radius: f32,
     height: f32,
 }
 

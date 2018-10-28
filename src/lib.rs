@@ -4,6 +4,7 @@ extern crate ordered_float;
 use std::collections::{BinaryHeap, HashMap, HashSet, LinkedList};
 use std::env;
 use std::f64::consts::SQRT_2;
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
@@ -11,7 +12,7 @@ use std::time::{Duration, SystemTime};
 
 mod node;
 mod obj;
-pub use node::{Connection, Node};
+pub use node::{Connection, Node, Vertex};
 pub use obj::{Obstacle, Plane, Point, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
@@ -79,7 +80,7 @@ impl Pathfinder {
     }
 
     // check if a path is valid (not blocked by flightzone)
-    fn valid_path(&mut self, a: &Point, b: &Point) -> bool {
+    fn valid_path(&self, a: &Point, b: &Point) -> bool {
         // latitude is y, longitude is x
         // flyzone is array connected by each index
         // some messy code to link flyzone points, can definitely be better
@@ -103,7 +104,7 @@ impl Pathfinder {
     }
 
 	// check if path is valid (not blocked by obstacle)
-	fn valid_path_obs(&mut self, a:&Point, b: &Point) -> bool {
+	fn valid_path_obs(&self, a:&Point, b: &Point) -> bool {
 		for obstacle in &self.obstacles {
 			//reciprocals of dy and dx in terms of unit vector
 			let mag = ((a.lat() - b.lat()).powf(2.0) + (a.lon() - b.lon()).powf(2.0)).sqrt();
@@ -184,15 +185,43 @@ impl Pathfinder {
 
     // Generate all possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
-    fn find_path(&self, a: &Rc<Node>, b: &Rc<Node>) -> Option<Connection> {
-        unimplemented!();
+
+    fn find_path(&self, a: &Rc<Node>, b: &Rc<Node>) -> Vec<Connection> {
+        let c1: Point = a.location;
+        let c2: Point = b.location;
+        let r1: f32 = a.radius.into();
+        let r2: f32 = b.radius.into();
+        let dist: f32 = (((c1.lat() - c2.lat()).powi(2) + (c1.lon() - c2.lon()).powi(2)).sqrt()) as f32;
+
+        let theta1 = ((r2 - r1).abs() / dist).acos();
+        let theta2 = -theta1;
+        let theta3 = ((r1 + r2) / dist).acos();
+        let theta4 = -theta3;
+        let phi1 = theta1;
+        let phi2 = -phi1;
+        let phi3 = PI - theta4;
+        let phi4 = -phi3;
+
+        let mut connections: Vec<Connection> = Vec::new();
+        let candidates = [(theta1, phi1), (theta2, phi2), (theta3, phi3), (theta4, phi4)];
+        for (i, j) in candidates.iter() {
+            let v1 = Vertex::new(a.clone(), *i);
+            let v2 = Vertex::new(b.clone(), *j);
+            let p1 = v1.to_point();
+            let p2 = v2.to_point();
+            if self.valid_path(&p1, &p2) {
+                connections.push(Connection::new(Rc::new(v1), Rc::new(v2), p1.distance(&p2)));
+            }
+        }
+        connections
     }
+
 
     fn build_graph(&mut self) {
         let mut candidates = self.nodes.clone();
         for (a, x) in &mut self.nodes.clone() {
             for (b, y) in &mut candidates {
-                if let Some(path) = self.find_path(a, b) {
+                for path in self.find_path(&a, &b) {
                     x.insert(path.reciprocal());
                     y.insert(path);
                 }
