@@ -79,7 +79,7 @@ impl Pathfinder {
         self.nodes.insert(Rc::new(node), HashSet::new());
     }
 
-    // check if a path is valid (not blocked by flightzone)
+    // check if a path is valid (not blocked by flightzone or obstacles)
     fn valid_path(&self, a: &Point, b: &Point) -> bool {
         // latitude is y, longitude is x
         // flyzone is array connected by each index
@@ -100,24 +100,50 @@ impl Pathfinder {
 					return false;
 			}
 		}
-		true
-    }
-
-	// check if path is valid (not blocked by obstacle)
-	fn valid_path_obs(&self, a:&Point, b: &Point) -> bool {
+		// test for obstacles
 		for obstacle in &self.obstacles {
+			//catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
+			if a.distance(&obstacle.coords) < obstacle.radius || b.distance(&obstacle.coords) < obstacle.radius {
+				return false
+			}
 			//reciprocals of dy and dx in terms of unit vector
-			let mag = ((a.lat() - b.lat()).powf(2.0) + (a.lon() - b.lon()).powf(2.0)).sqrt();
+			let mag = a.distance(b) as f64;
 			let dx = -(a.lat() - b.lat()) / mag;
-			let dy = a.lon() - b.lon() / mag;
+			let dy = (a.lon() - b.lon()) / mag;
+			// connect two points from perpendicular to a to b segment, guarantee "intersect"
 			let mut c = Point::from_radians(obstacle.coords.lat() + dy * obstacle.radius as f64, obstacle.coords.lon() + dx * obstacle.radius as f64, obstacle.height);
 			let mut d = Point::from_radians(obstacle.coords.lat() - dy * obstacle.radius as f64, obstacle.coords.lon() - dx * obstacle.radius as f64, obstacle.height);
-			if Self::intersect(a, b, &c, &d) == false {
+			//math seems to check out here, successfully generates appropriate "perpendicular" line
+			//println!("Test intersect for {} {} {} {}", a, b, &c, &d);
+			if Self::intersect(a, b, &c, &d) == true {
 				return false
 			}		
 		}
 		true
-	}
+    }
+
+	// check if path is valid (not blocked by obstacle)
+//	fn valid_path_obs(&self, a:&Point, b: &Point) -> bool {
+//		for obstacle in &self.obstacles {
+//			//catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
+//			if a.distance(&obstacle.coords) < obstacle.radius || b.distance(&obstacle.coords) < obstacle.radius {
+//				return false
+//			}
+//			//reciprocals of dy and dx in terms of unit vector
+//			let mag = a.distance(b) as f64;
+//			let dx = -(a.lat() - b.lat()) / mag;
+//			let dy = (a.lon() - b.lon()) / mag;
+//			// connect two points from perpendicular to a to b segment, guarantee "intersect"
+//			let mut c = Point::from_radians(obstacle.coords.lat() + dy * obstacle.radius as f64, obstacle.coords.lon() + dx * obstacle.radius as f64, obstacle.height);
+//			let mut d = Point::from_radians(obstacle.coords.lat() - dy * obstacle.radius as f64, obstacle.coords.lon() - dx * obstacle.radius as f64, obstacle.height);
+//			//math seems to check out here, successfully generates appropriate "perpendicular" line
+//			//println!("Test intersect for {} {} {} {}", a, b, &c, &d);
+//			if Self::intersect(a, b, &c, &d) == true {
+//				return false
+//			}		
+//		}
+//		true
+//	}
 
     // helper function for intersection calculation
     // returns the area between three points
@@ -434,6 +460,26 @@ mod tests {
 		assert_eq!(pathfinder.valid_path(&i, &l), false);
 		assert_eq!(pathfinder.valid_path(&k, &l), false);
 		assert_eq!(pathfinder.valid_path(&k, &m), true);
+	}
+	
+	#[test]
+	fn obstacles_pathing() {
+		let a = Point::from_radians(40f64, 20f64, 10f32);
+		let b = Point::from_radians(0f64, 20f64, 10f32);
+		let c = Point::from_radians(60f64, 20f64, 10f32);
+		let d = Point::from_radians(20f64, 60f64, 10f32);
+		let e = Point::from_radians(30f64, 20f64, 10f32);
+		
+		let ob = Obstacle::from_radians(20f64, 20f64, 20f32, 10f32);
+		
+		let obstacles = vec![ob];
+		
+		let mut pathfinder = Pathfinder::new();
+		pathfinder.init(1f32, Vec::new(), obstacles);
+		
+		assert_eq!(pathfinder.valid_path(&a, &b), false);
+		assert_eq!(pathfinder.valid_path(&c, &d), true);
+		assert_eq!(pathfinder.valid_path(&c, &e), false);
 	}
 
 }
