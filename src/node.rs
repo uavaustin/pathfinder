@@ -1,4 +1,5 @@
-use super::{std, TURNING_RADIUS, ordered_float::OrderedFloat, PI};
+use ::{TURNING_RADIUS, PI};
+use ::ordered_float::OrderedFloat;
 use obj::{Obstacle, Plane, Point, Waypoint};
 
 use std::hash::{Hash, Hasher};
@@ -92,7 +93,7 @@ impl<'a> From<&'a Obstacle> for Node {
 
 impl<'a> From<&'a Point> for Node {
     fn from(p: &Point) -> Node {
-        Node::new(0, *p, 10f32, std::f32::MAX)
+        Node::new(0, *p, 10f32, ::std::f32::MAX)
     }
 }
 

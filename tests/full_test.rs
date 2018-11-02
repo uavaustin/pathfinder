@@ -1,7 +1,8 @@
 extern crate pathfinder;
 use std::collections::LinkedList;
 
-use pathfinder::*;
+use pathfinder::Pathfinder;
+use pathfinder::obj::*;
 
 #[test]
 fn test0() {
