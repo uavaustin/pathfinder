@@ -209,6 +209,8 @@ impl Pathfinder {
         }
     }
 
+	// calculate distance of shortest distance from point to a segment defined by two lines
+
     // Generate all possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
 
