@@ -209,8 +209,40 @@ impl Pathfinder {
         }
     }
 
-	// calculate distance of shortest distance from point to a segment defined by two lines
-
+	// calculate distance of shortest distance from c to a segment defined by a and b
+		fn intersect_distance(a: &Point, b: &Point, c: &Point) {
+		//calculate distance from a to b, squared
+		let pd2 = (a.lon() - b.lon()) * (a.lon() - b.lon()) + (a.lat() - b.lat()) * (a.lat() - b.lat());
+		let (mut x, mut y) = (0f64, 0f64);
+		//check for conincidence of points
+		if pd2 == 0f64 {
+			x = a.lon();
+			y = b.lat();
+		}
+		//all other cases
+		else {
+			// calculate "distances" to points a and b (if a and b are shortest distance)
+			let u = ((c.lon() - a.lon()) * (b.lon() - a.lon()) + (c.lat() - a.lat()) * (b.lat() - a.lat())) / pd2;
+			// shortest distance is to point a
+			if u < 0f64 {
+				x = a.lon();
+				y = a.lat();
+			}
+			// shortest distance is to point b
+			else if u > 1f64 {
+				x = b.lon();
+				y = b.lat();
+			}
+			else {
+				// to perpendicular point on the segment
+				x = a.lon() + u * (b.lon() - a.lon());
+				y = a.lat() + u * (b.lat() - a.lat());
+			}
+		}
+		// returns distance
+		((x - c.lon()) * (x - c.lon()) + (y - c.lat()) * (y - c.lat())).sqrt();
+	}
+	
     // Generate all possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
 
