@@ -1,10 +1,14 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 extern crate ordered_float;
 
 use std::collections::{BinaryHeap, HashMap, HashSet, LinkedList};
 use std::env;
 use std::f64::consts::SQRT_2;
 use std::f32::consts::PI;
+use std::f64;
+use std::f32;
 use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
@@ -77,6 +81,50 @@ impl Pathfinder {
         let mut node = Node::from(input);
         node.set_index(self.nodes.len() as u32);
         self.nodes.insert(Rc::new(node), HashSet::new());
+    }
+
+    // Return intersection point(s) of line given by Point A and B and circle at point C with radius r  
+    fn circle_intersect(a: &Point, b: &Point, c: &Obstacle) -> (Option<Point>, Option<Point>) {
+        //y = mx + b for point a and b
+
+        println!("Point A, x:{}, y:{}", a.lat(), a.lon());
+        println!("Point B, x:{}, y:{}", b.lat(), b.lon());
+        let slope: f64 = (b.lon() - a.lon())/(b.lat() - a.lat()) as f64;
+        let slope_intercept: f64 = (b.lon() - slope*b.lat()) as f64;
+
+        println!("Slope: {}", slope);
+        println!("Slope Intercept: {}\n\n", slope);
+        //Quadratic to solve for intersects
+        let quad_A: f64 = (slope.powi(2) + 1.0) as f64;
+        let quad_B: f64 = 2.0*(slope*slope_intercept - slope*c.coords.lon() as f64 - c.coords.lat() as f64) as f64;
+        let quad_C: f64 = ((c.coords.lat()).powi(2) + (c.coords.lon()).powi(2) + slope_intercept.powi(2) - 2.0*slope_intercept*c.coords.lon() - c.radius.powi(2) as f64) as f64;
+
+        //Check discriminant (if > 0, 2 intersects; if = 0, 1 intersect; if < 0, no intersects)
+        let discriminant: f64 = (quad_B.powi(2) - 4.0*quad_A*quad_C) as f64;
+
+        //Returning value of NAN for no solution points
+        if(discriminant < 0.0) 
+        {
+            (None, None)
+        }
+        else
+        if(discriminant == 0.0)
+        {
+            let intersect_1: Point = Point::from_radians((-1.0)*quad_B/(2.0*quad_A), slope*((-1.0)*quad_B/(2.0*quad_A)) + slope_intercept, c.coords.alt()); //CURRENTLY JUST USES OBS HEIGHT
+           
+            (Some(intersect_1), None)
+        }
+        else
+        //if(discriminant > 0.0)
+        {
+
+            let intersect_1: Point = Point::from_radians(((-1.0)*quad_B - (quad_B.powi(2)-4.0*quad_A*quad_C).sqrt())/(2.0*quad_A), slope*(((-1.0)*quad_B - (quad_B.powi(2)-4.0*quad_A*quad_C).sqrt())/(2.0*quad_A)) + slope_intercept, c.coords.alt());
+            let intersect_2: Point = Point::from_radians(((-1.0)*quad_B + (quad_B.powi(2)-4.0*quad_A*quad_C).sqrt())/(2.0*quad_A), slope*(((-1.0)*quad_B + (quad_B.powi(2)-4.0*quad_A*quad_C).sqrt())/(2.0*quad_A)) + slope_intercept, c.coords.alt());
+            
+            (Some(intersect_1), Some(intersect_2))
+        }
+    
+        
     }
 
     // check if a path is valid (not blocked by flightzone or obstacles)
@@ -481,5 +529,39 @@ mod tests {
 		assert_eq!(pathfinder.valid_path(&c, &d), true);
 		assert_eq!(pathfinder.valid_path(&c, &e), false);
 	}
+    #[test]
+    fn intersects_circle() {
+        //Desmos Visual: https://www.desmos.com/calculator/zkfgbbexkm
+
+        //Check intersections of line from (0,0) to (30,0) with circle of radius 5 centered at (15,0)
+        //2 sol
+        let a = Point::from_radians(0f64, 0f64, 0f32);
+        let b = Point::from_radians(30f64, 0f64, 0f32);
+
+        let ob = Obstacle::from_radians(15f64, 0f64, 5f32, 20f32);
+
+        let (c1, c2) = Pathfinder::circle_intersect(&a, &b, &ob);
+        assert!(c1.is_some());
+        assert_eq!(c1.unwrap().lat(), 10f64);
+        assert_eq!(c1.unwrap().lon(), 0f64);
+
+        assert!(c2.is_some());
+        assert_eq!(c2.unwrap().lat(), 20f64);
+        assert_eq!(c2.unwrap().lon(), 0f64);
+
+        //Check intersections of line from (10,-5) to (10,5) with circle of radius 5 centered at (15,0)
+        //1 sol       
+        let d = Point::from_radians(10f64, -5f64, 0f32);
+        let e = Point::from_radians(10f64, 5f64, 0f32);
+        
+        let (f1, f2) = Pathfinder::circle_intersect(&d, &e, &ob);
+        assert!(f1.is_some());
+        assert_eq!(f1.unwrap().lat(), 10f64);
+        assert_eq!(f1.unwrap().lon(), 0f64);
+
+        assert!(f2.is_some());
+
+
+    }
 
 }
