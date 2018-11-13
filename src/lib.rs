@@ -549,18 +549,29 @@ mod tests {
         assert_eq!(c2.unwrap().lat(), 20f64);
         assert_eq!(c2.unwrap().lon(), 0f64);
 
-        //Check intersections of line from (10,-5) to (10,5) with circle of radius 5 centered at (15,0)
+        //Check intersections of line from (0,5) to (30,5) with circle of radius 5 centered at (15,0)
         //1 sol       
-        let d = Point::from_radians(10f64, -5f64, 0f32);
-        let e = Point::from_radians(10f64, 5f64, 0f32);
+        let d = Point::from_radians(0f64, 5f64, 0f32);
+        let e = Point::from_radians(30f64, 5f64, 0f32);
         
         let (f1, f2) = Pathfinder::circle_intersect(&d, &e, &ob);
         assert!(f1.is_some());
-        assert_eq!(f1.unwrap().lat(), 10f64);
-        assert_eq!(f1.unwrap().lon(), 0f64);
+        assert_eq!(f1.unwrap().lat(), 15f64);
+        assert_eq!(f1.unwrap().lon(), 5f64);
 
-        assert!(f2.is_some());
+        assert!(f2.is_none());
 
+        //Check intersections of line from (0,5) to (15,5) with circle of radius 5 centered at (15,0)
+        //1 sol       
+        let g = Point::from_radians(10f64, -5f64, 0f32);
+        let h = Point::from_radians(10f64, 5f64, 0f32);
+        
+        let (i1, i2) = Pathfinder::circle_intersect(&g, &h, &ob);
+        assert!(i1.is_some());
+        assert_eq!(i1.unwrap().lat(), 15f64);
+        assert_eq!(i1.unwrap().lon(), 5f64);
+
+        assert!(i2.is_none());
 
     }
 
