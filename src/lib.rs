@@ -102,25 +102,52 @@ impl Pathfinder {
 		}
 		// test for obstacles
 		for obstacle in &self.obstacles {
-			//catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
-			if a.distance(&obstacle.coords) < obstacle.radius || b.distance(&obstacle.coords) < obstacle.radius {
-				return false
+			//intersect distance gives x and y of intersect point, then distance
+			//calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
+			let int_data = Self::intersect_distance(a, b, &obstacle.coords);
+			if int_data.2.sqrt() < obstacle.radius as f64 {
+				//immediately check if the endpoint is the shortest distance; can't fly over in this case
+				//EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
+				if int_data.3 {
+					return false
+				}
+				//otherwise, we can check if height allows flyover
+				let mag = ((obstacle.radius as f64 * obstacle.radius as f64) - int_data.2).sqrt();
+				//calculate unit vectors for y and x directions
+				let dy = (a.lat() - b.lat()) / a.distance(b) as f64;
+				let dx = (a.lon() - b.lon()) / a.distance(b) as f64;
 			}
-			//reciprocals of dy and dx in terms of unit vector
-			let mag = a.distance(b) as f64;
-			let dx = -(a.lat() - b.lat()) / mag;
-			let dy = (a.lon() - b.lon()) / mag;
-			// connect two points from perpendicular to a to b segment, guarantee "intersect"
-			let mut c = Point::from_radians(obstacle.coords.lat() + dy * obstacle.radius as f64, obstacle.coords.lon() + dx * obstacle.radius as f64, obstacle.height);
-			let mut d = Point::from_radians(obstacle.coords.lat() - dy * obstacle.radius as f64, obstacle.coords.lon() - dx * obstacle.radius as f64, obstacle.height);
-			//math seems to check out here, successfully generates appropriate "perpendicular" line
-			//println!("Test intersect for {} {} {} {}", a, b, &c, &d);
-			if Self::intersect(a, b, &c, &d) == true {
-				return false
-			}		
 		}
 		true
     }
+
+	// temporary placeholder function to test functionality of point determination
+	fn valid_path_obs(a:&Point, b: &Point, c: &Obstacle) -> (Option<Point>, Option<Point>) {
+			//intersect distance gives x and y of intersect point, then distance
+			//calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
+			let int_data = Self::intersect_distance(a, b, &c.coords);
+			if int_data.2.sqrt() < c.radius as f64 {
+				println!("distance: {}", int_data.2.sqrt());
+				//immediately check if the endpoint is the shortest distance; can't fly over in this case
+				//EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
+				//if int_data.3 {
+					//not technically none, but should be considered as such as we will stop calculations
+					//return (None, None)
+				//}
+				let mag = ((c.radius as f64 * c.radius as f64) - int_data.2).sqrt();
+				println!("mag: {}", mag);
+				//calculate unit vectors for y and x directions
+				let dy = (a.lat() - b.lat()) / a.distance(b) as f64;
+				let dx = (a.lon() - b.lon()) / a.distance(b) as f64;
+				
+				let p1 = Point::from_radians(int_data.1 + dy * mag, int_data.0 + dx * mag, 0f32);
+				let p2 = Point::from_radians(int_data.1 - dy * mag, int_data.0 - dx * mag, 0f32);
+				return (Some(p1), Some(p2))
+		}
+		else {
+			return (None, None)
+		}
+	}
 
 	// check if path is valid (not blocked by obstacle)
 //	fn valid_path_obs(&self, a:&Point, b: &Point) -> bool {
@@ -209,11 +236,13 @@ impl Pathfinder {
         }
     }
 
-	// calculate distance of shortest distance from c to a segment defined by a and b
-		fn intersect_distance(a: &Point, b: &Point, c: &Point) {
+	// calculate distance of shortest distance from obstacle c to a segment defined by a and b
+	fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f64, f64, f64, bool) {
 		//calculate distance from a to b, squared
 		let pd2 = (a.lon() - b.lon()) * (a.lon() - b.lon()) + (a.lat() - b.lat()) * (a.lat() - b.lat());
 		let (mut x, mut y) = (0f64, 0f64);
+		// there may be a case where the shortest point is to an endpoint.
+		let mut endpoint = false;
 		//check for conincidence of points
 		if pd2 == 0f64 {
 			x = a.lon();
@@ -227,11 +256,13 @@ impl Pathfinder {
 			if u < 0f64 {
 				x = a.lon();
 				y = a.lat();
+				endpoint = true;
 			}
 			// shortest distance is to point b
 			else if u > 1f64 {
 				x = b.lon();
 				y = b.lat();
+				endpoint = true;
 			}
 			else {
 				// to perpendicular point on the segment
@@ -240,7 +271,7 @@ impl Pathfinder {
 			}
 		}
 		// returns distance
-		((x - c.lon()) * (x - c.lon()) + (y - c.lat()) * (y - c.lat())).sqrt();
+		(x, y, (x - c.lon()) * (x - c.lon()) + (y - c.lat()) * (y - c.lat()), endpoint)
 	}
 	
     // Generate all possible path (tangent lines) between two nodes, and return the
@@ -372,7 +403,7 @@ impl Pathfinder {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+use super::*;
 
     #[test]
     #[should_panic]
@@ -515,5 +546,104 @@ mod tests {
 		assert_eq!(pathfinder.valid_path(&c, &d), true);
 		assert_eq!(pathfinder.valid_path(&c, &e), false);
 	}
+	
+	#[test]
+	fn intersection_distance() {
+		let ax = Point::from_radians(0f64, 0f64, 0f32);
+		let ay = Point::from_radians(0f64, 30f64, 0f32);
+		
+		let bx = Point::from_radians(0f64, 10f64, 0f32);
+		let by = Point::from_radians(0f64, 20f64, 0f32);
+		
+		let ob = Obstacle::from_radians(0f64, 15f64, 5f32, 20f32);
+		
+		//intercepts at (10,0), (20,0)
+		assert_eq!(Pathfinder::intersect_distance(&ax, &ay, &ob.coords).2, 0f64);
+		assert_eq!(Pathfinder::valid_path_obs(&ax, &ay, &ob).0.unwrap(), (bx));
+		assert_eq!(Pathfinder::valid_path_obs(&ax, &ay, &ob).1.unwrap(), (by));
+	}
+	
+    //assert equal, equal practically because floating points suck for intersection
+	macro_rules! assert_eqp {
+		($x:expr, $y:expr, $d:expr) => (
+			if !((($x - $y) as f64).abs() < $d) 
+			{ 
+				println!("{} vs {}", $x, $y);
+				panic!(); 
+			}
+		)
+	}
+	
+	#[test]
+	fn circle_intersection() {
+	    //Desmos Visual: https://www.desmos.com/calculator/zkfgbbexkm
+
+        //Check intersections of line from (0,0) to (30,0) with circle of radius 5 centered at (15,0)
+        //2 sol
+        let a = Point::from_radians(0f64, 0f64, 0f32);
+        let b = Point::from_radians(30f64, 0f64, 0f32);
+
+        let ob = Obstacle::from_radians(15f64, 0f64, 5f32, 20f32);
+
+        let (c1, c2) = Pathfinder::valid_path_obs(&a, &b, &ob);
+        assert!(c1.is_some());
+        assert_eq!(c1.unwrap().lat(), 10f64);
+        assert_eq!(c1.unwrap().lon(), 0f64);
+
+        assert!(c2.is_some());
+        assert_eq!(c2.unwrap().lat(), 20f64);
+        assert_eq!(c2.unwrap().lon(), 0f64);
+
+        //Check intersections of line from (0,5) to (30,5) with circle of radius 5 centered at (15,0)
+        //intersects at 1 point, should be considered valid
+        let d = Point::from_radians(0f64, 5f64, 0f32);
+        let e = Point::from_radians(30f64, 5f64, 0f32);
+        
+        let (f1, f2) = Pathfinder::valid_path_obs(&d, &e, &ob);
+        assert!(f1.is_none());
+        assert!(f2.is_none());
+
+        //Check intersections of line from (0,5) to (15,5) with circle of radius 5 centered at (15,0)
+        //intersects at 1 point, should be considered valid 
+        let g = Point::from_radians(10f64, -5f64, 0f32);
+        let h = Point::from_radians(10f64, 5f64, 0f32);
+        
+        let (i1, i2) = Pathfinder::valid_path_obs(&g, &h, &ob);
+        assert!(i1.is_none());	
+        //assert_eq!(i1.unwrap().lat(), 15f64);
+        //assert_eq!(i1.unwrap().lon(), 5f64);
+
+        assert!(i2.is_none());
+
+		//should intersect at two points
+		let j = Point::from_radians(8f64, -2f64, 0f32);
+		let k = Point::from_radians(16f64, 6f64, 0f32);
+		
+		let (l1, l2) = Pathfinder::valid_path_obs(&j, &k, &ob);
+		assert!(l1.is_some());
+		
+		assert_eqp!(l1.unwrap().lat(), 10f64, 0.0001);
+		assert_eqp!(l1.unwrap().lon(), 0f64, 0.0001); 
+		
+		assert!(l2.is_some());
+		assert_eqp!(l2.unwrap().lat(), 15f64, 0.0001 );
+		assert_eqp!(l2.unwrap().lon(), 5f64, 0.0001 );
+		
+		//should intersect at two points
+		let m = Point::from_radians(8f64, 4f64, 0f32);
+		let n = Point::from_radians(30f64, -6f64, 0f32);
+		
+		let (o1, o2) = Pathfinder::valid_path_obs(&m, &n, &ob);
+		assert_eqp!(o1.unwrap().lat(), 10.807f64, 0.001);
+		assert_eqp!(o1.unwrap().lon(), 2.724f64, 0.001);
+		assert_eqp!(o2.unwrap().lat(), 19.809f64, 0.001);
+		assert_eqp!(o2.unwrap().lon(), -1.368f64, 0.001);
+   }
+
+
 
 }
+
+
+
+
