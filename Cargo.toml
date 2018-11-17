@@ -12,3 +12,8 @@ ordered-float = "1.0.1"
 
 [dev-dependencies]
 rand = "0.5.1"
+criterion = "0.2"
+
+[[bench]]
+name = "my_benchmark"
+harness = false

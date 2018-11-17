@@ -20,6 +20,7 @@ const POLAR_RADIUS: f64 = 6356752.0;
 const RADIUS: f64 = 6371000.0;
 const MIN_BUFFER: f32 = 5f32;
 const TURNING_RADIUS: f32 = 5f32; // In meters
+const MAX_ANGLE: f64 = 3.141/6f64;
 
 #[allow(non_snake_case)]
 pub struct Pathfinder {
@@ -116,13 +117,27 @@ impl Pathfinder {
 				//calculate unit vectors for y and x directions
 				let dy = (a.lat() - b.lat()) / a.distance(b) as f64;
 				let dx = (a.lon() - b.lon()) / a.distance(b) as f64;
+				//p1 closer to a, p2 closer to b
+				let p1 = Point::from_radians(int_data.1 + dy * mag, int_data.0 + dx * mag, obstacle.height);
+				let p2 = Point::from_radians(int_data.1 - dy * mag, int_data.0 - dx * mag, obstacle.height);
+				//if a descends to b, need to clear p2. if a ascends to b, need to clear p1.
+				let theta_o = ((a.alt() - b.alt()) / a.distance(b)).atan();
+				let mut theta1:f32;
+				if a.alt() > b.alt() {
+					let theta1 = ((a.alt() - p2.alt()) / a.distance(&p2)).atan();
+					return theta_o <= theta1;
+				}
+				else if a.alt() < b.alt() {
+					let theta1 = ((p1.alt() - a.alt()) / a.distance(&p1)).atan();
+					return theta_o >= theta1;
+				}
 			}
 		}
 		true
     }
 
 	// temporary placeholder function to test functionality of point determination
-	fn valid_path_obs(a:&Point, b: &Point, c: &Obstacle) -> (Option<Point>, Option<Point>) {
+	pub fn valid_path_obs(a:&Point, b: &Point, c: &Obstacle) -> (Option<Point>, Option<Point>) {
 			//intersect distance gives x and y of intersect point, then distance
 			//calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
 			let int_data = Self::intersect_distance(a, b, &c.coords);
