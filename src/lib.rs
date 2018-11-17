@@ -101,11 +101,12 @@ impl Pathfinder {
 					return false;
 			}
 		}
-		// test for obstacles
+		// test for obstacles, intersection/width/height
 		for obstacle in &self.obstacles {
 			//intersect distance gives x and y of intersect point, then distance
 			//calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
 			let int_data = Self::intersect_distance(a, b, &obstacle.coords);
+			println!("{:?}", int_data);
 			if int_data.2.sqrt() < obstacle.radius as f64 {
 				//immediately check if the endpoint is the shortest distance; can't fly over in this case
 				//EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
@@ -121,15 +122,21 @@ impl Pathfinder {
 				let p1 = Point::from_radians(int_data.1 + dy * mag, int_data.0 + dx * mag, obstacle.height);
 				let p2 = Point::from_radians(int_data.1 - dy * mag, int_data.0 - dx * mag, obstacle.height);
 				//if a descends to b, need to clear p2. if a ascends to b, need to clear p1.
-				let theta_o = ((a.alt() - b.alt()) / a.distance(b)).atan();
+				let theta_o = ((b.alt() - a.alt())).atan2(a.distance(b));
 				let mut theta1:f32;
 				if a.alt() > b.alt() {
-					let theta1 = ((a.alt() - p2.alt()) / a.distance(&p2)).atan();
-					return theta_o <= theta1;
+					let theta1 = (p2.alt() - a.alt()).atan2(a.distance(&p2));
+					println!("descending, {}, {}", theta1, theta_o);
+					return theta_o >= theta1;
 				}
 				else if a.alt() < b.alt() {
-					let theta1 = ((p1.alt() - a.alt()) / a.distance(&p1)).atan();
+					let theta1 = (p1.alt() - a.alt()).atan2(a.distance(&p1));
+					println!("ascending, {}, {}", theta1, theta_o);
 					return theta_o >= theta1;
+				}
+				//else it's a straight altitude line, just check altitude
+				else {
+					return a.alt() >= obstacle.height;
 				}
 			}
 		}
@@ -550,7 +557,7 @@ use super::*;
 		let d = Point::from_radians(20f64, 60f64, 10f32);
 		let e = Point::from_radians(30f64, 20f64, 10f32);
 		
-		let ob = Obstacle::from_radians(20f64, 20f64, 20f32, 10f32);
+		let ob = Obstacle::from_radians(20f64, 20f64, 20f32, 20f32);
 		
 		let obstacles = vec![ob];
 		
@@ -655,7 +662,36 @@ use super::*;
 		assert_eqp!(o2.unwrap().lon(), -1.368f64, 0.001);
    }
 
+	#[test]
+	fn obstacle_flyover() {
+		//Graphical Visualization: https://www.geogebra.org/3d/a55hmxfy
+		let a = Point::from_radians(0f64, 0f64, 10f32);
+        let b = Point::from_radians(30f64, 0f64, 10f32);
+		let c = Point::from_radians(20f64, 0f64, 30f32);
+		
+		let d = Point::from_radians(30f64, 0f64, 25f32);
+		let e = Point::from_radians(0f64, 0f64, 25f32);
+		let f = Point::from_radians(30f64, 10f64, 30f32);
+		let g = Point::from_radians(20f64, 0f64, 40f32);
 
+        let ob = Obstacle::from_radians(15f64, 0f64, 5f32, 20f32);
+
+		let obstacles = vec![ob];
+		
+		let mut pathfinder = Pathfinder::new();
+		pathfinder.init(1f32, Vec::new(), obstacles);
+		
+		assert_eq!(pathfinder.valid_path(&a, &b), false);
+		assert_eq!(pathfinder.valid_path(&a, &d), false);
+		assert_eq!(pathfinder.valid_path(&e, &b), false);
+		assert_eq!(pathfinder.valid_path(&b, &e), false);
+		
+		assert_eq!(pathfinder.valid_path(&d, &e), true);
+		assert_eq!(pathfinder.valid_path(&a, &c), true);
+		assert_eq!(pathfinder.valid_path(&a, &g), true);
+		
+		assert_eq!(pathfinder.valid_path(&a, &f), false);
+	}
 
 }
 
