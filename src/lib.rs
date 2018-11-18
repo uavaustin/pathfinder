@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
+
 extern crate ordered_float;
 
 use std::collections::{BinaryHeap, HashMap, HashSet, LinkedList};
@@ -84,11 +85,8 @@ impl Pathfinder {
     }
 
     // Return intersection point(s) of line given by Point A and B and circle at point C with radius r
-    fn circle_intersect(a: &Point, b: &Point, c: &Obstacle) -> (Option<Point>, Option<Point>) {
+    pub fn circle_intersect(a: &Point, b: &Point, c: &Obstacle) -> (Option<Point>, Option<Point>) {
         //y = mx + b for point a and b
-
-        println!("Point A, x:{}, y:{}", a.lon(), a.lat());
-        println!("Point B, x:{}, y:{}", b.lon(), b.lat());
 
         let dx = b.lon() - a.lon();
         let dy = b.lat() - a.lat();
@@ -107,8 +105,6 @@ impl Pathfinder {
             (indep, dep, slope, slope_intercept)
         };
 
-        println!("Slope: {}", slope);
-        println!("Slope Intercept: {}\n\n", slope);
 
         //Quadratic to solve for intersects
         let quad_A: f64 = (slope.powi(2) + 1.0) as f64;
