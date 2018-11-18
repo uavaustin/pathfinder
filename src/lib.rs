@@ -149,7 +149,7 @@ impl Pathfinder {
 			//calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
 			let int_data = Self::intersect_distance(a, b, &c.coords);
 			if int_data.2.sqrt() < c.radius as f64 {
-				println!("distance: {}", int_data.2.sqrt());
+				//println!("distance: {}", int_data.2.sqrt());
 				//immediately check if the endpoint is the shortest distance; can't fly over in this case
 				//EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
 				//if int_data.3 {
@@ -157,7 +157,7 @@ impl Pathfinder {
 					//return (None, None)
 				//}
 				let mag = ((c.radius as f64 * c.radius as f64) - int_data.2).sqrt();
-				println!("mag: {}", mag);
+				//println!("mag: {}", mag);
 				//calculate unit vectors for y and x directions
 				let dy = (a.lat() - b.lat()) / a.distance(b) as f64;
 				let dx = (a.lon() - b.lon()) / a.distance(b) as f64;
