@@ -147,7 +147,7 @@ impl Pathfinder {
                             * (((-1.0) * quad_B - (quad_B.powi(2) - 4.0 * quad_A * quad_C).sqrt())
                                 / (2.0 * quad_A))
                             + slope_intercept,
-                        c.coords.alt(),
+                        c.height,
                     ),
                     Point::from_radians(
                         ((-1.0) * quad_B + (quad_B.powi(2) - 4.0 * quad_A * quad_C).sqrt())
@@ -156,7 +156,7 @@ impl Pathfinder {
                             * (((-1.0) * quad_B + (quad_B.powi(2) - 4.0 * quad_A * quad_C).sqrt())
                                 / (2.0 * quad_A))
                             + slope_intercept,
-                        c.coords.alt(),
+                        c.height,
                     ),
                 )
             } else {
@@ -168,7 +168,7 @@ impl Pathfinder {
                             + slope_intercept,
                         ((-1.0) * quad_B - (quad_B.powi(2) - 4.0 * quad_A * quad_C).sqrt())
                             / (2.0 * quad_A),
-                        c.coords.alt(),
+                        c.height,
                     ),
                     Point::from_radians(
                         slope
@@ -177,7 +177,7 @@ impl Pathfinder {
                             + slope_intercept,
                         ((-1.0) * quad_B + (quad_B.powi(2) - 4.0 * quad_A * quad_C).sqrt())
                             / (2.0 * quad_A),
-                        c.coords.alt(),
+                        c.height,
                     ),
                 )
             };
@@ -209,31 +209,27 @@ impl Pathfinder {
         // test for obstacles
         for obstacle in &self.obstacles {
             //catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
-            if a.distance(&obstacle.coords) < obstacle.radius
-                || b.distance(&obstacle.coords) < obstacle.radius
-            {
-                return false;
-            }
-            //reciprocals of dy and dx in terms of unit vector
-            let mag = a.distance(b) as f64;
-            let dx = -(a.lat() - b.lat()) / mag;
-            let dy = (a.lon() - b.lon()) / mag;
-            // connect two points from perpendicular to a to b segment, guarantee "intersect"
-            let mut c = Point::from_radians(
-                obstacle.coords.lat() + dy * obstacle.radius as f64,
-                obstacle.coords.lon() + dx * obstacle.radius as f64,
-                obstacle.height,
-            );
-            let mut d = Point::from_radians(
-                obstacle.coords.lat() - dy * obstacle.radius as f64,
-                obstacle.coords.lon() - dx * obstacle.radius as f64,
-                obstacle.height,
-            );
-            //math seems to check out here, successfully generates appropriate "perpendicular" line
-            //println!("Test intersect for {} {} {} {}", a, b, &c, &d);
-            if Self::intersect(a, b, &c, &d) == true {
-                return false;
-            }
+			let (mut p1, mut p2) = Self::circle_intersect(a, b, obstacle);
+			//check if there are two points of intersect, for flyover cases
+			if p1.is_some() && p2.is_some() {
+				println!("p1:{}, p2:{}", p1.unwrap(), p2.unwrap());
+				let theta_o = (b.alt() - a.alt()).atan2(a.distance(b));
+				let mut theta1:f32;
+				if a.alt() > b.alt() {
+					let theta1 = (p2.unwrap().alt() - a.alt()).atan2(a.distance(&p2.unwrap()));
+					println!("descending, {}, {}", theta1, theta_o);
+					return theta_o >= theta1;
+				}
+				else if a.alt() < b.alt() {
+					let theta1 = (p1.unwrap().alt() - a.alt()).atan2(a.distance(&p1.unwrap()));
+					println!("ascending, {}, {}", theta1, theta_o);
+					return theta_o >= theta1;
+				}
+				//else it's a straight altitude line, just check altitude
+				else {
+					return a.alt() >= obstacle.height;
+				}
+			}
         }
         true
     }
@@ -591,7 +587,7 @@ mod tests {
         let d = Point::from_radians(20f64, 60f64, 10f32);
         let e = Point::from_radians(30f64, 20f64, 10f32);
 
-        let ob = Obstacle::from_radians(20f64, 20f64, 20f32, 10f32);
+        let ob = Obstacle::from_radians(20f64, 20f64, 20f32, 20f32);
 
         let obstacles = vec![ob];
 
@@ -678,5 +674,36 @@ mod tests {
         assert_eq!((o2.unwrap().lat()*1000.0).round() / 1000.0, -4.83f64);
 
     }
+
+	#[test]
+	fn obstacle_flyover() {
+		//Graphical Visualization: https://www.geogebra.org/3d/a55hmxfy
+		let a = Point::from_radians(0f64, 0f64, 10f32);
+        let b = Point::from_radians(30f64, 0f64, 10f32);
+		let c = Point::from_radians(20f64, 0f64, 30f32);
+		
+		let d = Point::from_radians(30f64, 0f64, 25f32);
+		let e = Point::from_radians(0f64, 0f64, 25f32);
+		let f = Point::from_radians(30f64, 10f64, 30f32);
+		let g = Point::from_radians(20f64, 0f64, 40f32);
+
+        let ob = Obstacle::from_radians(15f64, 0f64, 5f32, 20f32);
+
+		let obstacles = vec![ob];
+		
+		let mut pathfinder = Pathfinder::new();
+		pathfinder.init(1f32, Vec::new(), obstacles);
+		
+		assert_eq!(pathfinder.valid_path(&a, &b), false);
+		assert_eq!(pathfinder.valid_path(&a, &d), false);
+		assert_eq!(pathfinder.valid_path(&e, &b), false);
+		assert_eq!(pathfinder.valid_path(&b, &e), false);
+		
+		assert_eq!(pathfinder.valid_path(&d, &e), true);
+		assert_eq!(pathfinder.valid_path(&a, &c), true);
+		assert_eq!(pathfinder.valid_path(&a, &g), true);
+		
+		assert_eq!(pathfinder.valid_path(&a, &f), false);
+	}
 
 }
