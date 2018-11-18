@@ -1,20 +1,18 @@
 #![allow(dead_code)]
 extern crate ordered_float;
 
+use std::cell::RefCell;
 use std::collections::{BinaryHeap, HashMap, HashSet, LinkedList};
-use std::env;
-use std::f64::consts::SQRT_2;
 use std::f32::consts::PI;
-use std::fs::File;
-use std::io::Read;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
-pub mod obj;
 mod graph;
 mod node;
-use node::{Connection, Node};
-use obj::{Obstacle, Plane, Point, Waypoint};
+pub mod obj;
+mod point;
+use node::Node;
+use obj::{Location, Obstacle, Plane, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
@@ -25,25 +23,24 @@ const TURNING_RADIUS: f32 = 5f32; // In meters
 #[allow(non_snake_case)]
 pub struct Pathfinder {
     // exposed API
-    grid_size: f32,             // In meters
     buffer: f32,                // In meters
     max_process_time: Duration, // In seconds
-    flyzones: Vec<Vec<Point>>,
+    flyzones: Vec<Vec<Location>>,
     obstacles: Vec<Obstacle>,
     // private
     initialized: bool,
     start_time: SystemTime,
     current_wp: Waypoint,
     wp_list: LinkedList<Waypoint>,
-    nodes: HashMap<Rc<Node>, HashSet<Connection>>,
+    origin: Location, // Reference point defining each node
+    nodes: Vec<Rc<RefCell<Node>>>,
 }
 
 impl Pathfinder {
     pub fn new() -> Pathfinder {
-        Pathfinder {
+        Self {
             // exposed API
-            grid_size: 1f32,
-            buffer: 1f32,
+            buffer: MIN_BUFFER,
             max_process_time: Duration::from_secs(10u64),
             flyzones: Vec::new(),
             obstacles: Vec::new(),
@@ -52,49 +49,37 @@ impl Pathfinder {
             start_time: SystemTime::now(),
             current_wp: Waypoint::from_degrees(0u32, 0f64, 0f64, 0f32, 1f32),
             wp_list: LinkedList::new(),
-            nodes: HashMap::new(),
+            origin: Location::from_degrees(0f64, 0f64, 0f32),
+            nodes: Vec::new(),
         }
     }
 
-    pub fn init(&mut self, grid_size: f32, flyzones: Vec<Vec<Point>>, obstacles: Vec<Obstacle>) {
+    // Helper function to create an initialized pathfinder
+    pub fn create(
+        buffer_size: f32,
+        flyzones: Vec<Vec<Location>>,
+        obstacles: Vec<Obstacle>,
+    ) -> Self {
+        let mut pathfinder = Pathfinder::new();
+        pathfinder.init(buffer_size, flyzones, obstacles);
+        pathfinder
+    }
+
+    pub fn init(
+        &mut self,
+        buffer_size: f32,
+        flyzones: Vec<Vec<Location>>,
+        obstacles: Vec<Obstacle>,
+    ) {
         assert!(flyzones.len() >= 1);
         for flyzone in &flyzones {
             assert!(flyzone.len() >= 3);
         }
-        self.grid_size = grid_size;
-        self.buffer = grid_size.max(MIN_BUFFER);
+        self.buffer = buffer_size.max(MIN_BUFFER);
         self.flyzones = flyzones;
         self.obstacles = obstacles;
-        self.populate_nodes();
+        self.build_graph();
         self.initialized = true;
-    }
-
-    fn populate_nodes(&mut self) {
-        for ref obs in self.obstacles.clone() {
-            self.add_node(obs);
-        }
-    }
-
-    fn add_node<T>(&mut self, input: T)
-    where
-        Node: From<T>,
-    {
-        let mut node = Node::from(input);
-        node.set_index(self.nodes.len() as u32);
-        self.nodes.insert(Rc::new(node), HashSet::new());
-    }
-
-    fn build_graph(&mut self) {
-        let mut candidates = self.nodes.clone();
-        for (a, x) in &mut self.nodes.clone() {
-            for (b, y) in &mut candidates {
-                for path in self.find_path(&a, &b) {
-                    x.insert(path.reciprocal());
-                    y.insert(path);
-                }
-            }
-            candidates.remove(a); // Remove a from candidate pool
-        }
     }
 
     pub fn get_adjust_path(
@@ -105,8 +90,8 @@ impl Pathfinder {
         assert!(self.initialized);
         self.start_time = SystemTime::now();
         self.wp_list = LinkedList::new();
-        let mut current_loc: Point;
-        let mut next_loc: Point;
+        let mut current_loc: Location;
+        let mut next_loc: Location;
 
         // First destination is first waypoint
         match wp_list.pop_front() {
@@ -140,7 +125,7 @@ impl Pathfinder {
 
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
-    fn adjust_path(&mut self, start: Point, end: Point) -> Option<LinkedList<Waypoint>> {
+    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
         None
     }
 
@@ -148,16 +133,18 @@ impl Pathfinder {
         self.max_process_time = Duration::from_secs(max_process_time as u64);
     }
 
-    pub fn set_flyzone(&mut self, flyzone: Vec<Vec<Point>>) {
+    pub fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>) {
         self.flyzones = flyzone;
+        self.build_graph();
     }
 
     pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
         self.obstacles = obstacle_list;
+        self.build_graph();
     }
 
-    pub fn get_grid_size(&self) -> f32 {
-        self.grid_size
+    pub fn get_buffer_size(&self) -> f32 {
+        self.buffer
     }
 
     pub fn get_buffer(&self) -> f32 {
@@ -168,7 +155,7 @@ impl Pathfinder {
         self.max_process_time.as_secs() as u32
     }
 
-    pub fn get_flyzone(&mut self) -> &Vec<Vec<Point>> {
+    pub fn get_flyzone(&mut self) -> &Vec<Vec<Location>> {
         &self.flyzones
     }
 

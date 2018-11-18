@@ -1,124 +1,171 @@
-use ::{TURNING_RADIUS, PI};
-use ::ordered_float::OrderedFloat;
-use obj::{Obstacle, Plane, Point, Waypoint};
+use obj::{Location, Obstacle, Plane, Waypoint};
+use point::Point;
+use TURNING_RADIUS;
 
-use std::hash::{Hash, Hasher};
+use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+#[derive(Debug)]
 pub struct Vertex {
-    pub reference: Rc<Node>,
-    pub angle: OrderedFloat<f32>
+    pub angle: f32,                        // Angle with respect to the node
+    pub connection: Option<Connection>,    // Edge connecting to another node
+    pub next: Option<Rc<RefCell<Vertex>>>, // Neighbor vertex in the same node
 }
 
 impl Vertex {
-    pub fn new(reference: Rc<Node>, angle: f32) -> Vertex{
+    pub fn new(angle: f32, connection: Option<Connection>) -> Vertex {
         Vertex {
-            reference: reference.clone(),
-            angle: OrderedFloat(angle)
+            angle: angle,
+            connection: connection,
+            next: None,
         }
     }
+}
 
-    pub fn to_point(&self) -> Point {
-        let a1: f32 = self.angle.into();
-        Point::from_radians(self.reference.location.lat() + (self.reference.radius * a1.sin()) as f64,
-                self.reference.location.lon() + (self.reference.radius * a1.cos()) as f64,
-                0f32)
+impl fmt::Display for Vertex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "(angle={}, connection={} next={})",
+            self.angle,
+            self.connection.is_some(),
+            self.next.is_some()
+        )
     }
-
-    pub fn reciprocal(&self) -> Self {
-        let theta: f32 = self.angle.into();
-        Vertex {
-            reference: self.reference.clone(),
-            angle: OrderedFloat((2f32 * PI - theta) % (2f32 * PI)),
-        }
-    }
-
 }
 
 // Represent a connection between two nodes
 // Contains the coordinate of tangent line and distance
-#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+#[derive(Debug)]
 pub struct Connection {
-    pub start: Rc<Vertex>,
-    pub end: Rc<Vertex>,
-    distance: OrderedFloat<f32>,
+    pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
+    distance: f32,
 }
 
 impl Connection {
-    pub fn new(start: Rc<Vertex>, end: Rc<Vertex>, distance: f32) -> Self {
+    pub fn new(neighbor: Rc<RefCell<Vertex>>, distance: f32) -> Self {
         Connection {
-            start: start,
-            end: end,
-            distance: distance.into(),
-        }
-    }
-
-    pub fn reciprocal(&self) -> Self {
-        Connection {
-            start: Rc::new(self.end.reciprocal()),
-            end: Rc::new(self.start.reciprocal()),
-            distance: self.distance,
+            neighbor: neighbor,
+            distance: distance,
         }
     }
 }
 
-#[derive(Clone, Debug)]
 pub struct Node {
-    index: u32,
-    pub location: Point,
+    pub origin: Point,
     pub radius: f32,
     height: f32,
+    left_ring: Option<Rc<RefCell<Vertex>>>,
+    right_ring: Option<Rc<RefCell<Vertex>>>,
 }
 
-impl Eq for Node {}
-
-impl PartialEq for Node {
-    fn eq(&self, other: &Node) -> bool {
-        self.index == other.index
-    }
-}
-
-impl Hash for Node {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.index.hash(state);
-    }
-}
-
-impl<'a> From<&'a Obstacle> for Node {
-    fn from(obs: &Obstacle) -> Node {
-        Node::new(0, obs.coords, obs.radius, obs.height)
-    }
-}
-
-impl<'a> From<&'a Point> for Node {
-    fn from(p: &Point) -> Node {
-        Node::new(0, *p, 10f32, ::std::f32::MAX)
-    }
-}
-
-impl<'a> From<&'a Plane> for Node {
-    fn from(plane: &Plane) -> Node {
-        Node::new(0, plane.location, TURNING_RADIUS, plane.location.alt())
-    }
-}
-
-impl<'a> From<&'a Waypoint> for Node {
-    fn from(waypoint: &Waypoint) -> Node {
-        Node::new(0, waypoint.location, waypoint.radius, 0f32)
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "loc={:?}, r={} \nleft = [", self.origin, self.radius);
+        let mut current = self.left_ring.clone();
+        while let Some(ref mut vertex) = current.clone() {
+            write!(f, " {} ", vertex.borrow());
+            current = vertex.borrow().next.clone();
+        }
+        write!(f, " ] \nright = [");
+        let mut current = self.right_ring.clone();
+        while let Some(ref mut vertex) = current.clone() {
+            write!(f, " {} ", vertex.borrow());
+            current = vertex.borrow().next.clone();
+        }
+        write!(f, "]");
+        Ok(())
     }
 }
 
 impl Node {
-    pub fn new(index: u32, location: Point, radius: f32, height: f32) -> Self {
+    pub fn new(origin: Point, radius: f32, height: f32) -> Self {
         Node {
-            index: index,
-            location: location,
+            origin: origin,
             radius: radius,
             height: height,
+            left_ring: None,
+            right_ring: None,
         }
     }
-    pub fn set_index(&mut self, index: u32) {
-        self.index = index;
+
+    // Generate node from obstacle
+    pub fn from_obstacle(obs: &Obstacle, origin: &Location) -> Self {
+        Node::new(
+            Point::from_location(&obs.location, origin),
+            obs.radius,
+            obs.height,
+        )
+    }
+
+    // Generate node from point, used for inserting virtual obstacles for flyzones
+    pub fn from_location(p: &Location, origin: &Location) -> Self {
+        Node::new(Point::from_location(p, origin), TURNING_RADIUS, 0f32)
+    }
+
+    // Generate node from plane
+    pub fn from_plane(plane: &Plane, origin: &Location) -> Self {
+        Node::new(
+            Point::from_location(&plane.location, origin),
+            TURNING_RADIUS,
+            plane.location.alt(),
+        )
+    }
+
+    // Generate node from waypoint
+    pub fn from_waypoint(waypoint: &Waypoint, origin: &Location) -> Self {
+        Node::new(
+            Point::from_location(&waypoint.location, origin),
+            waypoint.radius,
+            0f32,
+        )
+    }
+
+    // Converts a vertex on a node to coordinate
+    pub fn to_point(&self, angle: f32) -> Point {
+        Point::new(
+            self.origin.x + self.radius * angle.cos(),
+            self.origin.y + self.radius * angle.sin(),
+            self.height,
+        )
+    }
+
+    pub fn insert_vertex(&mut self, v: Rc<RefCell<Vertex>>) {
+        let angle: f32 = v.borrow().angle;
+        let (is_left, mut current) = if angle > 0f32 {
+            // Left ring
+            if self.left_ring.is_none() {
+                self.left_ring = Some(v);
+                return;
+            }
+            (true, self.left_ring.clone())
+        } else {
+            // Right ring
+            if self.right_ring.is_none() {
+                self.right_ring = Some(v);
+                return;
+            }
+            (false, self.right_ring.clone())
+        };
+
+        while let Some(ref mut vertex) = current.clone() {
+            if vertex.borrow().next.is_some() {
+                let next_container = &vertex.borrow_mut().next;
+                let (angle, next_ptr) = match next_container {
+                    Some(next) => (next.borrow().angle, next.clone()),
+                    None => panic!("Next points to null"),
+                };
+                if (is_left && angle < angle) || (!is_left && angle > angle) {
+                    v.borrow_mut().next = Some(next_ptr);
+                    vertex.borrow_mut().next = Some(v);
+                    return;
+                }
+            } else {
+                vertex.borrow_mut().next = Some(v);
+                return;
+            }
+            current = vertex.borrow().next.clone();
+        }
     }
 }

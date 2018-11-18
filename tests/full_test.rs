@@ -1,8 +1,8 @@
 extern crate pathfinder;
 use std::collections::LinkedList;
 
-use pathfinder::Pathfinder;
 use pathfinder::obj::*;
+use pathfinder::Pathfinder;
 
 #[test]
 fn test0() {
@@ -11,17 +11,17 @@ fn test0() {
         Waypoint::from_degrees(1, 30.322280883789063, -97.60098266601564, 150f32, 10f32),
     ]);
     let flyzone = vec![vec![
-        Point::from_degrees(30.32469, -97.60466, 0f32),
-        Point::from_degrees(30.32437, -97.60367, 0f32),
-        Point::from_degrees(30.32356, -97.60333, 0f32),
-        Point::from_degrees(30.32276, -97.60398, 0f32),
-        Point::from_degrees(30.32082, -97.60368, 0f32),
-        Point::from_degrees(30.32173, -97.60008, 0f32),
-        Point::from_degrees(30.32329, -97.59958, 0f32),
-        Point::from_degrees(30.32545, -97.60066, 0f32),
-        Point::from_degrees(30.32608, -97.60201, 0f32),
-        Point::from_degrees(30.32613, -97.60339, 0f32),
-        Point::from_degrees(30.32537, -97.60453, 0f32),
+        Location::from_degrees(30.32469, -97.60466, 0f32),
+        Location::from_degrees(30.32437, -97.60367, 0f32),
+        Location::from_degrees(30.32356, -97.60333, 0f32),
+        Location::from_degrees(30.32276, -97.60398, 0f32),
+        Location::from_degrees(30.32082, -97.60368, 0f32),
+        Location::from_degrees(30.32173, -97.60008, 0f32),
+        Location::from_degrees(30.32329, -97.59958, 0f32),
+        Location::from_degrees(30.32545, -97.60066, 0f32),
+        Location::from_degrees(30.32608, -97.60201, 0f32),
+        Location::from_degrees(30.32613, -97.60339, 0f32),
+        Location::from_degrees(30.32537, -97.60453, 0f32),
     ]];
     let obstacles = vec![Obstacle::from_degrees(30.32228, -97.60198, 50f32, 10f32)];
 
@@ -35,11 +35,11 @@ fn test0() {
 #[test]
 fn test1() {
     let flyzone = vec![
-        Point::from_degrees(30.32521, -97.6023, 0f32),
-        Point::from_degrees(30.32466, -97.59856, 0f32),
-        Point::from_degrees(30.32107, -97.60032, 0f32),
-        Point::from_degrees(30.32247, -97.60325, 0f32),
-        Point::from_degrees(30.32473, -97.6041, 0f32),
+        Location::from_degrees(30.32521, -97.6023, 0f32),
+        Location::from_degrees(30.32466, -97.59856, 0f32),
+        Location::from_degrees(30.32107, -97.60032, 0f32),
+        Location::from_degrees(30.32247, -97.60325, 0f32),
+        Location::from_degrees(30.32473, -97.6041, 0f32),
     ];
     let obstacles = vec![
         Obstacle::from_degrees(30.32457, -97.60254, 50f32, 50.0),
@@ -65,10 +65,10 @@ fn test1() {
 #[test]
 fn test2() {
     let flyzone = vec![vec![
-        Point::from_degrees(30.276450732764616, -97.74291515350342, 0f32),
-        Point::from_degrees(30.276450732764616, -97.7239465713501, 0f32),
-        Point::from_degrees(30.29294185380876, -97.7239465713501, 0f32),
-        Point::from_degrees(30.29294185380876, -97.74291515350342, 0f32),
+        Location::from_degrees(30.276450732764616, -97.74291515350342, 0f32),
+        Location::from_degrees(30.276450732764616, -97.7239465713501, 0f32),
+        Location::from_degrees(30.29294185380876, -97.7239465713501, 0f32),
+        Location::from_degrees(30.29294185380876, -97.74291515350342, 0f32),
     ]];
     let obstacles = vec![Obstacle::from_degrees(
         30.286975723301133,
@@ -90,10 +90,10 @@ fn test2() {
 #[test]
 fn test3() {
     let flyzone = vec![vec![
-        Point::from_degrees(30.276450732764616, -97.74291515350342, 0f32),
-        Point::from_degrees(30.276450732764616, -97.7239465713501, 0f32),
-        Point::from_degrees(30.29294185380876, -97.7239465713501, 0f32),
-        Point::from_degrees(30.29294185380876, -97.74291515350342, 0f32),
+        Location::from_degrees(30.276450732764616, -97.74291515350342, 0f32),
+        Location::from_degrees(30.276450732764616, -97.7239465713501, 0f32),
+        Location::from_degrees(30.29294185380876, -97.7239465713501, 0f32),
+        Location::from_degrees(30.29294185380876, -97.74291515350342, 0f32),
     ]];
     let obstacles = vec![Obstacle::from_degrees(
         30.286975723301133,
@@ -117,18 +117,18 @@ fn test3() {
 #[test]
 fn test4() {
     let flyzone = vec![vec![
-        Point::from_degrees(38.14627, -76.42816, 0f32),
-        Point::from_degrees(38.15162, -76.42868, 0f32),
-        Point::from_degrees(38.15189, -76.43147, 0f32),
-        Point::from_degrees(38.15059, -76.43536, 0f32),
-        Point::from_degrees(38.14757, -76.43234, 0f32),
-        Point::from_degrees(38.14467, -76.43295, 0f32),
-        Point::from_degrees(38.14326, -76.43477, 0f32),
-        Point::from_degrees(38.14046, -76.43264, 0f32),
-        Point::from_degrees(38.14072, -76.42601, 0f32),
-        Point::from_degrees(38.14376, -76.42121, 0f32),
-        Point::from_degrees(38.14735, -76.42321, 0f32),
-        Point::from_degrees(38.14613, -76.42665, 0f32),
+        Location::from_degrees(38.14627, -76.42816, 0f32),
+        Location::from_degrees(38.15162, -76.42868, 0f32),
+        Location::from_degrees(38.15189, -76.43147, 0f32),
+        Location::from_degrees(38.15059, -76.43536, 0f32),
+        Location::from_degrees(38.14757, -76.43234, 0f32),
+        Location::from_degrees(38.14467, -76.43295, 0f32),
+        Location::from_degrees(38.14326, -76.43477, 0f32),
+        Location::from_degrees(38.14046, -76.43264, 0f32),
+        Location::from_degrees(38.14072, -76.42601, 0f32),
+        Location::from_degrees(38.14376, -76.42121, 0f32),
+        Location::from_degrees(38.14735, -76.42321, 0f32),
+        Location::from_degrees(38.14613, -76.42665, 0f32),
     ]];
     let obstacles = vec![Obstacle::from_degrees(38.14376, -76.42816, 50f32, 250f32)];
     let waypoints = vec_to_list(vec![Waypoint::from_degrees(
