@@ -46,7 +46,7 @@ impl Point {
         Into::<f64>::into(self.lon) * 180f64 / std::f64::consts::PI
     }
 
-    pub fn distance(&self, other: &Point) -> f32{
+    pub fn distance(&self, other: &Point) -> f32 {
         ((self.lat() - other.lat()).powi(2) + (self.lon() - other.lon()).powi(2)).sqrt() as f32
     }
 }

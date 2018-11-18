@@ -1,4 +1,4 @@
-use super::{std, TURNING_RADIUS, ordered_float::OrderedFloat, PI};
+use super::{ordered_float::OrderedFloat, std, PI, TURNING_RADIUS};
 use obj::{Obstacle, Plane, Point, Waypoint};
 
 use std::hash::{Hash, Hasher};
@@ -7,22 +7,24 @@ use std::rc::Rc;
 #[derive(Clone, Eq, Hash, PartialEq)]
 pub struct Vertex {
     pub reference: Rc<Node>,
-    pub angle: OrderedFloat<f32>
+    pub angle: OrderedFloat<f32>,
 }
 
 impl Vertex {
-    pub fn new(reference: Rc<Node>, angle: f32) -> Vertex{
+    pub fn new(reference: Rc<Node>, angle: f32) -> Vertex {
         Vertex {
             reference: reference.clone(),
-            angle: OrderedFloat(angle)
+            angle: OrderedFloat(angle),
         }
     }
 
     pub fn to_point(&self) -> Point {
         let a1: f32 = self.angle.into();
-        Point::from_radians(self.reference.location.lat() + (self.reference.radius * a1.sin()) as f64,
-                self.reference.location.lon() + (self.reference.radius * a1.cos()) as f64,
-                0f32)
+        Point::from_radians(
+            self.reference.location.lat() + (self.reference.radius * a1.sin()) as f64,
+            self.reference.location.lon() + (self.reference.radius * a1.cos()) as f64,
+            0f32,
+        )
     }
 
     pub fn reciprocal(&self) -> Self {
@@ -32,7 +34,6 @@ impl Vertex {
             angle: OrderedFloat((2f32 * PI - theta) % (2f32 * PI)),
         }
     }
-
 }
 
 // Represent a connection between two nodes
