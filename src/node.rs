@@ -5,7 +5,7 @@ use obj::{Obstacle, Plane, Point, Waypoint};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug)]
 pub struct Vertex {
     pub reference: Rc<Node>,
     pub angle: OrderedFloat<f32>
@@ -38,7 +38,7 @@ impl Vertex {
 
 // Represent a connection between two nodes
 // Contains the coordinate of tangent line and distance
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug)]
 pub struct Connection {
     pub start: Rc<Vertex>,
     pub end: Rc<Vertex>,
@@ -63,7 +63,7 @@ impl Connection {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Node {
     index: u32,
     pub location: Point,
@@ -110,7 +110,7 @@ impl<'a> From<&'a Waypoint> for Node {
 }
 
 impl Node {
-    fn new(index: u32, location: Point, radius: f32, height: f32) -> Self {
+    pub fn new(index: u32, location: Point, radius: f32, height: f32) -> Self {
         Node {
             index: index,
             location: location,

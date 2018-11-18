@@ -16,18 +16,23 @@ impl Pathfinder {
         let r1: f32 = a.radius.into();
         let r2: f32 = b.radius.into();
         let dist: f32 = (((c1.lat() - c2.lat()).powi(2) + (c1.lon() - c2.lon()).powi(2)).sqrt()) as f32;
-
+        //1 and 2 outer, 3 and 4 inner
         let theta1 = ((r2 - r1).abs() / dist).acos();
         let theta2 = -theta1;
-        let theta3 = ((r1 + r2) / dist).acos();
-        let theta4 = -theta3;
         let phi1 = theta1;
         let phi2 = -phi1;
+        let theta3 = ((r1 + r2) / dist).acos();
+        let theta4 = -theta3;
         let phi3 = PI - theta4;
         let phi4 = -phi3;
-
+        let candidates;
+        if dist > r1 + r2 {
+            candidates = vec![(theta1, phi1), (theta2, phi2), (theta3, phi3), (theta4, phi4)];
+        } else {
+            candidates = vec![(theta1, phi1), (theta2, phi2)];
+        }
         let mut connections: Vec<Connection> = Vec::new();
-        let candidates = [(theta1, phi1), (theta2, phi2), (theta3, phi3), (theta4, phi4)];
+        
         for (i, j) in candidates.iter() {
             let v1 = Vertex::new(a.clone(), *i);
             let v2 = Vertex::new(b.clone(), *j);
@@ -278,4 +283,73 @@ fn flyzones_pathing() {
     assert_eq!(pathfinder.valid_path(&i, &l), false);
     assert_eq!(pathfinder.valid_path(&k, &l), false);
     assert_eq!(pathfinder.valid_path(&k, &m), true);
+}
+
+#[test]
+fn find_path_tests() {
+    let a = Point::from_radians(40f64, 0f64, 10f32);
+    let b = Point::from_radians(40f64, 40f64, 10f32);
+    let c = Point::from_radians(0f64, 0f64, 10f32);
+    let d = Point::from_radians(0f64, 40f64, 10f32);
+    let flyzone = vec![a, b, d, c];
+    let flyzones = vec![flyzone];
+    let mut pathfinder = Pathfinder::new();
+    pathfinder.init(1f32, flyzones, Vec::new());
+
+    let n1 = Node::new(0_u32, Point::from_radians(30_f64, 30_f64, 0_f32), 1_f32, 0_f32);
+    let n2 = Node::new(1_u32, Point::from_radians(20_f64, 20_f64, 0_f32), 1_f32, 0_f32);
+    let a1 = Rc::new(n1);
+    let b1 = Rc::new(n2);
+    let mut expected = Vec::new();
+    let candidates = vec![(PI / 2_f32, PI / 2_f32),
+                (-PI / 2_f32, -PI / 2_f32),
+                ((2_f32 / (200_f32.sqrt())).acos(), PI + (2_f32 / (200_f32.sqrt())).acos()),
+                (-(2_f32 / (200_f32.sqrt())).acos(), -(PI + (2_f32 / (200_f32.sqrt())).acos()))];
+    for (i, j) in candidates.iter() {
+        let v1 = Vertex::new(a1.clone(), *i);
+        let v2 = Vertex::new(b1.clone(), *j);
+        let p1 = v1.to_point();
+        let p2 = v2.to_point();
+        expected.push(Connection::new(Rc::new(v1), Rc::new(v2), p1.distance(&p2)));
+    }
+    assert_eq!(pathfinder.find_path(&a1, &b1), expected);
+
+
+
+    let n3 = Node::new(0_u32, Point::from_radians(15_f64, 10_f64, 0_f32), 5_f32, 0_f32);
+    let n4 = Node::new(1_u32, Point::from_radians(20_f64, 10_f64, 0_f32), 4_f32, 0_f32);
+    let c = Rc::new(n3);
+    let d = Rc::new(n4);
+    let mut expected = Vec::new();
+    let candidates = vec![((1_f32/5_f32).acos(), (1_f32/5_f32).acos()),
+                (-(1_f32/5_f32).acos(), -(1_f32/5_f32).acos())];
+    for (i, j) in candidates.iter() {
+        let v1 = Vertex::new(c.clone(), *i);
+        let v2 = Vertex::new(d.clone(), *j);
+        let p1 = v1.to_point();
+        let p2 = v2.to_point();
+        expected.push(Connection::new(Rc::new(v1), Rc::new(v2), p1.distance(&p2)));
+    }
+    assert_eq!(pathfinder.find_path(&c, &d), expected);
+
+
+
+    let n5 = Node::new(0_u32, Point::from_radians(20_f64, 33_f64, 0_f32), 2_f32, 0_f32);
+    let n6 = Node::new(1_u32, Point::from_radians(12_f64, 33_f64, 0_f32), 1_f32, 0_f32);
+    let e = Rc::new(n5);
+    let f = Rc::new(n6);
+    let mut expected = Vec::new();
+    let candidates = [((1_f32/8_f32).acos(), (1_f32/8_f32).acos()),
+                (-(1_f32/8_f32).acos(), -(1_f32/8_f32).acos()),
+                ((3_f32/8_f32).acos(), PI + (3_f32/8_f32).acos()),
+                (-(3_f32/8_f32).acos(), -(PI + (3_f32/8_f32).acos()))];
+    for (i, j) in candidates.iter() {
+        let v1 = Vertex::new(e.clone(), *i);
+        let v2 = Vertex::new(f.clone(), *j);
+        let p1 = v1.to_point();
+        let p2 = v2.to_point();
+        expected.push(Connection::new(Rc::new(v1), Rc::new(v2), p1.distance(&p2)));
+    }
+    assert_eq!(pathfinder.find_path(&e, &f), expected);
+
 }
