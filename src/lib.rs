@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 extern crate ordered_float;
 
 use std::cell::RefCell;
@@ -7,9 +10,10 @@ use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
+pub mod obj;
+
 mod graph;
 mod node;
-pub mod obj;
 mod point;
 use node::Node;
 use obj::{Location, Obstacle, Plane, Waypoint};

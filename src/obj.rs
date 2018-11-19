@@ -70,11 +70,11 @@ impl Obstacle {
         }
     }
     pub fn from_degrees(lat: f64, lon: f64, radius: f32, height: f32) -> Self {
-        Obstacle::new(Location::from_degrees(lat, lon, 0f32), radius, height)
+        Obstacle::new(Location::from_degrees(lat, lon, height), radius, height)
     }
 
     pub fn from_radians(lat: f64, lon: f64, radius: f32, height: f32) -> Self {
-        Obstacle::new(Location::from_radians(lat, lon, 0f32), radius, height)
+        Obstacle::new(Location::from_radians(lat, lon, height), radius, height)
     }
 }
 

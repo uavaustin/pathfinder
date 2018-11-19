@@ -155,7 +155,32 @@ impl Pathfinder {
             }
         }
 
-        self.valid_obstacle_relative(a, b)
+        // test for obstacles
+        for obstacle in &self.obstacles {
+            //catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
+            let (p1, p2) = self.circle_intersect(a, b, obstacle);
+            //check if there are two points of intersect, for flyover cases
+            if p1.is_some() && p2.is_some() {
+                println!("p1:{:?}, p2:{:?}", p1.unwrap(), p2.unwrap());
+                let theta_o = (b.z - a.z).atan2(a.distance(b));
+                let mut theta1: f32;
+                if a.z > b.z {
+                    let theta1 = (p2.unwrap().z - a.z).atan2(a.distance(&p2.unwrap()));
+                    println!("descending, {}, {}", theta1, theta_o);
+                    return theta_o >= theta1;
+                } else if a.z < b.z {
+                    let theta1 = (p1.unwrap().z - a.z).atan2(a.distance(&p1.unwrap()));
+                    println!("ascending, {}, {}", theta1, theta_o);
+                    return theta_o >= theta1;
+                }
+                //else it's a straight altitude line, just check altitude
+                else {
+                    return a.z >= obstacle.height;
+                }
+            }
+        }
+
+        true
     }
 
     fn valid_obstacle_relative(&self, a: &Point, b: &Point) -> bool {
@@ -241,6 +266,112 @@ impl Pathfinder {
             return (Some(p1), Some(p2));
         } else {
             return (None, None);
+        }
+    }
+
+    // Return intersection point(s) of line given by Point A and B and circle at point C with radius r
+    pub fn circle_intersect(
+        &self,
+        a: &Point,
+        b: &Point,
+        obstacle: &Obstacle,
+    ) -> (Option<Point>, Option<Point>) {
+        //y = mx + b for point a and b
+
+        let mut c = Point::from_location(&obstacle.location, &self.origin);
+        c.z = obstacle.height;
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+
+        let (indep, dep, slope, slope_intercept) = if dx >= dy {
+            let indep = c.x;
+            let dep = c.y;
+            let slope = (b.y - a.y) / (b.x - a.x);
+            let slope_intercept = b.y - slope * b.x;
+            (indep, dep, slope, slope_intercept)
+        } else {
+            let indep = c.y;
+            let dep = c.x;
+            let slope = (b.x - a.x) / (b.y - a.y);
+            let slope_intercept = b.x - slope * b.y;
+            (indep, dep, slope, slope_intercept)
+        };
+
+        //Quadratic to solve for intersects
+        let quad_a = slope.powi(2) + 1.0;
+        let quad_b = 2.0 * (slope * slope_intercept - slope * dep - indep);
+        let quad_c = indep.powi(2) + dep.powi(2) + slope_intercept.powi(2)
+            - 2.0 * slope_intercept * dep
+            - obstacle.radius.powi(2);
+
+        //Check discriminant (if > 0, 2 intersects; if = 0, 1 intersect; if < 0, no intersects)
+        let discriminant = quad_b.powi(2) - 4.0 * quad_a * quad_c;
+
+        //Returning value of NAN for no solution points
+        if discriminant < 0.0 {
+            (None, None)
+        } else if discriminant == 0.0 {
+            let intersect_1: Point = if dx >= dy {
+                Point::new(
+                    (-1.0) * quad_b / (2.0 * quad_a),
+                    slope * ((-1.0) * quad_b / (2.0 * quad_a)) + slope_intercept,
+                    c.z,
+                ) //CURRENTLY JUST USES OBS HEIGHT
+            } else {
+                Point::new(
+                    slope * ((-1.0) * quad_b / (2.0 * quad_a)) + slope_intercept,
+                    (-1.0) * quad_b / (2.0 * quad_a),
+                    c.z,
+                ) //CURRENTLY JUST USES OBS HEIGHT
+            };
+            (Some(intersect_1), None)
+        } else
+        //if(discriminant > 0.0)
+        {
+            let (intersect_1, intersect_2) = if dx >= dy {
+                (
+                    Point::new(
+                        ((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a),
+                        slope
+                            * (((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                                / (2.0 * quad_a))
+                            + slope_intercept,
+                        c.z,
+                    ),
+                    Point::new(
+                        ((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a),
+                        slope
+                            * (((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                                / (2.0 * quad_a))
+                            + slope_intercept,
+                        c.z,
+                    ),
+                )
+            } else {
+                (
+                    Point::new(
+                        slope
+                            * (((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                                / (2.0 * quad_a))
+                            + slope_intercept,
+                        ((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a),
+                        c.z,
+                    ),
+                    Point::new(
+                        slope
+                            * (((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                                / (2.0 * quad_a))
+                            + slope_intercept,
+                        ((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a),
+                        c.z,
+                    ),
+                )
+            };
+            (Some(intersect_1), Some(intersect_2))
         }
     }
 }
@@ -375,6 +506,15 @@ mod tests {
         vec![points_to_flyzone(vec![a, b, c, d])]
     }
 
+    // Helper function to create an obstacle based on its position in transformed graph
+    fn obstacle_from_meters(x: f32, y: f32, radius: f32, height: f32) -> Obstacle {
+        Obstacle::new(
+            Location::from_meters(x, y, height, &dummy_origin()),
+            radius,
+            height,
+        )
+    }
+
     fn dummy_pathfinder() -> Pathfinder {
         Pathfinder::create(1f32, dummy_flyzones(), Vec::new())
     }
@@ -502,12 +642,7 @@ mod tests {
         let d = Point::new(20f32, 60f32, 10f32);
         let e = Point::new(30f32, 20f32, 10f32);
 
-        let ob = Obstacle::new(
-            Location::from_meters(20f32, 20f32, 20f32, &dummy_origin()),
-            20f32,
-            20f32,
-        );
-
+        let ob = obstacle_from_meters(20f32, 20f32, 20f32, 20f32);
         let obstacles = vec![ob];
 
         let mut pathfinder = Pathfinder::new();
@@ -519,6 +654,81 @@ mod tests {
     }
 
     #[test]
+    fn intersects_circle() {
+        //Desmos Visual: https://www.desmos.com/calculator/fxknkpinao
+
+        //Test Object - Desmos Eq 1
+        let pathfinder = dummy_pathfinder();
+        let ob = obstacle_from_meters(15f32, 0f32, 5f32, 20f32);
+
+        //Check intersections of line from (0,0) to (30,0) with circle of radius 5 centered at (15,0)
+        //2 sol - Desmos Eq 2
+        let a = Point::new(0f32, 0f32, 0f32);
+        let b = Point::new(30f32, 0f32, 0f32);
+
+        let (c1, c2) = pathfinder.circle_intersect(&a, &b, &ob);
+        assert!(c1.is_some());
+        assert_eq!(c1.unwrap().x, 10f32);
+        assert_eq!(c1.unwrap().y, 0f32);
+
+        assert!(c2.is_some());
+        assert_eq!(c2.unwrap().x, 20f32);
+        assert_eq!(c2.unwrap().y, 0f32);
+
+        //Check intersections of line from (0,5) to (30,5) with circle of radius 5 centered at (15,0)
+        //1 sol - Desmos Eq 3
+        let d = Point::new(0f32, 5f32, 0f32);
+        let e = Point::new(30f32, 5f32, 0f32);
+
+        let (f1, f2) = pathfinder.circle_intersect(&d, &e, &ob);
+        assert!(f1.is_some());
+        assert_eq!(f1.unwrap().x, 15f32);
+        assert_eq!(f1.unwrap().y, 5f32);
+
+        assert!(f2.is_none());
+
+        //Check intersections of line from (10,-5) to (10,5) with circle of radius 5 centered at (15,0)
+        //1 sol - Desmos Eq 4
+        let g = Point::new(10f32, -5f32, 0f32);
+        let h = Point::new(10f32, 5f32, 0f32);
+
+        let (i1, i2) = pathfinder.circle_intersect(&g, &h, &ob);
+        assert!(i1.is_some());
+        assert_eq!(i1.unwrap().x, 10f32);
+        assert_eq!(i1.unwrap().y, 0f32);
+
+        assert!(i2.is_none());
+
+        //Check intersections of line from (10,-5) to (20,5) , y = x-15, with circle of radius 5 centered at (15,0)
+        //2 sol - Desmos Eq 5
+        let j = Point::new(10f32, -5f32, 0f32);
+        let k = Point::new(20f32, 5f32, 0f32);
+
+        let (l1, l2) = pathfinder.circle_intersect(&j, &k, &ob);
+        assert!(l1.is_some());
+        assert_eq!((l1.unwrap().x * 1000.0).round() / 1000.0, 11.464f32); //Rounded to 3 decimal
+        assert_eq!((l1.unwrap().y * 1000.0).round() / 1000.0, -3.536f32); //Rounded to 3 decimal
+
+        assert!(l2.is_some());
+        assert_eq!((l2.unwrap().x * 1000.0).round() / 1000.0, 18.536f32);
+        assert_eq!((l2.unwrap().y * 1000.0).round() / 1000.0, 3.536f32);
+
+        //Check intersections of line from (10,10) to (15,-10) with circle of radius 5 centered at (15,0)
+        //2 sol - Desmos Eq 6
+        let m = Point::new(10f32, 10f32, 0f32);
+        let n = Point::new(15f32, -10f32, 0f32);
+
+        let (o1, o2) = pathfinder.circle_intersect(&m, &n, &ob);
+        assert!(o1.is_some());
+        assert_eq!((o1.unwrap().x * 1000.0).round() / 1000.0, 11.587f32); //Rounded to 3 decimal
+        assert_eq!((o1.unwrap().y * 1000.0).round() / 1000.0, 3.654f32); //Rounded to 3 decimal
+
+        assert!(o2.is_some());
+        assert_eq!((o2.unwrap().x * 1000.0).round() / 1000.0, 13.708f32);
+        assert_eq!((o2.unwrap().y * 1000.0).round() / 1000.0, -4.83f32);
+    }
+
+    #[test]
     fn intersection_distance() {
         let ax = Point::new(0f32, 0f32, 0f32);
         let ay = Point::new(30f32, 0f32, 0f32);
@@ -526,12 +736,7 @@ mod tests {
         let bx = Point::new(10f32, 0f32, 0f32);
         let by = Point::new(20f32, 0f32, 0f32);
 
-        let ob = Obstacle::new(
-            Location::from_meters(15f32, 0f32, 0f32, &dummy_origin()),
-            5f32,
-            20f32,
-        );
-
+        let ob = obstacle_from_meters(15f32, 0f32, 5f32, 20f32);
         let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
 
         //intercepts at (10,0), (20,0)
@@ -558,11 +763,7 @@ mod tests {
         let a = Point::new(0f32, 0f32, 0f32);
         let b = Point::new(30f32, 0f32, 0f32);
 
-        let ob = Obstacle::new(
-            Location::from_meters(15f32, 0f32, 0f32, &dummy_origin()),
-            5f32,
-            20f32,
-        );
+        let ob = obstacle_from_meters(15f32, 0f32, 5f32, 20f32);
 
         let pathfinder = dummy_pathfinder();
         let (c1, c2) = pathfinder.valid_path_obs(&a, &b, &ob);
@@ -632,12 +833,7 @@ mod tests {
         let f = Point::new(30f32, 10f32, 30f32);
         let g = Point::new(20f32, 0f32, 40f32);
 
-        let ob = Obstacle::new(
-            Location::from_meters(15f32, 0f32, 0f32, &dummy_origin()),
-            5f32,
-            20f32,
-        );
-
+        let ob = obstacle_from_meters(15f32, 0f32, 5f32, 20f32);
         let obstacles = vec![ob];
         let mut pathfinder = dummy_pathfinder();
         pathfinder.set_obstacles(obstacles);
@@ -661,8 +857,8 @@ mod tests {
         let d = Point::new(0f32, 0f32, 0f32);
         let flyzones = vec![points_to_flyzone(vec![a, b, c, d])];
         let obstacles = vec![
-            Obstacle::from_degrees(10f64, 20f64, 10f32, 10f32),
-            Obstacle::from_degrees(30f64, 20f64, 10f32, 10f32),
+            obstacle_from_meters(10f32, 20f32, 10f32, 10f32),
+            obstacle_from_meters(30f32, 20f32, 10f32, 10f32),
         ];
         let mut pathfinder = Pathfinder::new();
         pathfinder.init(5f32, flyzones, obstacles);
