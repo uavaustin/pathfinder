@@ -1,6 +1,6 @@
 // Visibility related code for modularity
 use node::{Connection, Node, Vertex};
-use obj::Location;
+use obj::{Location, Obstacle};
 use point::Point;
 use {Pathfinder, PI};
 
@@ -42,7 +42,7 @@ impl Pathfinder {
 
     fn populate_nodes(&mut self) {
         self.nodes.clear();
-        let origin = self.find_origin();
+        self.find_origin();
         for obs in &self.obstacles {
             let mut node = Node::from_obstacle(obs, &self.origin);
             self.nodes.push(Rc::new(RefCell::new(node)));
@@ -155,32 +155,95 @@ impl Pathfinder {
             }
         }
 
+        self.valid_obstacle_relative(a, b)
+    }
+
+    fn valid_obstacle_relative(&self, a: &Point, b: &Point) -> bool {
+        // test for obstacles, intersection/width/height
+        for obstacle in &self.obstacles {
+            //intersect distance gives x and y of intersect point, then distance
+            //calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
+            let int_data = intersect_distance(
+                a,
+                b,
+                &Point::from_location(&obstacle.location, &self.origin),
+            );
+            println!("{:?}", int_data);
+            if int_data.2.sqrt() < obstacle.radius {
+                //immediately check if the endpoint is the shortest distance; can't fly over in this case
+                //EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
+                if int_data.3 {
+                    return false;
+                }
+                //otherwise, we can check if height allows flyover
+                let mag = (obstacle.radius.powi(2) - int_data.2).sqrt();
+                //calculate unit vectors for y and x directions
+                let dy = (a.y - b.y) / a.distance(b);
+                let dx = (a.x - b.x) / a.distance(b);
+                //p1 closer to a, p2 closer to b
+                let p1 = Point::new(
+                    int_data.1 + dy * mag,
+                    int_data.0 + dx * mag,
+                    obstacle.height,
+                );
+                let p2 = Point::new(
+                    int_data.1 - dy * mag,
+                    int_data.0 - dx * mag,
+                    obstacle.height,
+                );
+                //if a descends to b, need to clear p2. if a ascends to b, need to clear p1.
+                let theta_o = (b.z - a.z).atan2(a.distance(b));
+                if a.z > b.z {
+                    let theta1 = (p2.z - a.z).atan2(a.distance(&p2));
+                    println!("descending, {}, {}", theta1, theta_o);
+                    return theta_o >= theta1;
+                } else if a.z < b.z {
+                    let theta1 = (p1.z - a.z).atan2(a.distance(&p1));
+                    println!("ascending, {}, {}", theta1, theta_o);
+                    return theta_o >= theta1;
+                }
+                //else it's a straight altitude line, just check altitude
+                else {
+                    return a.z >= obstacle.height;
+                }
+            }
+        }
+
         true
     }
-}
 
-// check if path is valid (not blocked by obstacle)
-//	fn valid_path_obs(&self, a:&Point, b: &Point) -> bool {
-//		for obstacle in &self.obstacles {
-//			//catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
-//			if a.distance(&obstacle.coords) < obstacle.radius || b.distance(&obstacle.coords) < obstacle.radius {
-//				return false
-//			}
-//			//reciprocals of dy and dx in terms of unit vector
-//			let mag = a.distance(b) as f64;
-//			let dx = -(a.lat() - b.lat()) / mag;
-//			let dy = (a.lon() - b.lon()) / mag;
-//			// connect two points from perpendicular to a to b segment, guarantee "intersect"
-//			let mut c = Point::from_radians(obstacle.coords.lat() + dy * obstacle.radius as f64, obstacle.coords.lon() + dx * obstacle.radius as f64, obstacle.height);
-//			let mut d = Point::from_radians(obstacle.coords.lat() - dy * obstacle.radius as f64, obstacle.coords.lon() - dx * obstacle.radius as f64, obstacle.height);
-//			//math seems to check out here, successfully generates appropriate "perpendicular" line
-//			//println!("Test intersect for {} {} {} {}", a, b, &c, &d);
-//			if Self::intersect(a, b, &c, &d) == true {
-//				return false
-//			}
-//		}
-//		true
-//	}
+    // temporary placeholder function to test functionality of point determination
+    pub fn valid_path_obs(
+        &self,
+        a: &Point,
+        b: &Point,
+        c: &Obstacle,
+    ) -> (Option<Point>, Option<Point>) {
+        //intersect distance gives x and y of intersect point, then distance
+        //calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
+        let int_data = intersect_distance(a, b, &Point::from_location(&c.location, &self.origin));
+        if int_data.2.sqrt() < c.radius as f32 {
+            //println!("distance: {}", int_data.2.sqrt());
+            //immediately check if the endpoint is the shortest distance; can't fly over in this case
+            //EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
+            //if int_data.3 {
+            //not technically none, but should be considered as such as we will stop calculations
+            //return (None, None)
+            //}
+            let mag = (c.radius.powi(2) - int_data.2).sqrt();
+            //println!("mag: {}", mag);
+            //calculate unit vectors for y and x directions
+            let dy = (a.y - b.y) / a.distance(b);
+            let dx = (a.x - b.x) / a.distance(b);
+
+            let p1 = Point::new(int_data.0 + dx * mag, int_data.1 + dy * mag, 0f32);
+            let p2 = Point::new(int_data.0 - dx * mag, int_data.1 - dy * mag, 0f32);
+            return (Some(p1), Some(p2));
+        } else {
+            return (None, None);
+        }
+    }
+}
 
 // helper function for intersection calculation
 // returns the area between three points
@@ -245,12 +308,66 @@ fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
     }
 }
 
+// calculate distance of shortest distance from obstacle c to a segment defined by a and b
+fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bool) {
+    //calculate distance from a to b, squared
+    let pd2 = (a.x - b.x).powi(2) + (a.y - b.y).powi(2);
+    // there may be a case where the shortest point is to an endpoint.
+    //check for conincidence of points
+    let (x, y, endpoint) = if pd2 == 0f32 {
+        (a.x, b.y, false)
+    }
+    //all other cases
+    else {
+        // calculate "distances" to points a and b (if a and b are shortest distance)
+        let u = ((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / pd2;
+        // shortest distance is to point a
+        if u < 0f32 {
+            (a.x, a.y, true)
+        }
+        // shortest distance is to point b
+        else if u > 1f32 {
+            (b.x, b.y, true)
+        } else {
+            // to perpendicular point on the segment
+            (a.x + u * (b.x - a.x), a.y + u * (b.y - a.y), false)
+        }
+    };
+    // returns distance
+    (
+        x,
+        y,
+        (x - c.x) * (x - c.x) + (y - c.y) * (y - c.y),
+        endpoint,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use obj::Obstacle;
+    const THRESHOLD: f64 = 0.001;
 
-    fn get_dummy_flyzones() -> Vec<Vec<Location>> {
+    //assert equal, equal practically because floating points suck for intersection
+    macro_rules! assert_eqp {
+        ($x:expr, $y:expr, $d:expr) => {
+            if !((($x - $y) as f64).abs() < $d) {
+                println!("{} vs {}", $x, $y);
+                panic!();
+            }
+        };
+    }
+
+    fn assert_point_eq(a: &Point, b: &Point) {
+        assert_eqp!(a.x, b.x, THRESHOLD);
+        assert_eqp!(a.y, b.y, THRESHOLD);
+    }
+
+    fn dummy_origin() -> Location {
+        Location::from_radians(0f64, 0f64, 0f32)
+    }
+
+    fn dummy_flyzones() -> Vec<Vec<Location>> {
         let a = Point::new(40f32, 0f32, 10f32);
         let b = Point::new(40f32, 40f32, 10f32);
         let c = Point::new(0f32, 40f32, 10f32);
@@ -258,11 +375,14 @@ mod tests {
         vec![points_to_flyzone(vec![a, b, c, d])]
     }
 
+    fn dummy_pathfinder() -> Pathfinder {
+        Pathfinder::create(1f32, dummy_flyzones(), Vec::new())
+    }
+
     fn points_to_flyzone(points: Vec<Point>) -> Vec<Location> {
-        let origin = Location::from_radians(0f64, 0f64, 0f32);
         let mut flyzone = Vec::new();
         for point in points {
-            flyzone.push(point.to_location(&origin));
+            flyzone.push(point.to_location(&dummy_origin()));
         }
         flyzone
     }
@@ -375,6 +495,165 @@ mod tests {
     }
 
     #[test]
+    fn obstacles_pathing() {
+        let a = Point::new(40f32, 20f32, 10f32);
+        let b = Point::new(0f32, 20f32, 10f32);
+        let c = Point::new(60f32, 20f32, 10f32);
+        let d = Point::new(20f32, 60f32, 10f32);
+        let e = Point::new(30f32, 20f32, 10f32);
+
+        let ob = Obstacle::new(
+            Location::from_meters(20f32, 20f32, 20f32, &dummy_origin()),
+            20f32,
+            20f32,
+        );
+
+        let obstacles = vec![ob];
+
+        let mut pathfinder = Pathfinder::new();
+        pathfinder.init(1f32, Vec::new(), obstacles);
+
+        assert_eq!(pathfinder.valid_path(&a, &b), false);
+        assert_eq!(pathfinder.valid_path(&c, &d), true);
+        assert_eq!(pathfinder.valid_path(&c, &e), false);
+    }
+
+    #[test]
+    fn intersection_distance() {
+        let ax = Point::new(0f32, 0f32, 0f32);
+        let ay = Point::new(30f32, 0f32, 0f32);
+
+        let bx = Point::new(10f32, 0f32, 0f32);
+        let by = Point::new(20f32, 0f32, 0f32);
+
+        let ob = Obstacle::new(
+            Location::from_meters(15f32, 0f32, 0f32, &dummy_origin()),
+            5f32,
+            20f32,
+        );
+
+        let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+
+        //intercepts at (10,0), (20,0)
+        assert_eq!(
+            intersect_distance(
+                &ax,
+                &ay,
+                &Point::from_location(&ob.location, &dummy_origin())
+            ).2,
+            0f32
+        );
+        let result = pathfinder.valid_path_obs(&ax, &ay, &ob);
+        println!("{:?} {:?}", result.0.unwrap(), result.1.unwrap());
+        assert_point_eq(&result.0.unwrap(), &bx);
+        assert_point_eq(&result.1.unwrap(), &by);
+    }
+
+    #[test]
+    fn circle_intersection() {
+        //Desmos Visual: https://www.desmos.com/calculator/zkfgbbexkm
+
+        //Check intersections of line from (0,0) to (30,0) with circle of radius 5 centered at (15,0)
+        //2 sol
+        let a = Point::new(0f32, 0f32, 0f32);
+        let b = Point::new(30f32, 0f32, 0f32);
+
+        let ob = Obstacle::new(
+            Location::from_meters(15f32, 0f32, 0f32, &dummy_origin()),
+            5f32,
+            20f32,
+        );
+
+        let pathfinder = dummy_pathfinder();
+        let (c1, c2) = pathfinder.valid_path_obs(&a, &b, &ob);
+        assert!(c1.is_some());
+        assert_eq!(c1.unwrap().y, 10f32);
+        assert_eq!(c1.unwrap().x, 0f32);
+
+        assert!(c2.is_some());
+        assert_eq!(c2.unwrap().y, 20f32);
+        assert_eq!(c2.unwrap().x, 0f32);
+
+        //Check intersections of line from (0,5) to (30,5) with circle of radius 5 centered at (15,0)
+        //intersects at 1 point, should be considered valid
+        let d = Point::new(0f32, 5f32, 0f32);
+        let e = Point::new(30f32, 5f32, 0f32);
+
+        let (f1, f2) = pathfinder.valid_path_obs(&d, &e, &ob);
+        assert!(f1.is_none());
+        assert!(f2.is_none());
+
+        //Check intersections of line from (0,5) to (15,5) with circle of radius 5 centered at (15,0)
+        //intersects at 1 point, should be considered valid
+        let g = Point::new(10f32, -5f32, 0f32);
+        let h = Point::new(10f32, 5f32, 0f32);
+
+        let (i1, i2) = pathfinder.valid_path_obs(&g, &h, &ob);
+        assert!(i1.is_none());
+        //assert_eq!(i1.unwrap().y, 15f32);
+        //assert_eq!(i1.unwrap().x, 5f32);
+
+        assert!(i2.is_none());
+
+        //should intersect at two points
+        let j = Point::new(8f32, -2f32, 0f32);
+        let k = Point::new(16f32, 6f32, 0f32);
+
+        let (l1, l2) = pathfinder.valid_path_obs(&j, &k, &ob);
+        assert!(l1.is_some());
+
+        assert_eqp!(l1.unwrap().y, 10f32, 0.0001);
+        assert_eqp!(l1.unwrap().x, 0f32, 0.0001);
+
+        assert!(l2.is_some());
+        assert_eqp!(l2.unwrap().y, 15f32, 0.0001);
+        assert_eqp!(l2.unwrap().x, 5f32, 0.0001);
+
+        //should intersect at two points
+        let m = Point::new(8f32, 4f32, 0f32);
+        let n = Point::new(30f32, -6f32, 0f32);
+
+        let (o1, o2) = pathfinder.valid_path_obs(&m, &n, &ob);
+        assert_eqp!(o1.unwrap().y, 10.807f32, 0.001);
+        assert_eqp!(o1.unwrap().x, 2.724f32, 0.001);
+        assert_eqp!(o2.unwrap().y, 19.809f32, 0.001);
+        assert_eqp!(o2.unwrap().x, -1.368f32, 0.001);
+    }
+
+    #[test]
+    fn obstacle_flyover() {
+        //Graphical Visualization: https://www.geogebra.org/3d/a55hmxfy
+        let a = Point::new(0f32, 0f32, 10f32);
+        let b = Point::new(30f32, 0f32, 10f32);
+        let c = Point::new(20f32, 0f32, 30f32);
+
+        let d = Point::new(30f32, 0f32, 25f32);
+        let e = Point::new(0f32, 0f32, 25f32);
+        let f = Point::new(30f32, 10f32, 30f32);
+        let g = Point::new(20f32, 0f32, 40f32);
+
+        let ob = Obstacle::new(
+            Location::from_meters(15f32, 0f32, 0f32, &dummy_origin()),
+            5f32,
+            20f32,
+        );
+
+        let obstacles = vec![ob];
+        let mut pathfinder = dummy_pathfinder();
+        pathfinder.set_obstacles(obstacles);
+        assert_eq!(pathfinder.valid_path(&a, &b), false);
+        assert_eq!(pathfinder.valid_path(&a, &d), false);
+        assert_eq!(pathfinder.valid_path(&e, &b), false);
+        assert_eq!(pathfinder.valid_path(&b, &e), false);
+
+        assert_eq!(pathfinder.valid_path(&d, &e), true);
+        assert_eq!(pathfinder.valid_path(&a, &c), true);
+        assert_eq!(pathfinder.valid_path(&a, &g), true);
+
+        assert_eq!(pathfinder.valid_path(&a, &f), false);
+    }
+
+    #[test]
     fn generate_graph() {
         let a = Point::new(40f32, 0f32, 0f32);
         let b = Point::new(40f32, 40f32, 0f32);
@@ -391,7 +670,7 @@ mod tests {
 
     #[test]
     fn same_radius_test() {
-        let pathfinder = Pathfinder::create(1f32, get_dummy_flyzones(), Vec::new());
+        let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
 
         let n1 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 1_f32, 0_f32);
         let n2 = Node::new(Point::new(20_f32, 20_f32, 0_f32), 1_f32, 0_f32);
@@ -416,7 +695,7 @@ mod tests {
 
     #[test]
     fn overlap_test() {
-        let pathfinder = Pathfinder::create(1f32, get_dummy_flyzones(), Vec::new());
+        let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
         let n3 = Node::new(Point::new(15_f32, 10_f32, 0_f32), 5_f32, 0_f32);
         let n4 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 4_f32, 0_f32);
         let c = Rc::new(n3);
@@ -434,7 +713,7 @@ mod tests {
 
     #[test]
     fn different_radius_no_overlap_test() {
-        let pathfinder = Pathfinder::create(1f32, get_dummy_flyzones(), Vec::new());
+        let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
         let n5 = Node::new(Point::new(20_f32, 33_f32, 0_f32), 2_f32, 0_f32);
         let n6 = Node::new(Point::new(12_f32, 33_f32, 0_f32), 1_f32, 0_f32);
         let e = Rc::new(n5);

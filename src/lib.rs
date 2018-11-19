@@ -19,6 +19,7 @@ const POLAR_RADIUS: f64 = 6356752.0;
 const RADIUS: f64 = 6371000.0;
 const MIN_BUFFER: f32 = 5f32;
 const TURNING_RADIUS: f32 = 5f32; // In meters
+const MAX_ANGLE: f64 = 3.141 / 6f64;
 
 #[allow(non_snake_case)]
 pub struct Pathfinder {
@@ -54,7 +55,7 @@ impl Pathfinder {
         }
     }
 
-    // Helper function to create an initialized pathfinder
+    // Helper function to return an initialized pathfinder
     pub fn create(
         buffer_size: f32,
         flyzones: Vec<Vec<Location>>,
@@ -138,8 +139,8 @@ impl Pathfinder {
         self.build_graph();
     }
 
-    pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
-        self.obstacles = obstacle_list;
+    pub fn set_obstacles(&mut self, obstacles: Vec<Obstacle>) {
+        self.obstacles = obstacles;
         self.build_graph();
     }
 

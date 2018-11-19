@@ -62,20 +62,19 @@ pub struct Obstacle {
 }
 
 impl Obstacle {
-    pub fn from_degrees(lat: f64, lon: f64, radius: f32, height: f32) -> Self {
+    pub fn new(location: Location, radius: f32, height: f32) -> Self {
         Obstacle {
-            location: Location::from_degrees(lat, lon, 0f32),
+            location: location,
             radius: radius,
             height: height,
         }
     }
+    pub fn from_degrees(lat: f64, lon: f64, radius: f32, height: f32) -> Self {
+        Obstacle::new(Location::from_degrees(lat, lon, 0f32), radius, height)
+    }
 
     pub fn from_radians(lat: f64, lon: f64, radius: f32, height: f32) -> Self {
-        Obstacle {
-            location: Location::from_radians(lat, lon, 0f32),
-            radius: radius,
-            height: height,
-        }
+        Obstacle::new(Location::from_radians(lat, lon, 0f32), radius, height)
     }
 }
 
