@@ -66,6 +66,7 @@ pub fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
 }
 
 // calculate distance of shortest distance from obstacle c to a segment defined by a and b
+// returns x, y of intersection, distance, and whether intersection is at endpoint
 pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bool) {
     //calculate distance from a to b, squared
     let pd2 = (a.x - b.x).powi(2) + (a.y - b.y).powi(2);
@@ -91,12 +92,7 @@ pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bo
         }
     };
     // returns distance
-    (
-        x,
-        y,
-        (x - c.x) * (x - c.x) + (y - c.y) * (y - c.y),
-        endpoint,
-    )
+    (x, y, (x - c.x).powi(2) + (y - c.y).powi(2), endpoint)
 }
 
 #[cfg(test)]
