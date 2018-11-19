@@ -115,7 +115,7 @@ impl Pathfinder {
             }
         }
 
-        self.origin = Location::from_radians(min_lat, lon, 0f32);
+        self.origin = Location::from_radians(lon, min_lat, 0f32);
     }
 
     // calculate distance of shortest distance from point to a segment defined by two lines

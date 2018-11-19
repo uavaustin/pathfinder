@@ -11,19 +11,19 @@ impl fmt::Display for Location {
 
 impl Location {
     // Create location from coordinates in degrees
-    pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
+    pub fn from_degrees(lon: f64, lat: f64, alt: f32) -> Self {
         const FACTOR: f64 = ::std::f64::consts::PI / 180f64;
         Location {
-            lat: lat.to_radians().into(),
             lon: lon.to_radians().into(),
+            lat: lat.to_radians().into(),
             alt: alt.into(),
         }
     }
     // Create location from coordinates in radians
-    pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Self {
+    pub fn from_radians(lon: f64, lat: f64, alt: f32) -> Self {
         Location {
-            lat: lat.into(),
             lon: lon.into(),
+            lat: lat.into(),
             alt: alt.into(),
         }
     }
@@ -31,19 +31,19 @@ impl Location {
     pub fn from_meters(x: f32, y: f32, alt: f32, origin: &Location) -> Self {
         Point::new(x, y, alt).to_location(origin)
     }
-    pub fn lat(&self) -> f64 {
-        self.lat.into()
-    }
     pub fn lon(&self) -> f64 {
         self.lon.into()
+    }
+    pub fn lat(&self) -> f64 {
+        self.lat.into()
     }
     pub fn alt(&self) -> f32 {
         self.alt.into()
     }
-    pub fn lat_degree(&self) -> f64 {
-        Into::<f64>::into(self.lat) * 180f64 / ::std::f64::consts::PI
-    }
     pub fn lon_degree(&self) -> f64 {
         Into::<f64>::into(self.lon) * 180f64 / ::std::f64::consts::PI
+    }
+    pub fn lat_degree(&self) -> f64 {
+        Into::<f64>::into(self.lat) * 180f64 / ::std::f64::consts::PI
     }
 }
