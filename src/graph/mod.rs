@@ -1,11 +1,44 @@
 // Visibility related code for modularity
-use node::{Connection, Node, Vertex};
-use obj::{Location, Obstacle};
-use point::Point;
-use {Pathfinder, PI};
+use super::*;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+mod connection;
+mod node;
+mod point;
+mod util;
+mod vertex;
+
+use graph::util::*;
+use obj::{Location, Obstacle};
+
+#[derive(Copy, Clone, Debug)]
+pub struct Point {
+    pub x: f32, // horizontal distance from origin in meters
+    pub y: f32, // vertical distance from origin in meters
+    pub z: f32,
+}
+
+#[derive(Debug)]
+pub struct Vertex {
+    pub angle: f32,                        // Angle with respect to the node
+    pub connection: Option<Connection>,    // Edge connecting to another node
+    pub next: Option<Rc<RefCell<Vertex>>>, // Neighbor vertex in the same node
+}
+
+// Represent a connection between two nodes
+// Contains the coordinate of tangent line and distance
+#[derive(Debug)]
+pub struct Connection {
+    pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
+    distance: f32,
+}
+
+pub struct Node {
+    pub origin: Point,
+    pub radius: f32,
+    height: f32,
+    left_ring: Option<Rc<RefCell<Vertex>>>,
+    right_ring: Option<Rc<RefCell<Vertex>>>,
+}
 
 impl Pathfinder {
     pub fn build_graph(&mut self) {
@@ -142,19 +175,19 @@ impl Pathfinder {
             let first = Point::from_location(&tempzone.remove(0), &self.origin);
             let mut temp = first;
             for location in tempzone {
-				//println!("origin: {:?}", &self.origin);
+                //println!("origin: {:?}", &self.origin);
                 let point = Point::from_location(&location, &self.origin);
                 //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &point);
                 if intersect(a, b, &temp, &point) {
-					println!("false due to flyzone");
+                    println!("false due to flyzone");
                     return false;
                 }
                 temp = point;
             }
             //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &first);
             if intersect(a, b, &temp, &first) {
+                println!("false due to flyzone");
                 return false;
-				println!("false due to flyzone");
             }
         }
 
@@ -191,8 +224,8 @@ impl Pathfinder {
         for obstacle in &self.obstacles {
             //intersect distance gives x and y of intersect point, then distance
             //calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
-				println!("{:?}", &self.origin);
-				let int_data = intersect_distance(
+            println!("{:?}", &self.origin);
+            let int_data = intersect_distance(
                 a,
                 b,
                 &Point::from_location(&obstacle.location, &self.origin),
@@ -212,12 +245,12 @@ impl Pathfinder {
                 //p1 closer to a, p2 closer to b
                 let p1 = Point::new(
                     int_data.0 + dx * mag,
-					int_data.1 + dy * mag,
+                    int_data.1 + dy * mag,
                     obstacle.height,
                 );
                 let p2 = Point::new(
                     int_data.0 - dx * mag,
-					int_data.1 - dy * mag,
+                    int_data.1 - dy * mag,
                     obstacle.height,
                 );
                 //if a descends to b, need to clear p2. if a ascends to b, need to clear p1.
@@ -233,7 +266,7 @@ impl Pathfinder {
                 }
                 //else it's a straight altitude line, just check altitude
                 else {
-					println!("same height!");
+                    println!("same height!");
                     return a.z >= obstacle.height;
                 }
             }
@@ -381,105 +414,8 @@ impl Pathfinder {
     }
 }
 
-// helper function for intersection calculation
-// returns the area between three points
-fn area(a: &Point, b: &Point, c: &Point) -> f32 {
-    (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)
-}
-
-// helper function for intersection calculation
-// returns true if point c is between a and b, false otherwise
-fn between(a: &Point, b: &Point, c: &Point) -> bool {
-    if a.x != b.x {
-        (a.x <= c.x && c.x <= b.x) || (a.x >= c.x && c.x >= b.x)
-    } else {
-        (a.y <= c.y && c.y <= b.y) || (a.y >= c.y && c.y >= b.y)
-    }
-}
-
-// calculate the intersection between four given points
-// implement: http://developer.classpath.org/doc/java/awt/geom/Line2D-source.html
-// returns true if a line segment a to b and another segment c to d intersect
-fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
-    // special cases of intersection
-    let a1 = area(a, b, c);
-    let a2 = area(a, b, d);
-    let a3 = area(c, d, a);
-    let a4 = area(c, d, b);
-    if a1 == 0f32 {
-        // checks if c is between a and b OR
-        // d is colinear also AND between a and b or at opposite ends?
-        if between(a, b, c) {
-            return true;
-        } else {
-            if area(a, b, d) == 0f32 {
-                return between(c, d, a) || between(c, d, b);
-            } else {
-                return false;
-            }
-        }
-    } else if a2 == 0f32 {
-        // check if d is between a and b since c is not colinear
-        return between(a, b, d);
-    }
-    if a3 == 0f32 {
-        // checks if a is between c and d OR
-        // b is colinear AND either between a and b or at opposite ends?
-        if between(c, d, a) {
-            return true;
-        } else {
-            if area(c, d, b) == 0f32 {
-                return between(a, b, c) || between(a, b, d);
-            } else {
-                return false;
-            }
-        }
-    } else if a4 == 0f32 {
-        // check if b is between c and d since we know a is not colinear
-        return between(c, d, b);
-    }
-    //tests for regular intersection
-    else {
-        ((a1 > 0f32) ^ (a2 > 0f32)) && ((a3 > 0f32) ^ (a4 > 0f32))
-    }
-}
-
-// calculate distance of shortest distance from obstacle c to a segment defined by a and b
-fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bool) {
-    //calculate distance from a to b, squared
-    let pd2 = (a.x - b.x).powi(2) + (a.y - b.y).powi(2);
-    // there may be a case where the shortest point is to an endpoint.
-    //check for conincidence of points
-    let (x, y, endpoint) = if pd2 == 0f32 {
-        (a.x, b.y, false)
-    }
-    //all other cases
-    else {
-        // calculate "distances" to points a and b (if a and b are shortest distance)
-        let u = ((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / pd2;
-        // shortest distance is to point a
-        if u < 0f32 {
-            (a.x, a.y, true)
-        }
-        // shortest distance is to point b
-        else if u > 1f32 {
-            (b.x, b.y, true)
-        } else {
-            // to perpendicular point on the segment
-            (a.x + u * (b.x - a.x), a.y + u * (b.y - a.y), false)
-        }
-    };
-    // returns distance
-    (
-        x,
-        y,
-        (x - c.x) * (x - c.x) + (y - c.y) * (y - c.y),
-        endpoint,
-    )
-}
-
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
     use obj::Obstacle;
     const THRESHOLD: f64 = 0.001;
@@ -520,13 +456,13 @@ mod tests {
         )
     }
 
-	fn dummy_big_flyzones() -> Vec<Vec<Location>> {
-		let a = Point::new(0f32, 0f32, 10f32);
+    fn dummy_big_flyzones() -> Vec<Vec<Location>> {
+        let a = Point::new(0f32, 0f32, 10f32);
         let b = Point::new(0f32, 400f32, 10f32);
         let c = Point::new(400f32, 400f32, 10f32);
         let d = Point::new(400f32, 0f32, 10f32);
         vec![points_to_flyzone(vec![a, b, c, d])]
-	}
+    }
 
     fn dummy_pathfinder() -> Pathfinder {
         Pathfinder::create(1f32, dummy_flyzones(), Vec::new())
@@ -538,52 +474,6 @@ mod tests {
             flyzone.push(point.to_location(&dummy_origin()));
         }
         flyzone
-    }
-
-    #[test]
-    fn is_between() {
-        let a = Point::new(40f32, 40f32, 10f32);
-        let b = Point::new(40f32, 50f32, 10f32);
-        let c = Point::new(40f32, 60f32, 10f32);
-        assert_eq!(between(&a, &c, &b), true);
-        assert_eq!(between(&a, &b, &c), false);
-    }
-
-    #[test]
-    fn is_colinear() {
-        let a = Point::new(40f32, 40f32, 10f32);
-        let b = Point::new(40f32, 50f32, 10f32);
-        let c = Point::new(40f32, 60f32, 10f32);
-        assert_eq!(area(&a, &b, &c), 0f32);
-    }
-
-    #[test]
-    fn yes_intersect() {
-        let a = Point::new(40f32, 0f32, 10f32);
-        let b = Point::new(40f32, 40f32, 10f32);
-        let c = Point::new(0f32, 0f32, 10f32);
-        let d = Point::new(0f32, 40f32, 10f32);
-        assert_eq!(intersect(&a, &d, &b, &c), true);
-    }
-
-    #[test]
-    fn no_intersect() {
-        let a = Point::new(40f32, 0f32, 10f32);
-        let b = Point::new(40f32, 40f32, 10f32);
-        let c = Point::new(0f32, 0f32, 10f32);
-        let d = Point::new(0f32, 40f32, 10f32);
-        assert_eq!(intersect(&a, &c, &b, &d), false);
-        assert_eq!(intersect(&c, &d, &a, &b), false);
-    }
-
-    #[test]
-    fn special_intersect() {
-        let a = Point::new(0f32, 0f32, 10f32);
-        let b = Point::new(10f32, 5f32, 10f32);
-        let c = Point::new(20f32, 10f32, 10f32);
-        let d = Point::new(30f32, 15f32, 10f32);
-        assert_eq!(intersect(&a, &b, &c, &d), false);
-        assert_eq!(intersect(&a, &c, &b, &d), true);
     }
 
     #[test]
@@ -634,7 +524,7 @@ mod tests {
         let mut pathfinder = Pathfinder::new();
         pathfinder.init(1f32, flyzones, Vec::new());
 
-		//test breaks with multiple flyzones; must declare every flyzone from meters at (0,0)
+        //test breaks with multiple flyzones; must declare every flyzone from meters at (0,0)
         /*let i = Point::new(15f32, 15f32, 10f32);
         let j = Point::new(25f32, 25f32, 10f32);
         let k = Point::new(35f32, 5f32, 10f32);
@@ -646,8 +536,7 @@ mod tests {
         assert_eq!(pathfinder.valid_path(&i, &l), false);
         assert_eq!(pathfinder.valid_path(&k, &l), false);
         assert_eq!(pathfinder.valid_path(&k, &m), true);
-		*/
-    }
+		*/    }
 
     #[test]
     fn obstacles_pathing() {

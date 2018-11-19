@@ -1,21 +1,18 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
-#![allow(unused_imports)]
 
 extern crate ordered_float;
 
 use std::cell::RefCell;
-use std::collections::{BinaryHeap, HashMap, HashSet, LinkedList};
+use std::collections::LinkedList;
 use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
+mod graph;
 pub mod obj;
 
-mod graph;
-mod node;
-mod point;
-use node::Node;
+use graph::Node;
 use obj::{Location, Obstacle, Plane, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;

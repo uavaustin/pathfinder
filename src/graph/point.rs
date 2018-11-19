@@ -1,12 +1,4 @@
-use obj::Location;
-use RADIUS;
-
-#[derive(Copy, Clone, Debug)]
-pub struct Point {
-    pub x: f32, // horizontal distance from origin in meters
-    pub y: f32, // vertical distance from origin in meters
-    pub z: f32,
-}
+use super::*;
 
 impl Point {
     pub fn new(x: f32, y: f32, z: f32) -> Self {

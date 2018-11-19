@@ -1,64 +1,6 @@
-use obj::{Location, Obstacle, Plane, Waypoint};
-use point::Point;
-use TURNING_RADIUS;
+use super::*;
 
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
-
-#[derive(Debug)]
-pub struct Vertex {
-    pub angle: f32,                        // Angle with respect to the node
-    pub connection: Option<Connection>,    // Edge connecting to another node
-    pub next: Option<Rc<RefCell<Vertex>>>, // Neighbor vertex in the same node
-}
-
-impl Vertex {
-    pub fn new(angle: f32, connection: Option<Connection>) -> Vertex {
-        Vertex {
-            angle: angle,
-            connection: connection,
-            next: None,
-        }
-    }
-}
-
-impl fmt::Display for Vertex {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "(angle={}, connection={} next={})",
-            self.angle,
-            self.connection.is_some(),
-            self.next.is_some()
-        )
-    }
-}
-
-// Represent a connection between two nodes
-// Contains the coordinate of tangent line and distance
-#[derive(Debug)]
-pub struct Connection {
-    pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
-    distance: f32,
-}
-
-impl Connection {
-    pub fn new(neighbor: Rc<RefCell<Vertex>>, distance: f32) -> Self {
-        Connection {
-            neighbor: neighbor,
-            distance: distance,
-        }
-    }
-}
-
-pub struct Node {
-    pub origin: Point,
-    pub radius: f32,
-    height: f32,
-    left_ring: Option<Rc<RefCell<Vertex>>>,
-    right_ring: Option<Rc<RefCell<Vertex>>>,
-}
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

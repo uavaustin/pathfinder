@@ -18,7 +18,7 @@ fn conversion_test() {
     ]];
     let mut pathfinder = Pathfinder::new();
     pathfinder.init(1.0, flight_zone, Vec::new());
-    let test_Locations = vec![
+    let test_locations = vec![
         Location::from_degrees(30.32247, -97.6009, 0f32),
         Location::from_degrees(30.32307, -97.6005, 0f32),
         Location::from_degrees(30.32373, -97.6012, 0f32),
@@ -30,7 +30,7 @@ fn conversion_test() {
         Location::from_degrees(30.32247, -97.60325, 0f32),
         Location::from_degrees(30.32473, -97.60410, 0f32),
     ];
-    for Location in test_Locations {
+    for location in test_locations {
         //      let node1 = Location.to_node(&pathfinder);
         //     let Location1 = node1.to_Location(&pathfinder);
         //      // print!("{:.5}, {:.5} => ", Location.lat_degree(), Location.lon_degree());
