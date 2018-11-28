@@ -140,7 +140,7 @@ impl Pathfinder {
         let phi2 = -phi1;
         let theta3 = ((r1 + r2) / dist).acos();
         let theta4 = -theta3;
-        let phi3 = PI - theta4;
+        let phi3 = theta3 + PI;
         let phi4 = -phi3;
         let candidates;
         if dist > r1 + r2 {
@@ -153,11 +153,17 @@ impl Pathfinder {
         } else {
             candidates = vec![(theta1, phi1), (theta2, phi2)];
         }
-
+		//the values of theta we generate are RELATIVE to the slope between the nodes
+		//hence we need to offset it by that value in order to obtain the actual angles
+		//when it comes to generating the physical points.
+		let theta0 = ((c2.x - c1.x).abs() / dist).acos();
+		println!("theta0:{}", theta0);
         let mut connections = Vec::new();
         for (i, j) in candidates.iter() {
-            let p1 = a.to_point(*i);
-            let p2 = b.to_point(*j);
+            let p1 = a.to_point(*j + theta0);
+			println!("{} {:?}", j, &p1);
+            let p2 = b.to_point(*i + theta0);
+			println!("{} {:?}", i, &p2);
             if self.valid_path(&p1, &p2) {
                 connections.push((*i, *j, p1.distance(&p2)));
             }
