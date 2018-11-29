@@ -373,7 +373,7 @@ mod test {
     macro_rules! assert_eqp {
         ($x:expr, $y:expr, $d:expr) => {
             if !((($x - $y) as f64).abs() < $d) {
-                println!("{} vs {}", $x, $y);
+                //println!("{} vs {}", $x, $y);
                 panic!();
             }
         };
@@ -729,7 +729,12 @@ mod test {
                 14f32,
             ),
         ];
-        assert_eq!(pathfinder.find_path(&a1, &b1), expected);
+		let result = pathfinder.find_path(&a1, &b1);
+		for i in 0..result.len() {
+       		assert_eqp!(result[i].0, expected[i].0, 0.0001);
+			assert_eqp!(result[i].1, expected[i].1, 0.0001);
+			assert_eqp!(result[i].2, expected[i].2, 0.0001);
+		}
     }
 
     #[test]
@@ -747,7 +752,12 @@ mod test {
                 24f32.sqrt(),
             ),
         ];
-        assert_eq!(pathfinder.find_path(&c, &d), expected);
+		let result = pathfinder.find_path(&c, &d);
+		for i in 0..result.len() {
+        	assert_eqp!(result[i].0, expected[i].0, 0.0001);
+			assert_eqp!(result[i].1, expected[i].1, 0.0001);
+			assert_eqp!(result[i].2, expected[i].2, 0.0001);
+		}
     }
 
     #[test]
@@ -758,11 +768,14 @@ mod test {
         let e = Rc::new(n5);
         let f = Rc::new(n6);
         let expected = [
-            ((1_f32 / 8_f32).acos(), (1_f32 / 8_f32).acos(), 7f32.sqrt()),
+            (
+				(1_f32 / 8_f32).acos(), 
+				(1_f32 / 8_f32).acos(), 
+				67f32.sqrt()),
             (
                 -(1_f32 / 8_f32).acos(),
                 -(1_f32 / 8_f32).acos(),
-                7f32.sqrt(),
+                67f32.sqrt(),
             ),
             (
                 (3_f32 / 8_f32).acos(),
