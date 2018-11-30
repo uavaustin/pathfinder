@@ -67,8 +67,8 @@ impl Node {
     // Converts a vertex on a node to coordinate
     pub fn to_point(&self, angle: f32) -> Point {
         Point::new(
-            self.origin.x + self.radius * angle.cos(),
-            self.origin.y + self.radius * angle.sin(),
+            self.origin.x + (self.radius * angle.cos()),
+            self.origin.y + (self.radius * angle.sin()),
             self.height,
         )
     }
