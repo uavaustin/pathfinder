@@ -32,6 +32,14 @@ pub struct Connection {
     distance: f32,
 }
 
+pub enum PathValidity 
+{
+    Valid,
+    Invalid,
+    Flyover(Point),
+
+}
+
 pub struct Node {
     pub origin: Point,
     pub radius: f32,
