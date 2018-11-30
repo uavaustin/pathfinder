@@ -32,12 +32,19 @@ pub struct Connection {
     distance: f32,
 }
 
-pub enum PathValidity 
-{
+pub enum PathValidity {
     Valid,
     Invalid,
     Flyover(Point),
+}
 
+impl From<PathValidity> for bool {
+	fn from(pv: PathValidity) -> bool {
+		match(pv) {
+			PathValidity::Invalid => false,
+			_ => true
+		}
+	}
 }
 
 pub struct Node {
@@ -173,10 +180,15 @@ impl Pathfinder {
 			println!("{} {:?}", j, &p1);
             let p2 = b.to_point(*i + theta0);
 			println!("{} {:?}", i, &p2);
-            if self.valid_path(&p1, &p2) {
+            match self.valid_path(&p1, &p2) {
 				//probably want to push points in this case later
-                connections.push((*i, *j, p1.distance(&p2)));
-				point_connections.push((p1, p2));
+                PathValidity::Valid => {
+					connections.push((*i, *j, p1.distance(&p2)));
+					point_connections.push((p1, p2));
+				}
+				_ => {
+					println!("im sad");
+				}
             }
         }
         connections
@@ -218,7 +230,7 @@ impl Pathfinder {
         for obstacle in &self.obstacles {
             // catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
             // check if there are two points of intersect, for flyover cases
-            if let (Some(p1), Some(p2)) = self.circular_intersect(a, b, obstacle) {
+            if let (Some(p1), Some(p2)) = self.perpendicular_intersect(a, b, obstacle) {
                 println!("p1:{:?}, p2:{:?}", p1, p2);
 				let theta1 = 
                 //if a.z > b.z {
@@ -235,7 +247,7 @@ impl Pathfinder {
 					(ah, bh) if ah < bh =>	(p1.z - a.z).atan2(a.distance(&p1)),
 					_ => 0f32			 	
 				};
-			if theta1 == 0.0 && a.z < obstacle.height {
+			if theta1 == 0f32 && a.z < obstacle.height {
 				return PathValidity::Invalid;
 			}
 			else if theta_o < theta1 {
@@ -455,16 +467,16 @@ mod test {
         let h = Point::new(50f32, 50f32, 10f32);
         let i = Point::new(50f32, 0f32, 10f32);
 
-        assert_eq!(pathfinder.valid_path(&e, &f), true);
-        assert_eq!(pathfinder.valid_path(&e, &g), false);
-        assert_eq!(pathfinder.valid_path(&f, &g), false);
-        assert_eq!(pathfinder.valid_path(&a, &b), false);
-        assert_eq!(pathfinder.valid_path(&a, &h), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&e, &f)), true);
+        assert_eq!(bool::from(pathfinder.valid_path(&e, &g)), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&f, &g)), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &b)), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &h)), false);
 
         //here some points are outside of the flyzone; should this be a special case?
         //should we assume that the points we evaluate will always be inside the flyzone?
-        assert_eq!(pathfinder.valid_path(&h, &i), true);
-        assert_eq!(pathfinder.valid_path(&h, &e), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&h, &i)), true);
+        assert_eq!(bool::from(pathfinder.valid_path(&h, &e)), false);
     }
 
     #[test]
@@ -515,9 +527,9 @@ mod test {
         let mut pathfinder = Pathfinder::new();
         pathfinder.init(1f32, dummy_flyzones(), obstacles);
 
-        assert_eq!(pathfinder.valid_path(&a, &b), false);
-        assert_eq!(pathfinder.valid_path(&c, &d), true);
-        assert_eq!(pathfinder.valid_path(&c, &e), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &b)), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&c, &d)), true);
+        assert_eq!(bool::from(pathfinder.valid_path(&c, &e)), false);
     }
 
     #[test]
@@ -702,16 +714,16 @@ mod test {
         let ob = obstacle_from_meters(10f32, 25f32, 5f32, 20f32);
         let obstacles = vec![ob];
         let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), obstacles);
-        assert_eq!(pathfinder.valid_path(&a, &b), false);
-        assert_eq!(pathfinder.valid_path(&a, &d), false);
-        assert_eq!(pathfinder.valid_path(&e, &b), false);
-        assert_eq!(pathfinder.valid_path(&b, &e), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &b)), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &d)), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&e, &b)), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&b, &e)), false);
 
-        assert_eq!(pathfinder.valid_path(&d, &e), true);
-        assert_eq!(pathfinder.valid_path(&a, &c), true);
-        assert_eq!(pathfinder.valid_path(&a, &g), true);
+        assert_eq!(bool::from(pathfinder.valid_path(&d, &e)), true);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &c)), true);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &g)), true);
 
-        assert_eq!(pathfinder.valid_path(&a, &f), false);
+        assert_eq!(bool::from(pathfinder.valid_path(&a, &f)), false);
     }
 
     #[test]
