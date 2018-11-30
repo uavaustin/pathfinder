@@ -148,7 +148,7 @@ impl Pathfinder {
         let phi2 = -phi1;
         let theta3 = ((r1 + r2) / dist).acos();
         let theta4 = -theta3;
-        let phi3 = theta3 + PI;
+        let phi3 = -PI + theta3;
         let phi4 = -phi3;
         let candidates;
         if dist > r1 + r2 {
@@ -156,23 +156,26 @@ impl Pathfinder {
                 (theta1, phi1),
                 (theta2, phi2),
                 (theta3, phi3),
-                (theta4, phi4),
-            ];
+                (theta4, phi4)];
         } else {
             candidates = vec![(theta1, phi1), (theta2, phi2)];
         }
-		//the values of theta we generate are RELATIVE to the slope between the nodes
-		//hence we need to offset it by that value in order to obtain the actual angles
-		//when it comes to generating the physical points.
-		let theta0 = ((c2.x - c1.x).abs() / dist).acos();
-		println!("theta0:{}", theta0);
+
         let mut connections = Vec::new();
 		let mut point_connections = Vec::new();
         for (i, j) in candidates.iter() {
-            let p1 = a.to_point(*j + theta0);
-			println!("{} {:?}", j, &p1);
-            let p2 = b.to_point(*i + theta0);
-			println!("{} {:?}", i, &p2);
+            let p1;
+            let p2;
+            if c1.x > c2.x || c1.y > c2.y {
+                p1 = a.to_point(PI - *i);
+                p2 = b.to_point(PI - *j);
+            }
+            else {
+                p1 = a.to_point(*i);
+                p2 = b.to_point(*j);
+            }
+            println!(
+            "finding distance between {:?} with angle {:?} and {:?} with angle {:?}", p1, i, p2, j);
             if self.valid_path(&p1, &p2) {
 				//probably want to push points in this case later
                 connections.push((*i, *j, p1.distance(&p2)));
@@ -399,6 +402,16 @@ mod test {
                 panic!();
             }
         };
+    }
+
+    fn assert_vec_eqp(v1: &Vec<(f32, f32, f32)>, v2: &Vec<(f32, f32, f32)>) {
+        for i in 0..v1.len() {
+            let a = v1[i];
+            let b = v2[i];
+            assert_eqp!(a.0, b.0, THRESHOLD);
+            assert_eqp!(a.1, b.1, THRESHOLD);
+            assert_eqp!(a.2, b.2, THRESHOLD);
+        }
     }
 
     fn assert_point_eq(a: &Point, b: &Point) {
@@ -734,29 +747,15 @@ mod test {
         let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
 
         let n1 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 1_f32, 0_f32);
-        let n2 = Node::new(Point::new(20_f32, 20_f32, 0_f32), 1_f32, 0_f32);
+        let n2 = Node::new(Point::new(20_f32, 30_f32, 0_f32), 1_f32, 0_f32);
         let a1 = Rc::new(n1);
         let b1 = Rc::new(n2);
         let expected = vec![
-            (PI / 2_f32, PI / 2_f32, 200f32.sqrt()),
-            (-PI / 2_f32, -PI / 2_f32, 200f32.sqrt()),
-            (
-                (2_f32 / (200_f32.sqrt())).acos(),
-                PI + (2_f32 / (200_f32.sqrt())).acos(),
-                14f32,
-            ),
-            (
-                -(2_f32 / (200_f32.sqrt())).acos(),
-                -(PI + (2_f32 / (200_f32.sqrt())).acos()),
-                14f32,
-            ),
-        ];
-		let result = pathfinder.find_path(&a1, &b1);
-		for i in 0..result.len() {
-       		assert_eqp!(result[i].0, expected[i].0, 0.0001);
-			assert_eqp!(result[i].1, expected[i].1, 0.0001);
-			assert_eqp!(result[i].2, expected[i].2, 0.0001);
-		}
+            (PI / 2_f32, PI / 2_f32, 10f32),
+            (-PI / 2_f32, -PI / 2_f32, 10f32),
+            ((2_f32 / 10f32).acos(), -PI + (2_f32 / 10f32).acos(), 96f32.sqrt()),
+            (-(2_f32 / 10f32).acos(), PI - (2_f32 / 10f32).acos(), 96f32.sqrt())];
+        assert_vec_eqp(&pathfinder.find_path(&a1, &b1), &expected);
     }
 
     #[test]
@@ -774,42 +773,35 @@ mod test {
                 24f32.sqrt(),
             ),
         ];
-		let result = pathfinder.find_path(&c, &d);
-		for i in 0..result.len() {
-        	assert_eqp!(result[i].0, expected[i].0, 0.0001);
-			assert_eqp!(result[i].1, expected[i].1, 0.0001);
-			assert_eqp!(result[i].2, expected[i].2, 0.0001);
-		}
+        assert_vec_eqp(&pathfinder.find_path(&c, &d), &expected);
     }
 
     #[test]
     fn different_radius_no_overlap_test() {
         let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
-        let n5 = Node::new(Point::new(20_f32, 33_f32, 0_f32), 2_f32, 0_f32);
-        let n6 = Node::new(Point::new(12_f32, 33_f32, 0_f32), 1_f32, 0_f32);
+        let n5 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 2_f32, 0_f32);
+        let n6 = Node::new(Point::new(12_f32, 10_f32, 0_f32), 1_f32, 0_f32);
         let e = Rc::new(n5);
         let f = Rc::new(n6);
-        let expected = [
-            (
-				(1_f32 / 8_f32).acos(), 
-				(1_f32 / 8_f32).acos(), 
-				67f32.sqrt()),
+        let expected = vec![
+            ((1_f32 / 8_f32).acos(), (1_f32 / 8_f32).acos(), 63f32.sqrt()),
             (
                 -(1_f32 / 8_f32).acos(),
                 -(1_f32 / 8_f32).acos(),
-                67f32.sqrt(),
+                63f32.sqrt(),
             ),
             (
                 (3_f32 / 8_f32).acos(),
-                PI + (3_f32 / 8_f32).acos(),
+                -PI + (3_f32 / 8_f32).acos(),
                 55f32.sqrt(),
             ),
             (
                 -(3_f32 / 8_f32).acos(),
-                -(PI + (3_f32 / 8_f32).acos()),
+                PI - (3_f32 / 8_f32).acos(),
                 55f32.sqrt(),
             ),
         ];
-        assert_eq!(pathfinder.find_path(&e, &f), expected);
+        assert_vec_eqp(&pathfinder.find_path(&e, &f), &expected);
     }
+
 }
