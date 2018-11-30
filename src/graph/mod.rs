@@ -183,11 +183,11 @@ impl Pathfinder {
     }
 
     // check if a path is valid (not blocked by flightzone or obstacles)
-    fn valid_path(&self, a: &Point, b: &Point) -> bool {
+    fn valid_path(&self, a: &Point, b: &Point) -> PathValidity {
 		let theta_o = (b.z - a.z).atan2(a.distance(b));
 		//check if angle of waypoints is valid
         if theta_o > MAX_ANGLE_ASCENT {
-			return false
+			return PathValidity::Invalid;
 		}
         println!("validating path: {:?}, {:?}", a, b);
         // latitude is y, longitude is x
@@ -203,14 +203,14 @@ impl Pathfinder {
                 //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &point);
                 if intersect(a, b, &temp, &point) {
                     println!("false due to flyzone");
-                    return false;
+                    return PathValidity::Invalid;
                 }
                 temp = point;
             }
             //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &first);
             if intersect(a, b, &temp, &first) {
                 println!("false due to flyzone");
-                return false;
+                return PathValidity::Invalid;
             }
         }
 
@@ -220,24 +220,30 @@ impl Pathfinder {
             // check if there are two points of intersect, for flyover cases
             if let (Some(p1), Some(p2)) = self.circular_intersect(a, b, obstacle) {
                 println!("p1:{:?}, p2:{:?}", p1, p2);
-
-                if a.z > b.z {
-                    let theta1 = (p2.z - a.z).atan2(a.distance(&p2));
-                    println!("descending, {}, {}", theta1, theta_o);
-                    return theta_o >= theta1;
-                } else if a.z < b.z {
-                    let theta1 = (p1.z - a.z).atan2(a.distance(&p1));
-                    println!("ascending, {}, {}", theta1, theta_o);
-                    return theta_o >= theta1;
-                }
-                //else it's a straight altitude line, just check altitude
-                else {
-                    return a.z >= obstacle.height;
-                }
-            }
+				let theta1 = 
+                //if a.z > b.z {
+                //    (p2.z - a.z).atan2(a.distance(&p2))					
+                //} 
+				//else if a.z < b.z {
+                //    (p1.z - a.z).atan2(a.distance(&p1))
+                //
+				//else {
+				//	0.0
+				//};
+				match (a.z, b.z) {
+					(ah, bh) if ah > bh => (p2.z - a.z).atan2(a.distance(&p2)),
+					(ah, bh) if ah < bh =>	(p1.z - a.z).atan2(a.distance(&p1)),
+					_ => 0f32			 	
+				};
+			if theta1 == 0.0 && a.z < obstacle.height {
+				return PathValidity::Invalid;
+			}
+			else if theta_o < theta1 {
+				return PathValidity::Invalid;
+			}
+			} 
         }
-
-        true
+        PathValidity::Valid
     }
 
     // temporary placeholder function to test functionality of point determination
