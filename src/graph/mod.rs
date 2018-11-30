@@ -120,7 +120,7 @@ impl Pathfinder {
 
     // calculate distance of shortest distance from point to a segment defined by two lines
 
-    // Generate all possible path (tangent lines) between two nodes, and return the
+    // Generate all valid possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
 
     fn find_path(&self, a: &Node, b: &Node) -> Vec<(f32, f32, f32)> {
@@ -159,13 +159,16 @@ impl Pathfinder {
 		let theta0 = ((c2.x - c1.x).abs() / dist).acos();
 		println!("theta0:{}", theta0);
         let mut connections = Vec::new();
+		let mut point_connections = Vec::new();
         for (i, j) in candidates.iter() {
             let p1 = a.to_point(*j + theta0);
 			println!("{} {:?}", j, &p1);
             let p2 = b.to_point(*i + theta0);
 			println!("{} {:?}", i, &p2);
             if self.valid_path(&p1, &p2) {
+				//probably want to push points in this case later
                 connections.push((*i, *j, p1.distance(&p2)));
+				point_connections.push((p1, p2));
             }
         }
         connections
@@ -173,6 +176,11 @@ impl Pathfinder {
 
     // check if a path is valid (not blocked by flightzone or obstacles)
     fn valid_path(&self, a: &Point, b: &Point) -> bool {
+		let theta_o = (b.z - a.z).atan2(a.distance(b));
+		//check if angle of waypoints is valid
+        if theta_o > MAX_ANGLE_ASCENT {
+			return false
+		}
         println!("validating path: {:?}, {:?}", a, b);
         // latitude is y, longitude is x
         // flyzone is array connected by each index
@@ -202,9 +210,9 @@ impl Pathfinder {
         for obstacle in &self.obstacles {
             // catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
             // check if there are two points of intersect, for flyover cases
-            if let (Some(p1), Some(p2)) = self.perpendicular_intersect(a, b, obstacle) {
+            if let (Some(p1), Some(p2)) = self.circular_intersect(a, b, obstacle) {
                 println!("p1:{:?}, p2:{:?}", p1, p2);
-                let theta_o = (b.z - a.z).atan2(a.distance(b));
+
                 if a.z > b.z {
                     let theta1 = (p2.z - a.z).atan2(a.distance(&p2));
                     println!("descending, {}, {}", theta1, theta_o);
