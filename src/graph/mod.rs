@@ -22,6 +22,7 @@ pub struct Vertex {
     pub angle: f32,                        // Angle with respect to the node
     pub connection: Option<Connection>,    // Edge connecting to another node
     pub next: Option<Rc<RefCell<Vertex>>>, // Neighbor vertex in the same node
+	pub sentinel: bool,					   // Sentinel property marks end of path hugging
 }
 
 // Represent a connection between two nodes
