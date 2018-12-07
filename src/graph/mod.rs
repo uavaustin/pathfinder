@@ -40,7 +40,7 @@ pub enum PathValidity {
 
 impl From<PathValidity> for bool {
 	fn from(pv: PathValidity) -> bool {
-		match(pv) {
+		match pv {
 			PathValidity::Invalid => false,
 			_ => true
 		}
@@ -244,11 +244,11 @@ impl Pathfinder {
                 println!("p1:{:?}, p2:{:?}", p1, p2);
 				let theta1 = 
                 //if a.z > b.z {
-                //    (p2.z - a.z).atan2(a.distance(&p2))					
+                //   (p2.z - a.z).atan2(a.distance(&p2))					
                 //} 
 				//else if a.z < b.z {
                 //    (p1.z - a.z).atan2(a.distance(&p1))
-                //
+                //}
 				//else {
 				//	0.0
 				//};
