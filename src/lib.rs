@@ -22,7 +22,7 @@ const MIN_BUFFER: f32 = 5f32;
 const TURNING_RADIUS: f32 = 5f32; // In meters
 const MAX_ANGLE: f32 = PI / 6f32;
 const MAX_ANGLE_ASCENT: f32 = PI / 3f32;
-const MAX_ANGLE_DESCENT: f32 = - PI / 3f32;
+const MAX_ANGLE_DESCENT: f32 = -PI / 3f32;
 
 #[allow(non_snake_case)]
 pub struct Pathfinder {
