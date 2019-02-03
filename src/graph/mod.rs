@@ -150,8 +150,7 @@ impl Pathfinder {
             let (iter_clockwise, straight) = vertex_direction(&vec![a, vertex, b]);
             // straight line condition
             if straight == true {
-                //End current iteration
-                iter = iter + direction;
+                println!("Straight!");
             } else {
                 let d = if (iter_clockwise == false && direction == 1)
                     || (iter_clockwise == true && direction == -1)
@@ -162,8 +161,7 @@ impl Pathfinder {
                 };
 
                 if d > mag_a || d > mag_b {
-                    // small angle cut
-                    iter = iter + direction;
+                    println!("small angle");
                 } else {
                     // normal angle node
                     let dis = d;
@@ -177,7 +175,7 @@ impl Pathfinder {
                     self.nodes.push(Rc::new(RefCell::new(virt_ob)));
                 }
             }
-            iter = iter + direction;
+            iter += direction;
         }
     }
 
@@ -922,7 +920,7 @@ mod test {
         let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
         let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
         let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
-        let mut test_flyzone = vec![vec![d, c, b, a]];
+        let test_flyzone = vec![vec![d, c, b, a]];
         let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
         let node_a = Point::new(5f32, 5f32, 0f32);
         let node_b = Point::new(15f32, 5f32, 0f32);
@@ -940,41 +938,105 @@ mod test {
         }
     }
 
-/*    #[test]
-    fn virtualize_flyzone_square() {
+    #[test]
+    fn virtualize_flyzone_plus() {
         let origin = Location::from_degrees(0f64, 0f64, 0f32);
-        let test_flyzone = vec![vec![Point::new(10f64, 0f64, 10f32).to_location(&origin),
-        Point::new(20f64, 0f64, 10f32).to_location(&origin),
-        Point::new(20f64, 10f64, 10f32).to_location(&origin),
-        Point::new(30f64, 10f64, 10f32).to_location(&origin),
-        Point::new(30f64, 20f64, 10f32).to_location(&origin),
-        Point::new(20f64, 20f64, 10f32).to_location(&origin),
-        Point::new(20f64, 30f64, 10f32).to_location(&origin),
-        Point::new(10f64, 30f64, 10f32).to_location(&origin),
-        Point::new(10f64, 20f64, 10f32).to_location(&origin),
-        Point::new(0f64, 20f64, 10f32).to_location(&origin),
-        Point::new(0f64, 10f64, 10f32).to_location(&origin),
-        Point::new(10f64, 10f64, 10f32).to_location(&origin)]];
-        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new(), 4);
-        let expected = Vec::new();
-
-
-        Point::new(25f32, 5f32, 0f32),
-        Point::new(35f32, 15f32, 0f32),
-        Point::new(30f32, 10f32, 0f32),
-
-
-        let expected = vec![node_d, node_c, node_b, node_a];
-        let test_flyzone = vec![vec![d, c, b, a]];
-        for i in 0..4 {
+        let a =Point::new(20f32, 0f32, 10f32).to_location(&origin);
+        let b = Point::new(40f32, 0f32, 10f32).to_location(&origin);
+        let c = Point::new(40f32, 20f32, 10f32).to_location(&origin);
+        let d = Point::new(60f32, 20f32, 10f32).to_location(&origin);
+        let e = Point::new(60f32, 40f32, 10f32).to_location(&origin);
+        let f = Point::new(40f32, 40f32, 10f32).to_location(&origin);
+        let g = Point::new(40f32, 60f32, 10f32).to_location(&origin);
+        let h = Point::new(20f32, 60f32, 10f32).to_location(&origin);
+        let i = Point::new(20f32, 40f32, 10f32).to_location(&origin);
+        let j = Point::new(0f32, 40f32, 10f32).to_location(&origin);
+        let k = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+        let l =Point::new(20f32, 20f32, 10f32).to_location(&origin);
+        let test_flyzone = vec![vec![l, k, j, i, h, g, f, e, d, c, b, a]];
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+        let node_a = Point::new(25f32,5f32, 0f32);
+        let node_b = Point::new(35f32, 5f32, 0f32);
+        let node_c = Point::new(40f32+(25f32/2f32).sqrt(), 20f32-(25f32/2f32).sqrt(), 0f32);
+        let node_d = Point::new(55f32, 25f32, 0f32);
+        let node_e = Point::new(55f32,35f32, 0f32);
+        let node_f = Point::new(40f32+(25f32/2f32).sqrt(), 40f32+(25f32/2f32).sqrt(), 0f32);
+        let node_g = Point::new(35f32, 55f32, 0f32);
+        let node_h = Point::new(25f32, 55f32, 0f32);
+        let node_i = Point::new(20f32-(25f32/2f32).sqrt(), 40f32+(25f32/2f32).sqrt(), 0f32);
+        let node_j = Point::new(5f32, 35f32, 0f32);
+        let node_k = Point::new(5f32, 25f32, 0f32);
+        let node_l = Point::new(20f32-(25f32/2f32).sqrt(), 20f32-(25f32/2f32).sqrt(), 0f32);
+        let expected = vec![node_l, node_k, node_j, node_i, node_h, node_g, node_f,
+            node_e, node_d, node_c, node_b, node_a];
+        for i in 0..11 {
             assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
         }
-        let test_flyzone = vec![vec![a, b, c, d]];
+        let test_flyzone = vec![vec![a, b, c, d, e, f, g, h, i, j, k, l]];
         pathfinder.set_flyzone(test_flyzone);
         for i in 0..4 {
             assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
         }
     }
-    */
+
+    #[test]
+    fn virtualize_flyzone_linear() {
+        let origin = Location::from_degrees(0f64, 0f64, 0f32);
+        let a = Point::new(0f32, 0f32, 10f32).to_location(&origin);
+        let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
+        let c = Point::new(20f32, 10f32, 10f32).to_location(&origin);
+        let d = Point::new(20f32, 20f32, 10f32).to_location(&origin);
+        let e = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+        let test_flyzone = vec![vec![e, d, c, b, a]];
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+        let node_a = Point::new(5f32, 5f32, 0f32);
+        let node_b = Point::new(15f32, 5f32, 0f32);
+        let node_c = Point::new(15f32, 15f32, 0f32);
+        let node_d = Point::new(5f32, 15f32, 0f32);
+        let expected = vec![node_d, node_c, node_b, node_a];
+        for i in 0..4 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+        let test_flyzone = vec![vec![a, b, c, d, e]];
+        pathfinder.set_flyzone(test_flyzone);
+        for i in 0..4 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+    }
+
+    #[test]
+    fn virtualize_flyzone_small_angle() {
+        let origin = Location::from_degrees(0f64, 0f64, 0f32);
+        let a = Point::new(10f32, 0f32, 10f32).to_location(&origin);
+        let b = Point::new(30f32, 0f32, 10f32).to_location(&origin);
+        let c = Point::new(30f32, 20f32, 10f32).to_location(&origin);
+        let d = Point::new(10f32, 20f32, 10f32).to_location(&origin);
+        let e = Point::new(10f32, 11f32, 10f32).to_location(&origin);
+        let f = Point::new(0f32, 10f32, 10f32).to_location(&origin);
+        let g = Point::new(10f32, 9f32, 10f32).to_location(&origin);
+        let test_flyzone = vec![vec![g, f, e, d, c, b, a]];
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+        let node_a = Point::new(15f32, 5f32, 0f32);
+        let node_b = Point::new(25f32, 5f32, 0f32);
+        let node_c = Point::new(25f32, 15f32, 0f32);
+        let node_d = Point::new(15f32, 15f32, 0f32);
+        /*
+        let e_x:f32 = 10f32-5f32*(90f32/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
+        let e_y:f32 = 9f32+5f32*((9f32-9f32*(101f32).sqrt())/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
+        let f_x:f32 = 10f32-5f32*(-90f32/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
+        let f_y:f32 = 11f32-5f32*((9f32-9f32*(101f32).sqrt())/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
+        */
+        let node_f = Point::new(6.2927, 5.6450, 0f32);
+        let node_e = Point::new(6.2927, 14.3550, 0f32);
+        let expected = vec![node_f, node_e, node_d, node_c, node_b, node_a];
+        for i in 0..6 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+        let test_flyzone = vec![vec![a, b, c, d, e, f, g]];
+        pathfinder.set_flyzone(test_flyzone);
+        for i in 0..6 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+    }
 
 }
