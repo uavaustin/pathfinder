@@ -8,13 +8,13 @@ impl Vertex {
             angle: angle,
             connection: connection,
             next: None,
-			sentinel: false,
+            sentinel: false,
         }
     }
-	
-	pub fn set_sentinel() {
-		let sentinel = true;
-	}
+
+    pub fn set_sentinel() {
+        let sentinel = true;
+    }
 }
 
 impl fmt::Display for Vertex {

@@ -22,7 +22,7 @@ pub struct Vertex {
     pub angle: f32,                        // Angle with respect to the node
     pub connection: Option<Connection>,    // Edge connecting to another node
     pub next: Option<Rc<RefCell<Vertex>>>, // Neighbor vertex in the same node
-	pub sentinel: bool,					   // Sentinel property marks end of path hugging
+    pub sentinel: bool,                    // Sentinel property marks end of path hugging
 }
 
 // Represent a connection between two nodes
@@ -40,12 +40,12 @@ pub enum PathValidity {
 }
 
 impl From<PathValidity> for bool {
-	fn from(pv: PathValidity) -> bool {
-		match pv {
-			PathValidity::Invalid => false,
-			_ => true
-		}
-	}
+    fn from(pv: PathValidity) -> bool {
+        match pv {
+            PathValidity::Invalid => false,
+            _ => true,
+        }
+    }
 }
 
 pub struct Node {
@@ -96,7 +96,89 @@ impl Pathfinder {
             let mut node = Node::from_obstacle(obs, &self.origin);
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
-        // #TODO: generate virtual obstacles using flyzone
+        for i in 0..self.flyzones.len() {
+            self.virtualize_flyzone(i);
+        }
+    }
+
+    pub fn virtualize_flyzone(&mut self, index: usize) {
+        let flyzone = &self.flyzones[index];
+        // convert flyzone to points
+        let mut flyzone_points = Vec::new();
+        for location in flyzone {
+            let point = Point::from_location(&location, &self.origin);
+            flyzone_points.push(point);
+        }
+        // determine flyzone directions
+        let size = flyzone.len() as isize - 1;
+        let (clockwise, _) = vertex_direction(&flyzone_points);
+        let (direction, mut iter): (isize, isize) = if clockwise == true {
+            (1, 0)
+        } else {
+            (-1, size)
+        };
+        // edge conditions for flyzone
+        while (iter <= size) && (iter > -1) {
+            let (prev, next) = if iter == 0 {
+                (size, iter + 1)
+            } else if iter == size {
+                (iter - 1, 0)
+            } else {
+                (iter - 1, iter + 1)
+            };
+            println!("prev iter next: {} {} {}", prev, iter, next);
+            // initalize obstacle location
+            let a = flyzone_points[prev as usize];
+            let vertex = flyzone_points[iter as usize];
+            let b = flyzone_points[next as usize];
+            println!("{:?} {:?} {:?}", a, vertex, b);
+            let vec_a = (a.x - vertex.x , a.y - vertex.y);
+            let vec_b = (b.x - vertex.x , b.y - vertex.y);
+            let mag_a = ((vec_a.0).powi(2) + (vec_a.1).powi(2)).sqrt();
+            let mag_b = ((vec_b.0).powi(2) + (vec_b.1).powi(2)).sqrt();
+            let bisect = (
+                mag_b * vec_a.0 + mag_a * vec_b.0,
+                mag_b * vec_a.1 + mag_a * vec_b.1,
+            );
+            //println!("{:?}", vec_a);
+            //println!("{:?}", vec_b);
+            let mag_bisection = ((bisect.0).powi(2) + (bisect.1).powi(2)).powf(0.5);
+            let bisection = (bisect.0 / mag_bisection, bisect.1 / mag_bisection);
+            //println!("bisection: {:?}", bisection);
+            let theta = ((vec_a.0 * vec_b.0 + vec_a.1 * vec_b.1) / (mag_a * mag_b)).acos();
+            // section direction
+            let (iter_clockwise, straight) = vertex_direction(&vec![a, vertex, b]);
+            // straight line condition
+            if straight == true {
+                //End current iteration
+                iter = iter + direction;
+            } else {
+                let d = if (iter_clockwise == false && direction == 1)
+                    || (iter_clockwise == true && direction == -1)
+                {
+                    TURNING_RADIUS
+                } else {
+                    TURNING_RADIUS / ((theta / 2f32).sin())
+                };
+
+                if d > mag_a || d > mag_b {
+                    // small angle cut
+                    iter = iter + direction;
+                } else {
+                    // normal angle node
+                    let dis = d;
+                    let center = Point::new(
+                        dis * bisection.0 + vertex.x,
+                        dis * bisection.1 + vertex.y,
+                        0f32,
+                    );
+                    println!("center: {:?}", center);
+                    let virt_ob = Node::new(center, TURNING_RADIUS, 0f32);
+                    self.nodes.push(Rc::new(RefCell::new(virt_ob)));
+                }
+            }
+            iter = iter + direction;
+        }
     }
 
     fn find_origin(&mut self) {
@@ -165,7 +247,8 @@ impl Pathfinder {
                 (theta1, phi1),
                 (theta2, phi2),
                 (theta3, phi3),
-                (theta4, phi4)];
+                (theta4, phi4),
+            ];
         } else {
             candidates = vec![(theta1, phi1), (theta2, phi2)];
 			//determine angle locations of sentinels
@@ -185,36 +268,36 @@ impl Pathfinder {
         }
 
         let mut connections = Vec::new();
-		let mut point_connections = Vec::new();
+        let mut point_connections = Vec::new();
         for (i, j) in candidates.iter() {
-
-//          let p1 = a.to_point(*j + theta0);
-//			println!("{} {:?}", j, &p1);
-//          let p2 = b.to_point(*i + theta0);
-//			println!("{} {:?}", i, &p2);
-//          match self.valid_path(&p1, &p2) {
+            //          let p1 = a.to_point(*j + theta0);
+            //			println!("{} {:?}", j, &p1);
+            //          let p2 = b.to_point(*i + theta0);
+            //			println!("{} {:?}", i, &p2);
+            //          match self.valid_path(&p1, &p2) {
             let p1;
             let p2;
             if c1.x > c2.x || c1.y > c2.y {
                 p1 = a.to_point(PI - *i);
                 p2 = b.to_point(PI - *j);
-            }
-            else {
+            } else {
                 p1 = a.to_point(*i);
                 p2 = b.to_point(*j);
             }
             println!(
-            "finding distance between {:?} with angle {:?} and {:?} with angle {:?}", p1, i, p2, j);
-//            if self.valid_path(&p1, &p2) {
-				//probably want to push points in this case later
-            match self.valid_path(&p1, &p2) { 
-				PathValidity::Valid => {
-					connections.push((*i, *j, p1.distance(&p2)));
-					point_connections.push((p1, p2));
-				}
-				_ => {
-					println!("im sad");
-				}
+                "finding distance between {:?} with angle {:?} and {:?} with angle {:?}",
+                p1, i, p2, j
+            );
+            //            if self.valid_path(&p1, &p2) {
+            //probably want to push points in this case later
+            match self.valid_path(&p1, &p2) {
+                PathValidity::Valid => {
+                    connections.push((*i, *j, p1.distance(&p2)));
+                    point_connections.push((p1, p2));
+                }
+                _ => {
+                    println!("im sad");
+                }
             }
         }
         (connections, sentinels)
@@ -222,11 +305,11 @@ impl Pathfinder {
 
     // check if a path is valid (not blocked by flightzone or obstacles)
     fn valid_path(&self, a: &Point, b: &Point) -> PathValidity {
-		let theta_o = (b.z - a.z).atan2(a.distance(b));
-		//check if angle of waypoints is valid
+        let theta_o = (b.z - a.z).atan2(a.distance(b));
+        //check if angle of waypoints is valid
         if theta_o > MAX_ANGLE_ASCENT {
-			return PathValidity::Invalid;
-		}
+            return PathValidity::Invalid;
+        }
         println!("validating path: {:?}, {:?}", a, b);
         // latitude is y, longitude is x
         // flyzone is array connected by each index
@@ -258,10 +341,10 @@ impl Pathfinder {
             // check if there are two points of intersect, for flyover cases
             if let (Some(p1), Some(p2)) = self.perpendicular_intersect(a, b, obstacle) {
                 println!("p1:{:?}, p2:{:?}", p1, p2);
-				let theta1 = 
+                let theta1 =
                 //if a.z > b.z {
-                //   (p2.z - a.z).atan2(a.distance(&p2))					
-                //} 
+                //   (p2.z - a.z).atan2(a.distance(&p2))
+                //}
 				//else if a.z < b.z {
                 //    (p1.z - a.z).atan2(a.distance(&p1))
                 //}
@@ -271,15 +354,14 @@ impl Pathfinder {
 				match (a.z, b.z) {
 					(ah, bh) if ah > bh => (p2.z - a.z).atan2(a.distance(&p2)),
 					(ah, bh) if ah < bh =>	(p1.z - a.z).atan2(a.distance(&p1)),
-					_ => 0f32			 	
+					_ => 0f32
 				};
-			if theta1 == 0f32 && a.z < obstacle.height {
-				return PathValidity::Invalid;
-			}
-			else if theta_o < theta1 {
-				return PathValidity::Invalid;
-			}
-			} 
+                if theta1 == 0f32 && a.z < obstacle.height {
+                    return PathValidity::Invalid;
+                } else if theta_o < theta1 {
+                    return PathValidity::Invalid;
+                }
+            }
         }
         PathValidity::Valid
     }
@@ -788,8 +870,17 @@ mod test {
         let expected = vec![
             (PI / 2_f32, PI / 2_f32, 10f32),
             (-PI / 2_f32, -PI / 2_f32, 10f32),
-            ((2_f32 / 10f32).acos(), -PI + (2_f32 / 10f32).acos(), 96f32.sqrt()),
-            (-(2_f32 / 10f32).acos(), PI - (2_f32 / 10f32).acos(), 96f32.sqrt())];
+            (
+                (2_f32 / 10f32).acos(),
+                -PI + (2_f32 / 10f32).acos(),
+                96f32.sqrt(),
+            ),
+            (
+                -(2_f32 / 10f32).acos(),
+                PI - (2_f32 / 10f32).acos(),
+                96f32.sqrt(),
+            ),
+        ];
         assert_vec_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
     }
 
@@ -838,5 +929,67 @@ mod test {
         ];
         assert_vec_eqp(&pathfinder.find_path(&e, &f).0, &expected);
     }
+
+    #[test]
+    fn virtualize_flyzone_square() {
+        let origin = Location::from_degrees(0f64, 0f64, 0f32);
+        let a = Point::new(0f32, 0f32, 10f32).to_location(&origin);
+        let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
+        let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
+        let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+        let mut test_flyzone = vec![vec![d, c, b, a]];
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+        let node_a = Point::new(5f32, 5f32, 0f32);
+        let node_b = Point::new(15f32, 5f32, 0f32);
+        let node_c = Point::new(15f32, 15f32, 0f32);
+        let node_d = Point::new(5f32, 15f32, 0f32);
+        let expected = vec![node_d, node_c, node_b, node_a];
+        let test_flyzone = vec![vec![d, c, b, a]];
+        for i in 0..4 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+        let test_flyzone = vec![vec![a, b, c, d]];
+        pathfinder.set_flyzone(test_flyzone);
+        for i in 0..4 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+    }
+
+/*    #[test]
+    fn virtualize_flyzone_square() {
+        let origin = Location::from_degrees(0f64, 0f64, 0f32);
+        let test_flyzone = vec![vec![Point::new(10f64, 0f64, 10f32).to_location(&origin),
+        Point::new(20f64, 0f64, 10f32).to_location(&origin),
+        Point::new(20f64, 10f64, 10f32).to_location(&origin),
+        Point::new(30f64, 10f64, 10f32).to_location(&origin),
+        Point::new(30f64, 20f64, 10f32).to_location(&origin),
+        Point::new(20f64, 20f64, 10f32).to_location(&origin),
+        Point::new(20f64, 30f64, 10f32).to_location(&origin),
+        Point::new(10f64, 30f64, 10f32).to_location(&origin),
+        Point::new(10f64, 20f64, 10f32).to_location(&origin),
+        Point::new(0f64, 20f64, 10f32).to_location(&origin),
+        Point::new(0f64, 10f64, 10f32).to_location(&origin),
+        Point::new(10f64, 10f64, 10f32).to_location(&origin)]];
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new(), 4);
+        let expected = Vec::new();
+
+
+        Point::new(25f32, 5f32, 0f32),
+        Point::new(35f32, 15f32, 0f32),
+        Point::new(30f32, 10f32, 0f32),
+
+
+        let expected = vec![node_d, node_c, node_b, node_a];
+        let test_flyzone = vec![vec![d, c, b, a]];
+        for i in 0..4 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+        let test_flyzone = vec![vec![a, b, c, d]];
+        pathfinder.set_flyzone(test_flyzone);
+        for i in 0..4 {
+            assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        }
+    }
+    */
 
 }

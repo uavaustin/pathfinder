@@ -95,6 +95,27 @@ pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bo
     (x, y, (x - c.x).powi(2) + (y - c.y).powi(2), endpoint)
 }
 
+pub fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
+    //Determine if set of order points is clockwise, c-clockwise, or straight
+    let mut sum_whole = 0f32;
+    for i in 0..points.len() {
+        let first = points[i];
+        let second = if i + 1 == points.len() {
+            points[0]
+        } else {
+            points[i + 1]
+        };
+        sum_whole += (second.x - first.x) * (second.y + first.y);
+    }
+    if sum_whole > 0f32 {
+        (true, false) // clockwise
+    } else if sum_whole < 0f32 {
+        (false, false) // counter-clockwise
+    } else {
+        (false, true) // straight-line
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -143,5 +164,20 @@ mod test {
         let d = Point::new(30f32, 15f32, 10f32);
         assert_eq!(intersect(&a, &b, &c, &d), false);
         assert_eq!(intersect(&a, &c, &b, &d), true);
+    }
+
+    #[test]
+    fn vertex_direction_test() {
+        let a = Point::new(0f32, 0f32, 10f32);
+        let b = Point::new(0f32, 10f32, 10f32);
+        let c = Point::new(10f32, 10f32, 10f32);
+        let d = Point::new(10f32, 0f32, 10f32);
+        let e = Point::new(0f32, 20f32, 10f32);
+        let clockwise_flyzone = vec![a, b, c, d];
+        let anticlockwise_flyzone = vec![d, c, b, a];
+        let line_flyzone = vec![a, b, e];
+        assert_eq!(vertex_direction(&clockwise_flyzone), (true, false));
+        assert_eq!(vertex_direction(&anticlockwise_flyzone), (false, false));
+        assert_eq!(vertex_direction(&line_flyzone), (false, true));
     }
 }
