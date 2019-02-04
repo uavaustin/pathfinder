@@ -62,7 +62,7 @@ impl Pathfinder {
         for i in 0..self.nodes.len() {
             for j in i + 1..self.nodes.len() {
                 let paths = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
-                for (alpha, beta, distance) in paths {
+                for (alpha, beta, distance) in paths.0 {
                     // println!("path: {} {} {}", alpha, beta, distance);
                     let v = Rc::new(RefCell::new(Vertex::new(beta, None)));
                     let edge = Connection::new(v, distance);
@@ -139,7 +139,7 @@ impl Pathfinder {
     // Generate all valid possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
 
-    fn find_path(&self, a: &Node, b: &Node) -> Vec<(f32, f32, f32)> {
+    fn find_path(&self, a: &Node, b: &Node) -> (Vec<(f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
         let c1: Point = a.origin;
         let c2: Point = b.origin;
         let r1: f32 = a.radius;
@@ -159,6 +159,7 @@ impl Pathfinder {
         let phi3 = -PI + theta3;
         let phi4 = -phi3;
         let candidates;
+		let mut sentinels = None;
         if dist > r1 + r2 {
             candidates = vec![
                 (theta1, phi1),
@@ -167,6 +168,20 @@ impl Pathfinder {
                 (theta4, phi4)];
         } else {
             candidates = vec![(theta1, phi1), (theta2, phi2)];
+			//determine angle locations of sentinels
+			let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2))/(2f32 * r1 * dist)).acos();
+			let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2))/(2f32 * r2 * dist)).acos();
+			//sentinel vertices on A
+			let a_s1 = theta_s;
+			let a_s2 = -theta_s;
+			let a_s3 = -2f32 * PI + theta_s;
+			let a_s4 = 2f32 * PI - theta_s; 
+			//sentinel vertices on B
+			let b_s1 = PI - phi_s;
+			let b_s2 = PI + phi_s;
+			let b_s3 = -PI + phi_s;
+			let b_s4 = -PI - phi_s;
+			sentinels = Some(vec![(a_s1, b_s1), (a_s2, b_s2), (a_s3, b_s3), (a_s4, b_s4)]);
         }
 
         let mut connections = Vec::new();
@@ -202,7 +217,7 @@ impl Pathfinder {
 				}
             }
         }
-        connections
+        (connections, sentinels)
     }
 
     // check if a path is valid (not blocked by flightzone or obstacles)
@@ -225,14 +240,14 @@ impl Pathfinder {
                 let point = Point::from_location(&location, &self.origin);
                 //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &point);
                 if intersect(a, b, &temp, &point) {
-                    println!("false due to flyzone");
+                    //println!("false due to flyzone");
                     return PathValidity::Invalid;
                 }
                 temp = point;
             }
             //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &first);
             if intersect(a, b, &temp, &first) {
-                println!("false due to flyzone");
+                //println!("false due to flyzone");
                 return PathValidity::Invalid;
             }
         }
@@ -775,7 +790,7 @@ mod test {
             (-PI / 2_f32, -PI / 2_f32, 10f32),
             ((2_f32 / 10f32).acos(), -PI + (2_f32 / 10f32).acos(), 96f32.sqrt()),
             (-(2_f32 / 10f32).acos(), PI - (2_f32 / 10f32).acos(), 96f32.sqrt())];
-        assert_vec_eqp(&pathfinder.find_path(&a1, &b1), &expected);
+        assert_vec_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
     }
 
     #[test]
@@ -793,7 +808,7 @@ mod test {
                 24f32.sqrt(),
             ),
         ];
-        assert_vec_eqp(&pathfinder.find_path(&c, &d), &expected);
+        assert_vec_eqp(&pathfinder.find_path(&c, &d).0, &expected);
     }
 
     #[test]
@@ -821,7 +836,7 @@ mod test {
                 55f32.sqrt(),
             ),
         ];
-        assert_vec_eqp(&pathfinder.find_path(&e, &f), &expected);
+        assert_vec_eqp(&pathfinder.find_path(&e, &f).0, &expected);
     }
 
 }
