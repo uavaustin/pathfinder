@@ -61,8 +61,8 @@ impl Pathfinder {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
             for j in i + 1..self.nodes.len() {
-                let paths = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
-                for (alpha, beta, distance) in paths.0 {
+                let (paths, sentinels) = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
+                for (alpha, beta, distance) in paths {
                     // println!("path: {} {} {}", alpha, beta, distance);
                     let v = Rc::new(RefCell::new(Vertex::new(beta, None)));
                     let edge = Connection::new(v, distance);
@@ -81,6 +81,18 @@ impl Pathfinder {
                     )));
                     self.nodes[j].borrow_mut().insert_vertex(u);
                 }
+				if sentinels.is_some() {
+					for (alpha_s, beta_s) in sentinels.unwrap() {
+						let mut a = Vertex::new(alpha_s, None);
+						a.set_sentinel();
+						let mut b = Vertex::new(beta_s, None);
+						b.set_sentinel();
+						let s_a = Rc::new(RefCell::new(a));
+						let s_b = Rc::new(RefCell::new(b));
+						self.nodes[i].borrow_mut().insert_vertex(s_a);
+						self.nodes[j].borrow_mut().insert_vertex(s_b);
+					}
+				}
             }
         }
 
@@ -254,6 +266,7 @@ impl Pathfinder {
 			//determine angle locations of sentinels
 			let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2))/(2f32 * r1 * dist)).acos();
 			let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2))/(2f32 * r2 * dist)).acos();
+			println!("Generating Sentinels: Theta = {:?}, Phi = {:?}", theta_s, phi_s);
 			//sentinel vertices on A
 			let a_s1 = theta_s;
 			let a_s2 = -theta_s;
@@ -265,6 +278,7 @@ impl Pathfinder {
 			let b_s3 = -PI + phi_s;
 			let b_s4 = -PI - phi_s;
 			sentinels = Some(vec![(a_s1, b_s1), (a_s2, b_s2), (a_s3, b_s3), (a_s4, b_s4)]);
+			println!("{:?}", sentinels)
         }
 
         let mut connections = Vec::new();
@@ -521,7 +535,19 @@ mod test {
         };
     }
 
-    fn assert_vec_eqp(v1: &Vec<(f32, f32, f32)>, v2: &Vec<(f32, f32, f32)>) {
+	//compare two vectors with tuple of 2 elements
+    fn assert_vec2_eqp(v1: &Vec<(f32, f32)>, v2: &Vec<(f32, f32)>) {
+        for i in 0..v1.len() {
+            let a = v1[i];
+            let b = v2[i];
+			println!("comparing {:?} with {:?}", a, b);
+            assert_eqp!(a.0, b.0, THRESHOLD);
+            assert_eqp!(a.1, b.1, THRESHOLD);
+        }
+    }
+	
+	//compare two vectors of tuple with 3 elements
+    fn assert_vec3_eqp(v1: &Vec<(f32, f32, f32)>, v2: &Vec<(f32, f32, f32)>) {
         for i in 0..v1.len() {
             let a = v1[i];
             let b = v2[i];
@@ -881,7 +907,7 @@ mod test {
                 96f32.sqrt(),
             ),
         ];
-        assert_vec_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
+        assert_vec3_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
     }
 
     #[test]
@@ -899,8 +925,20 @@ mod test {
                 24f32.sqrt(),
             ),
         ];
-        assert_vec_eqp(&pathfinder.find_path(&c, &d).0, &expected);
+        assert_vec3_eqp(&pathfinder.find_path(&c, &d).0, &expected);
     }
+
+	#[test]
+	fn sentinel_test() {
+		let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+        let n3 = Node::new(Point::new(15_f32, 10_f32, 0_f32), 5_f32, 0_f32);
+        let n4 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 5_f32, 0_f32);
+        let c = Rc::new(n3);
+        let d = Rc::new(n4);
+        let expected = vec![(PI/3f32, 2f32 * PI/3f32), (-PI/3f32, 4f32 * PI /3f32), (-5f32*PI/3f32, -2f32*PI/3f32), (5f32 * PI/3f32, -4f32 * PI/3f32)];
+		println!("{:?}", expected);
+        assert_vec2_eqp(&pathfinder.find_path(&c, &d).1.unwrap(), &expected);
+	}
 
     #[test]
     fn different_radius_no_overlap_test() {
@@ -927,7 +965,7 @@ mod test {
                 55f32.sqrt(),
             ),
         ];
-        assert_vec_eqp(&pathfinder.find_path(&e, &f).0, &expected);
+        assert_vec3_eqp(&pathfinder.find_path(&e, &f).0, &expected);
     }
 
     #[test]
