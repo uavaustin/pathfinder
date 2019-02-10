@@ -12,8 +12,8 @@ impl Vertex {
         }
     }
 
-    pub fn set_sentinel() {
-        let sentinel = true;
+    pub fn set_sentinel(&mut self) {
+        self.sentinel = true;
     }
 }
 
