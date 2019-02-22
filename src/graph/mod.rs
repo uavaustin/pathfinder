@@ -19,7 +19,13 @@ pub struct Point {
 
 #[derive(Debug)]
 pub struct Vertex {
+    pub index: i32,                        // Index to identify vertex
+    pub radius: f32,                       // Radius of the node vertex is attached to
+    pub location: Point,                   // Location of the vertex
     pub angle: f32,                        // Angle with respect to the node
+    pub g_cost: f32,                       //
+    pub f_cost: f32,                       //
+    pub parent: Option<Rc<RefCell<Vertex>>>,// 
     pub connection: Option<Connection>,    // Edge connecting to another node
     pub next: Option<Rc<RefCell<Vertex>>>, // Neighbor vertex in the same node
     pub sentinel: bool,                    // Sentinel property marks end of path hugging
@@ -30,7 +36,7 @@ pub struct Vertex {
 #[derive(Debug)]
 pub struct Connection {
     pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
-    distance: f32,
+    pub distance: f32,
 }
 
 pub enum PathValidity {
@@ -48,6 +54,7 @@ impl From<PathValidity> for bool {
     }
 }
 
+#[derive(Debug)]
 pub struct Node {
     pub origin: Point,
     pub radius: f32,
@@ -64,18 +71,18 @@ impl Pathfinder {
                 let (paths, sentinels) = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
                 for (alpha, beta, distance) in paths {
                     // println!("path: {} {} {}", alpha, beta, distance);
-                    let v = Rc::new(RefCell::new(Vertex::new(beta, None)));
+                    let v = Rc::new(RefCell::new(Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, beta, None)));
                     let edge = Connection::new(v, distance);
-                    let u = Rc::new(RefCell::new(Vertex::new(alpha, Some(edge))));
+                    let u = Rc::new(RefCell::new(Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, alpha, Some(edge))));
                     self.nodes[i].borrow_mut().insert_vertex(u);
 
                     // reciprocal
-                    let v = Rc::new(RefCell::new(Vertex::new(
+                    let v = Rc::new(RefCell::new(Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, 
                         (2f32 * PI - alpha) % (2f32 * PI),
                         None,
                     )));
                     let edge = Connection::new(v, distance);
-                    let u = Rc::new(RefCell::new(Vertex::new(
+                    let u = Rc::new(RefCell::new(Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, 
                         (2f32 * PI - beta) % (2f32 * PI),
                         Some(edge),
                     )));
@@ -83,9 +90,9 @@ impl Pathfinder {
                 }
 				if sentinels.is_some() {
 					for (alpha_s, beta_s) in sentinels.unwrap() {
-						let mut a = Vertex::new(alpha_s, None);
+						let mut a = Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, alpha_s, None);
 						a.set_sentinel();
-						let mut b = Vertex::new(beta_s, None);
+						let mut b = Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, beta_s, None);
 						b.set_sentinel();
 						let s_a = Rc::new(RefCell::new(a));
 						let s_b = Rc::new(RefCell::new(b));
@@ -231,7 +238,7 @@ impl Pathfinder {
     // Generate all valid possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
 
-    fn find_path(&self, a: &Node, b: &Node) -> (Vec<(f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
+    pub fn find_path(&self, a: &Node, b: &Node) -> (Vec<(f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
         let c1: Point = a.origin;
         let c2: Point = b.origin;
         let r1: f32 = a.radius;
@@ -252,7 +259,7 @@ impl Pathfinder {
         let phi4 = -phi3;
         let candidates;
 		let mut sentinels = None;
-        if dist > r1 + r2 {
+        if r1 != 0f32 && r2 != 0f32 && dist > r1 + r2 {
             candidates = vec![
                 (theta1, phi1),
                 (theta2, phi2),
@@ -892,8 +899,16 @@ mod test {
         let a1 = Rc::new(n1);
         let b1 = Rc::new(n2);
         let expected = vec![
-            (PI / 2_f32, PI / 2_f32, 10f32),
-            (-PI / 2_f32, -PI / 2_f32, 10f32),
+            (
+                PI / 2_f32, 
+                PI / 2_f32, 
+                10f32
+            ),
+            (
+                -PI / 2_f32,
+                -PI / 2_f32,
+                10f32
+            ),
             (
                 (2_f32 / 10f32).acos(),
                 -PI + (2_f32 / 10f32).acos(),
@@ -916,7 +931,11 @@ mod test {
         let c = Rc::new(n3);
         let d = Rc::new(n4);
         let expected = vec![
-            ((1_f32 / 5_f32).acos(), (1_f32 / 5_f32).acos(), 24f32.sqrt()),
+            (
+                (1_f32 / 5_f32).acos(), 
+                (1_f32 / 5_f32).acos(), 
+                24f32.sqrt()
+            ),
             (
                 -(1_f32 / 5_f32).acos(),
                 -(1_f32 / 5_f32).acos(),
@@ -946,7 +965,11 @@ mod test {
         let e = Rc::new(n5);
         let f = Rc::new(n6);
         let expected = vec![
-            ((1_f32 / 8_f32).acos(), (1_f32 / 8_f32).acos(), 63f32.sqrt()),
+            (
+                (1_f32 / 8_f32).acos(), 
+                (1_f32 / 8_f32).acos(), 
+                63f32.sqrt()
+            ),
             (
                 -(1_f32 / 8_f32).acos(),
                 -(1_f32 / 8_f32).acos(),

@@ -8,21 +8,25 @@ use std::collections::LinkedList;
 use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
+use std::collections::BinaryHeap;
+use std::collections::HashSet;
 
 mod graph;
 pub mod obj;
 
-use graph::Node;
+use graph::{Node, Vertex, Connection, Point};
 use obj::{Location, Obstacle, Plane, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
 const RADIUS: f64 = 6371000.0;
 const MIN_BUFFER: f32 = 5f32;
-const TURNIkNG_RADIUS: f32 = 5f32; // In meters
+const TURNING_RADIUS: f32 = 5f32; // In meters
 const MAX_ANGLE: f32 = PI / 6f32;
 const MAX_ANGLE_ASCENT: f32 = PI / 3f32;
 const MAX_ANGLE_DESCENT: f32 = -PI / 3f32;
+const START_VERTEX_INDEX: i32 = -1;
+const END_VERTEX_INDEX: i32 = -2;
 
 #[allow(non_snake_case)]
 pub struct Pathfinder {
@@ -38,6 +42,7 @@ pub struct Pathfinder {
     wp_list: LinkedList<Waypoint>,
     origin: Location, // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
+    num_vertices: i32,
 }
 
 impl Pathfinder {
@@ -55,6 +60,7 @@ impl Pathfinder {
             wp_list: LinkedList::new(),
             origin: Location::from_degrees(0f64, 0f64, 0f32),
             nodes: Vec::new(),
+            num_vertices: 0i32,
         }
     }
 
@@ -67,7 +73,10 @@ impl Pathfinder {
         let mut pathfinder = Pathfinder::new();
         pathfinder.init(buffer_size, flyzones, obstacles);
         pathfinder
-    }
+    } //          let p1 = a.to_point(*j + theta0);
+            //          println!("{} {:?}", j, &p1);
+            //          let p2 = b.to_point(*i + theta0);
+            //          println!("{} {:?}", i, &
 
     pub fn init(
         &mut self,
@@ -130,7 +139,99 @@ impl Pathfinder {
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
     fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
+
+        let mut num_vertices = self.num_vertices;
+        let mut open_list: BinaryHeap<Rc<RefCell<Vertex>>> = BinaryHeap::new();
+        let mut open_set: HashSet<i32> = HashSet::new();
+        let mut closed_set: HashSet<i32> = HashSet::new();
+        let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
+        let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
+        let start_vertex = Vertex::new(start_node.clone(), &mut START_VERTEX_INDEX, 0f32, None);
+
+        //Prepare graph for A*
+        for i in 0..self.nodes.len() {
+            let temp_node = &self.nodes[i];
+            let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
+            for (a, b, dist) in temp_paths.iter() {
+                let vertex = Rc::new(RefCell::new(Vertex::new(temp_node.clone(), &mut num_vertices, *b, None)));
+                temp_node.borrow_mut().insert_vertex(vertex.clone());
+                open_list.push(vertex.clone());
+                open_set.insert(vertex.borrow().index);
+            }
+
+            let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
+            for (a, b, dist) in temp_paths.iter() {
+                let end_vertex = Rc::new(RefCell::new(Vertex::new(end_node.clone(), &mut END_VERTEX_INDEX, *b, None)));
+                let connection = Connection::new(end_vertex.clone(), *dist);
+                let vertex = Rc::new(RefCell::new(Vertex::new(temp_node.clone(), &mut num_vertices, *a, Some(connection))));
+                temp_node.borrow_mut().insert_vertex(vertex.clone());
+                open_list.push(vertex.clone());
+                open_set.insert(vertex.borrow().index);
+                open_list.push(end_vertex.clone());
+                open_set.insert(end_vertex.borrow().index);
+            }
+        }
+
+        
+
+        //A* algorithm - find shortest path from plane to destination
+        while let Some(cur) = open_list.pop() {
+            if cur.borrow().index == END_VERTEX_INDEX {
+                break;
+            }
+            closed_set.insert(cur.borrow().index);
+
+            let mut update_vertex = |cur_g_cost: f32, next: &mut Rc<RefCell<Vertex>>, dist: f32| {
+                let new_g_cost = cur_g_cost + dist;
+                {
+                    let mut next_mut = next.borrow_mut();
+                    if closed_set.contains(&next_mut.index)                                         //vertex is already explored
+                        || next_mut.sentinel                                                        //vertex is a sentinel
+                        || (open_set.contains(&next_mut.index) && new_g_cost >= next_mut.g_cost) {  //vertex has been visited and the current cost is better
+                        return;
+                    }                
+                    let new_f_cost = next_mut.g_cost + next_mut.location.distance3d(&Point::from_location(&end, &self.origin));
+                    next_mut.g_cost = new_g_cost;
+                    next_mut.f_cost = new_f_cost;
+                    next_mut.parent = Some(cur.clone());
+                }
+                open_list.push(next.clone());
+                open_set.insert(next.borrow().index);
+            };
+
+            let mut cur_vertex = cur.borrow_mut();
+            let g_cost = cur_vertex.g_cost;
+            if let Some(ref mut connection) = cur_vertex.connection {
+                let next_vertex = &mut connection.neighbor;
+                let dist = connection.distance;
+                update_vertex(g_cost, &mut *next_vertex, dist);                
+            }
+
+            let weight = cur_vertex.get_neighbor_weight();
+            if let Some(ref mut next_vertex) = cur_vertex.next {
+                update_vertex(g_cost, &mut *next_vertex, weight);                
+            }
+        }
         None
+        //TODO: Clean up the graph before we finish
+    }
+
+    fn generate_waypoint_list(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint> {
+        let mut waypoint_list = LinkedList::new();
+        let mut cur_vertex = end_vertex;
+        let mut index = END_VERTEX_INDEX;
+        while (index != START_VERTEX_INDEX) {
+            let loc = cur_vertex.borrow().location.to_location(&self.origin);
+            let radius = cur_vertex.borrow().radius;
+            waypoint_list.push_front(Waypoint::new(1, loc, radius));
+            let parent = match cur_vertex.borrow().parent {
+                Some(ref cur_parent) => cur_parent.clone(),
+                None => panic!("Missing a parent without reaching start point"),
+            };
+            cur_vertex = parent;
+            index = cur_vertex.borrow().index;
+        }
+        waypoint_list
     }
 
     pub fn set_process_time(&mut self, max_process_time: u32) {

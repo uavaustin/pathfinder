@@ -17,6 +17,14 @@ impl Point {
         )
     }
 
+    pub fn from_node_and_angle(node: &Node, angle: f32) -> Self {
+        let origin = node.origin;
+        let radius = node.radius;
+        let x = origin.x + radius * angle.cos();
+        let y = origin.y + radius * angle.sin();
+        Point::new(x, y, origin.z)
+    }
+
     // Convert point with respect to origin to location
     pub fn to_location(&self, origin: &Location) -> Location {
         let lat = self.y as f64 / RADIUS + origin.lat();
