@@ -94,9 +94,9 @@ pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bo
     // returns distance
     (x, y, (x - c.x).powi(2) + (y - c.y).powi(2), endpoint)
 }
-
+// determine if set of order points is clockwise, c-clockwise, or straight
+// input vector of points, output (direction, straight)
 pub fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
-    //Determine if set of order points is clockwise, c-clockwise, or straight
     let mut sum_whole = 0f32;
     for i in 0..points.len() {
         let first = points[i];

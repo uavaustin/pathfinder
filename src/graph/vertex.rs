@@ -22,8 +22,13 @@ impl Vertex {
         }
     }
 
-    pub fn set_sentinel(&mut self) {
-        self.sentinel = true;
+    pub fn new_sentinel(angle: f32) -> Vertex {
+        Vertex {
+            angle: angle,
+            connection: None,
+            next: None,
+            sentinel: true,
+        }
     }
 
     pub fn get_neighbor_weight(&self) -> f32 {

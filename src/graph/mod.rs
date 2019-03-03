@@ -159,11 +159,8 @@ impl Pathfinder {
                 mag_b * vec_a.0 + mag_a * vec_b.0,
                 mag_b * vec_a.1 + mag_a * vec_b.1,
             );
-            //println!("{:?}", vec_a);
-            //println!("{:?}", vec_b);
             let mag_bisection = ((bisect.0).powi(2) + (bisect.1).powi(2)).powf(0.5);
             let bisection = (bisect.0 / mag_bisection, bisect.1 / mag_bisection);
-            //println!("bisection: {:?}", bisection);
             let theta = ((vec_a.0 * vec_b.0 + vec_a.1 * vec_b.1) / (mag_a * mag_b)).acos();
             // section direction
             let (iter_clockwise, straight) = vertex_direction(&vec![a, vertex, b]);
@@ -233,7 +230,47 @@ impl Pathfinder {
         self.origin = Location::from_radians(lon, min_lat, 0f32);
     }
 
-    // calculate distance of shortest distance from point to a segment defined by two lines
+    // determines vertices of node and flyzone intersection
+    fn sentinel_normal(&self, node: &Node) -> () {
+        let center: Point = node.origin;
+        let r: f32 = node.radius;
+        for flyzone in self.flyzones {
+            let size = flyzone.len()+1;
+            // iterate node over all vertices
+            for i in 0..size {
+                let mut v1 = flyzone[i];
+                let mut v2 = flyzone[(i+1)%size];
+                let (x,y,dist,end) = intersect_distance(v1, v2, center);
+                // check intersect is true
+                if dist > r {
+                    continue;
+                }
+                // determine both intersect angles in left and right ring
+                let theta = (dist/r).acos();
+                let dx = x - center.x;
+                let dy = y - center.y;
+                let phi = dy.atan2(dx);
+                let (left, right) = if dy > 0 {
+                    (phi, -2*PI +phi)
+                } else {
+                    (2*PI + phi, phi)
+                };
+                let angles = vec![
+                    (left, theta),
+                    (right, theta)
+                ];
+                // create and impliment vertices
+                for (i,j) in angles {
+                    let a = i + j;
+                    let b = i - j;
+                    let vertex_a = Vertex::new_sentinel(a);
+                    let vertex_b = Vertex::new_sentinel(b);
+                    node.insert_vertex(vertex_a);
+                    node.insert_vertex(vertex_b);
+                }
+            }
+        }
+    }
 
     // Generate all valid possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
@@ -276,7 +313,7 @@ impl Pathfinder {
 			let a_s1 = theta_s;
 			let a_s2 = -theta_s;
 			let a_s3 = -2f32 * PI + theta_s;
-			let a_s4 = 2f32 * PI - theta_s; 
+			let a_s4 = 2f32 * PI - theta_s;
 			//sentinel vertices on B
 			let b_s1 = PI - phi_s;
 			let b_s2 = PI + phi_s;
@@ -550,7 +587,7 @@ mod test {
             assert_eqp!(a.1, b.1, THRESHOLD);
         }
     }
-	
+
 	//compare two vectors of tuple with 3 elements
     fn assert_vec3_eqp(v1: &Vec<(f32, f32, f32)>, v2: &Vec<(f32, f32, f32)>) {
         for i in 0..v1.len() {
@@ -1096,12 +1133,6 @@ mod test {
         let node_b = Point::new(25f32, 5f32, 0f32);
         let node_c = Point::new(25f32, 15f32, 0f32);
         let node_d = Point::new(15f32, 15f32, 0f32);
-        /*
-        let e_x:f32 = 10f32-5f32*(90f32/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
-        let e_y:f32 = 9f32+5f32*((9f32-9f32*(101f32).sqrt())/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
-        let f_x:f32 = 10f32-5f32*(-90f32/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
-        let f_y:f32 = 11f32-5f32*((9f32-9f32*(101f32).sqrt())/(((90f32).powi(2)+(9f32-9f32*(101f32).sqrt()).powi(2)).sqrt()));
-        */
         let node_f = Point::new(6.2927, 5.6450, 0f32);
         let node_e = Point::new(6.2927, 14.3550, 0f32);
         let expected = vec![node_f, node_e, node_d, node_c, node_b, node_a];
@@ -1113,6 +1144,22 @@ mod test {
         for i in 0..6 {
             assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
         }
+    }
+
+    #[test]
+    fn sentinel_vertex_test() {
+        let a = Point::new(0f32, 0f32, 0f32).to_location(&origin);
+        let b = Point::new(0f32, 5f32, 0f32).to_location(&origin);
+        let a = Point::new(5f32, 0f32, 0f32).to_location(&origin);
+        let test_flyzone = vec![vec![a, b, c]];
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+        let origin = Point::new(4f32, 1f32, 0f32);
+        let node = Node::new(origin, 1f32, 2f32);
+
+        vertex_al = (3/2*PI, None);
+        vertex_bl =
+        vertex.angle =
+        let expected_vertices = []
     }
 
 }

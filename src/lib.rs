@@ -14,8 +14,14 @@ use std::collections::HashSet;
 mod graph;
 pub mod obj;
 
+<<<<<<< Updated upstream
 use graph::{Node, Vertex, Connection, Point};
+=======
+use graph::Node;
+use graph::Point;
+>>>>>>> Stashed changes
 use obj::{Location, Obstacle, Plane, Waypoint};
+use graph::util::intersect;
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
@@ -90,9 +96,45 @@ impl Pathfinder {
         }
         self.buffer = buffer_size.max(MIN_BUFFER);
         self.flyzones = flyzones;
+        for i in 0..self.flyzones.len() {
+            let validity = self.invalid_flyzone(i);
+            if validity == true {
+                panic!();
+            }
+         }
         self.obstacles = obstacles;
         self.build_graph();
         self.initialized = true;
+    }
+
+    // determine if flyzone intersects itself (correct order)
+    // inputs (self,flyzones indices), outputs true if invalid
+    fn invalid_flyzone(&mut self, iter: usize) -> (bool) {
+        let flyzone = &self.flyzones[iter];
+        let mut vertices = Vec::new();
+        for loc in 0..flyzone.len() {
+            let i = flyzone[loc];
+            let point = Point::from_location(&i, &self.origin);
+            vertices.push(point);
+        }
+        let n = vertices.len();
+        // compares any side of flyzone, ab, with any non-adjacent side, cd
+        for ab in 0..n-2 {
+            let a = vertices[ab];
+            let b = vertices[ab+1];
+            for i in 2..n-1 {
+                let cd = ab + i;
+                let c = vertices[cd];
+                let d = vertices[(cd+1)%n];
+                if intersect(&a, &b, &c, &d) {
+                    return true;
+                }
+                if cd + 1 == n {
+                    break;
+                }
+            }
+        }
+    return false;
     }
 
     pub fn get_adjust_path(
@@ -272,6 +314,7 @@ impl Pathfinder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use graph::Point;
 
     #[test]
     #[should_panic]
@@ -283,5 +326,18 @@ mod tests {
     #[should_panic]
     fn invalid_flyzone_test() {
         Pathfinder::new().init(1f32, vec![vec![]], Vec::new())
+    }
+
+    #[test]
+    #[should_panic]
+    fn fz_fz_intersection_test() {
+        let origin = Location::from_degrees(0f64, 0f64, 0f32);
+        let a = Point::new(0f32, 0f32, 10f32).to_location(&origin);
+        let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
+        let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
+        let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+        let test_flyzone = vec![vec![a, b, d, c]];
+        let mut pathfinder = Pathfinder::create(1f32,test_flyzone, Vec::new());
+        assert!(pathfinder.invalid_flyzone(0));
     }
 }
