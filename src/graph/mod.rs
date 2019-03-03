@@ -37,12 +37,14 @@ pub struct Vertex {
 pub struct Connection {
     pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
     pub distance: f32,
+	// starting and ending vertices must be above threshold to take the connection
+	pub threshold: f32
 }
 
 pub enum PathValidity {
     Valid,
     Invalid,
-    Flyover(Point),
+    Flyover(f32),
 }
 
 impl From<PathValidity> for bool {
@@ -68,28 +70,27 @@ impl Pathfinder {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
             for j in i + 1..self.nodes.len() {
-                let (paths, sentinels) = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
-                for (alpha, beta, distance) in paths {
+                let (paths, obs_sentinels) = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
+                for (alpha, beta, distance, threshold) in paths {
                     // println!("path: {} {} {}", alpha, beta, distance);
                     let v = Rc::new(RefCell::new(Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, beta, None)));
-                    let edge = Connection::new(v, distance);
+                    let edge = Connection::new(v, distance, threshold);
                     let u = Rc::new(RefCell::new(Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, alpha, Some(edge))));
                     self.nodes[i].borrow_mut().insert_vertex(u);
-
                     // reciprocal
                     let v = Rc::new(RefCell::new(Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, 
                         (2f32 * PI - alpha) % (2f32 * PI),
                         None,
                     )));
-                    let edge = Connection::new(v, distance);
+                    let edge = Connection::new(v, distance, threshold);
                     let u = Rc::new(RefCell::new(Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, 
                         (2f32 * PI - beta) % (2f32 * PI),
                         Some(edge),
                     )));
                     self.nodes[j].borrow_mut().insert_vertex(u);
                 }
-				if sentinels.is_some() {
-					for (alpha_s, beta_s) in sentinels.unwrap() {
+				if obs_sentinels.is_some() {
+					for (alpha_s, beta_s) in obs_sentinels.unwrap() {
 						let mut a = Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, alpha_s, None);
 						a.set_sentinel();
 						let mut b = Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, beta_s, None);
@@ -275,7 +276,8 @@ impl Pathfinder {
     // Generate all valid possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
 
-    pub fn find_path(&self, a: &Node, b: &Node) -> (Vec<(f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
+	// returns: (i, j, distance, threshold), (a_sentinels, b_sentinels)
+   pub fn find_path(&self, a: &Node, b: &Node) -> (Vec<(f32, f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
         let c1: Point = a.origin;
         let c2: Point = b.origin;
         let r1: f32 = a.radius;
@@ -348,9 +350,13 @@ impl Pathfinder {
             //probably want to push points in this case later
             match self.valid_path(&p1, &p2) {
                 PathValidity::Valid => {
-                    connections.push((*i, *j, p1.distance(&p2)));
+                    connections.push((*i, *j, p1.distance(&p2), 0f32));
                     point_connections.push((p1, p2));
                 }
+				PathValidity::Flyover(h_min) => {
+					connections.push((*i, *j, p1.distance(&p2), h_min));
+                    point_connections.push((p1, p2));
+				}
                 _ => {
                     println!("im sad");
                 }
@@ -416,7 +422,9 @@ impl Pathfinder {
                     return PathValidity::Invalid;
                 } else if theta_o < theta1 {
                     return PathValidity::Invalid;
-                }
+                } else {
+					return PathValidity::Flyover(obstacle.height);
+				}
             }
         }
         PathValidity::Valid
@@ -596,6 +604,17 @@ mod test {
             assert_eqp!(a.0, b.0, THRESHOLD);
             assert_eqp!(a.1, b.1, THRESHOLD);
             assert_eqp!(a.2, b.2, THRESHOLD);
+        }
+    }
+
+    fn assert_vec4_eqp(v1: &Vec<(f32, f32, f32, f32)>, v2: &Vec<(f32, f32, f32, f32)>) {
+        for i in 0..v1.len() {
+            let a = v1[i];
+            let b = v2[i];
+            assert_eqp!(a.0, b.0, THRESHOLD);
+            assert_eqp!(a.1, b.1, THRESHOLD);
+            assert_eqp!(a.2, b.2, THRESHOLD);
+			assert_eqp!(a.3, b.3, THRESHOLD);
         }
     }
 
@@ -936,28 +955,22 @@ mod test {
         let a1 = Rc::new(n1);
         let b1 = Rc::new(n2);
         let expected = vec![
-            (
-                PI / 2_f32, 
-                PI / 2_f32, 
-                10f32
-            ),
-            (
-                -PI / 2_f32,
-                -PI / 2_f32,
-                10f32
-            ),
+
+            (PI / 2_f32, PI / 2_f32, 10f32, 0f32),
+            (-PI / 2_f32, -PI / 2_f32, 10f32, 0f32),
             (
                 (2_f32 / 10f32).acos(),
                 -PI + (2_f32 / 10f32).acos(),
-                96f32.sqrt(),
+                96f32.sqrt(), 0f32
             ),
             (
                 -(2_f32 / 10f32).acos(),
                 PI - (2_f32 / 10f32).acos(),
-                96f32.sqrt(),
+                96f32.sqrt(), 0f32
             ),
+			
         ];
-        assert_vec3_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
+        assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
     }
 
     #[test]
@@ -968,18 +981,14 @@ mod test {
         let c = Rc::new(n3);
         let d = Rc::new(n4);
         let expected = vec![
-            (
-                (1_f32 / 5_f32).acos(), 
-                (1_f32 / 5_f32).acos(), 
-                24f32.sqrt()
-            ),
+            ((1_f32 / 5_f32).acos(), (1_f32 / 5_f32).acos(), 24f32.sqrt(), 0f32),
             (
                 -(1_f32 / 5_f32).acos(),
                 -(1_f32 / 5_f32).acos(),
-                24f32.sqrt(),
+                24f32.sqrt(), 0f32
             ),
         ];
-        assert_vec3_eqp(&pathfinder.find_path(&c, &d).0, &expected);
+        assert_vec4_eqp(&pathfinder.find_path(&c, &d).0, &expected);
     }
 
 	#[test]
@@ -1002,28 +1011,94 @@ mod test {
         let e = Rc::new(n5);
         let f = Rc::new(n6);
         let expected = vec![
-            (
-                (1_f32 / 8_f32).acos(), 
-                (1_f32 / 8_f32).acos(), 
-                63f32.sqrt()
-            ),
+            ((1_f32 / 8_f32).acos(), (1_f32 / 8_f32).acos(), 63f32.sqrt(), 0f32),
             (
                 -(1_f32 / 8_f32).acos(),
                 -(1_f32 / 8_f32).acos(),
                 63f32.sqrt(),
+				0f32,
             ),
             (
                 (3_f32 / 8_f32).acos(),
                 -PI + (3_f32 / 8_f32).acos(),
                 55f32.sqrt(),
+				0f32,
             ),
             (
                 -(3_f32 / 8_f32).acos(),
                 PI - (3_f32 / 8_f32).acos(),
                 55f32.sqrt(),
+				0f32,
             ),
         ];
-        assert_vec3_eqp(&pathfinder.find_path(&e, &f).0, &expected);
+        assert_vec4_eqp(&pathfinder.find_path(&e, &f).0, &expected);
+    }
+
+    #[test]
+	//all tangents are flying over an obstacle. returns threshold appropriately.
+	//https://www.geogebra.org/graphing/ufegkqcv
+    fn different_radius_no_overlap_all_flyover_test() {		
+		let obs = obstacle_from_meters(16f32, 10f32, 1.8f32, 20f32);
+        let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), vec![obs]);
+        let n5 = Node::new(Point::new(20_f32, 10_f32, 30_f32), 2_f32, 0_f32);
+        let n6 = Node::new(Point::new(12_f32, 10_f32, 30_f32), 1_f32, 0_f32);
+        let e = Rc::new(n5);
+        let f = Rc::new(n6);
+        let expected = vec![
+            ((1_f32 / 8_f32).acos(), (1_f32 / 8_f32).acos(), 63f32.sqrt(), 20f32),
+            (
+                -(1_f32 / 8_f32).acos(),
+                -(1_f32 / 8_f32).acos(),
+                63f32.sqrt(),
+				20f32,
+            ),
+            (
+                (3_f32 / 8_f32).acos(),
+                -PI + (3_f32 / 8_f32).acos(),
+                55f32.sqrt(),
+				20f32,
+            ),
+            (
+                -(3_f32 / 8_f32).acos(),
+                PI - (3_f32 / 8_f32).acos(),
+                55f32.sqrt(),
+				20f32,
+            ),
+        ];
+        assert_vec4_eqp(&pathfinder.find_path(&e, &f).0, &expected);
+    }
+
+	//one tangent is flying over an obstacle. returns threshold appropriately.
+	//https://www.geogebra.org/graphing/twuxqprk
+	fn different_radius_no_overlap_one_flyover_test() {		
+		let obs = obstacle_from_meters(16f32, 12f32, 1f32, 20f32);
+        let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), vec![obs]);
+        let n5 = Node::new(Point::new(20_f32, 10_f32, 30_f32), 2_f32, 0_f32);
+        let n6 = Node::new(Point::new(12_f32, 10_f32, 30_f32), 1_f32, 0_f32);
+        let e = Rc::new(n5);
+        let f = Rc::new(n6);
+        let expected = vec![
+            ((1_f32 / 8_f32).acos(), (1_f32 / 8_f32).acos(), 63f32.sqrt(), 20f32),
+            (
+                -(1_f32 / 8_f32).acos(),
+                -(1_f32 / 8_f32).acos(),
+                63f32.sqrt(),
+				0f32,
+            ),
+            (
+                (3_f32 / 8_f32).acos(),
+                -PI + (3_f32 / 8_f32).acos(),
+                55f32.sqrt(),
+				0f32,
+            ),
+            (
+                -(3_f32 / 8_f32).acos(),
+                PI - (3_f32 / 8_f32).acos(),
+                55f32.sqrt(),
+				0f32,
+            ),
+        ];
+        assert_vec4_eqp(&pathfinder.find_path(&e, &f).0, &expected);
     }
 
     #[test]

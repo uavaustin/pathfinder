@@ -194,7 +194,7 @@ impl Pathfinder {
         for i in 0..self.nodes.len() {
             let temp_node = &self.nodes[i];
             let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
-            for (a, b, dist) in temp_paths.iter() {
+            for (a, b, dist, thresh) in temp_paths.iter() {
                 let vertex = Rc::new(RefCell::new(Vertex::new(temp_node.clone(), &mut num_vertices, *b, None)));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 open_list.push(vertex.clone());
@@ -202,9 +202,9 @@ impl Pathfinder {
             }
 
             let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
-            for (a, b, dist) in temp_paths.iter() {
+            for (a, b, dist, thresh) in temp_paths.iter() {
                 let end_vertex = Rc::new(RefCell::new(Vertex::new(end_node.clone(), &mut END_VERTEX_INDEX, *b, None)));
-                let connection = Connection::new(end_vertex.clone(), *dist);
+                let connection = Connection::new(end_vertex.clone(), *dist, *thresh);
                 let vertex = Rc::new(RefCell::new(Vertex::new(temp_node.clone(), &mut num_vertices, *a, Some(connection))));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 open_list.push(vertex.clone());
