@@ -37,9 +37,15 @@ impl fmt::Display for Node {
 
 impl Node {
     pub fn new(origin: Point, radius: f32, height: f32) -> Self {
-        let left_head = Rc::new(RefCell::new(Vertex::new_head(&mut HEADER_VERTEX_INDEX, origin)));
+        let left_head = Rc::new(RefCell::new(Vertex::new_head(
+            &mut HEADER_VERTEX_INDEX,
+            origin,
+        )));
         left_head.borrow_mut().next = Some(left_head.clone());
-        let right_head = Rc::new(RefCell::new(Vertex::new_head(&mut HEADER_VERTEX_INDEX, origin)));
+        let right_head = Rc::new(RefCell::new(Vertex::new_head(
+            &mut HEADER_VERTEX_INDEX,
+            origin,
+        )));
         right_head.borrow_mut().next = Some(right_head.clone());
         Node {
             origin: origin,
@@ -92,15 +98,19 @@ impl Node {
     }
 
     pub fn insert_vertex(&mut self, v: Rc<RefCell<Vertex>>) {
-        let angle: f32 = v.borrow().angle;
-        let (is_left, mut current) = if angle > 0f32 {
+        let new_angle: f32 = v.borrow().angle;
+        let (is_left, mut current) = if new_angle > 0f32 {
             // Left ring
             (true, self.left_ring.clone())
         } else {
             // Right ring
             (false, self.right_ring.clone())
         };
-        print!("inserting {:?} to header {:?}\n", v.borrow().index, current.borrow().index);
+        print!(
+            "inserting {:?} to header {:?}\n",
+            v.borrow().index,
+            current.borrow().index
+        );
         loop {
             let ref mut vertex = current.clone();
             //print!("{:?}\n", current.borrow().index);
@@ -109,7 +119,7 @@ impl Node {
                 None => panic!("Next points to null"),
             };
             if index != HEADER_VERTEX_INDEX {
-                let (new_angle, next_ptr) = match vertex.borrow().next {
+                let (angle, next_ptr) = match vertex.borrow().next {
                     Some(ref next) => (next.borrow().angle, next.clone()),
                     None => panic!("Next points to null"),
                 };
@@ -130,7 +140,7 @@ impl Node {
         }
     }
 
-    //add header node to linked list for rings 
+    //add header node to linked list for rings
     //check if left_ring is start/end node and if so remove it before looping
     /*pub fn remove_extra_vertices(&mut self, start_index: i32, end_index: i32) {
         let mut current = self.left_ring;

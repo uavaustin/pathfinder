@@ -4,19 +4,19 @@
 extern crate ordered_float;
 
 use std::cell::RefCell;
+use std::collections::BinaryHeap;
+use std::collections::HashSet;
 use std::collections::LinkedList;
 use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
-use std::collections::BinaryHeap;
-use std::collections::HashSet;
 
 mod graph;
 pub mod obj;
 
-use graph::{Node, Vertex, Connection, Point};
-use obj::{Location, Obstacle, Plane, Waypoint};
 use graph::util::intersect;
+use graph::{Connection, Node, Point, Vertex};
+use obj::{Location, Obstacle, Plane, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
@@ -76,9 +76,9 @@ impl Pathfinder {
         pathfinder.init(buffer_size, flyzones, obstacles);
         pathfinder
     } //          let p1 = a.to_point(*j + theta0);
-            //          println!("{} {:?}", j, &p1);
-            //          let p2 = b.to_point(*i + theta0);
-            //          println!("{} {:?}", i, &
+      //          println!("{} {:?}", j, &p1);
+      //          let p2 = b.to_point(*i + theta0);
+      //          println!("{} {:?}", i, &
 
     pub fn init(
         &mut self,
@@ -97,7 +97,7 @@ impl Pathfinder {
             if validity == true {
                 panic!();
             }
-         }
+        }
         self.obstacles = obstacles;
         self.build_graph();
         self.initialized = true;
@@ -115,13 +115,13 @@ impl Pathfinder {
         }
         let n = vertices.len();
         // compares any side of flyzone, ab, with any non-adjacent side, cd
-        for ab in 0..n-2 {
+        for ab in 0..n - 2 {
             let a = vertices[ab];
-            let b = vertices[ab+1];
-            for i in 2..n-1 {
+            let b = vertices[ab + 1];
+            for i in 2..n - 1 {
                 let cd = ab + i;
                 let c = vertices[cd];
-                let d = vertices[(cd+1)%n];
+                let d = vertices[(cd + 1) % n];
                 if intersect(&a, &b, &c, &d) {
                     return true;
                 }
@@ -130,7 +130,7 @@ impl Pathfinder {
                 }
             }
         }
-    return false;
+        return false;
     }
 
     pub fn get_adjust_path(
@@ -177,7 +177,6 @@ impl Pathfinder {
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
     fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
-
         let mut num_vertices = self.num_vertices;
         let mut open_list: BinaryHeap<Rc<RefCell<Vertex>>> = BinaryHeap::new();
         let mut open_set: HashSet<i32> = HashSet::new();
@@ -191,7 +190,12 @@ impl Pathfinder {
             let temp_node = &self.nodes[i];
             let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
             for (a, b, dist, thresh) in temp_paths.iter() {
-                let vertex = Rc::new(RefCell::new(Vertex::new(temp_node.clone(), &mut num_vertices, *b, None)));
+                let vertex = Rc::new(RefCell::new(Vertex::new(
+                    temp_node.clone(),
+                    &mut num_vertices,
+                    *b,
+                    None,
+                )));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 open_list.push(vertex.clone());
                 open_set.insert(vertex.borrow().index);
@@ -199,37 +203,52 @@ impl Pathfinder {
 
             let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
             for (a, b, dist, thresh) in temp_paths.iter() {
-                let end_vertex = Rc::new(RefCell::new(Vertex::new(end_node.clone(), &mut END_VERTEX_INDEX, *b, None)));
+                let end_vertex = Rc::new(RefCell::new(Vertex::new(
+                    end_node.clone(),
+                    &mut END_VERTEX_INDEX,
+                    *b,
+                    None,
+                )));
                 let connection = Connection::new(end_vertex.clone(), *dist, *thresh);
-                let vertex = Rc::new(RefCell::new(Vertex::new(temp_node.clone(), &mut num_vertices, *a, Some(connection))));
+                let vertex = Rc::new(RefCell::new(Vertex::new(
+                    temp_node.clone(),
+                    &mut num_vertices,
+                    *a,
+                    Some(connection),
+                )));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
-                open_list.push(vertex.clone());
-                open_set.insert(vertex.borrow().index);
-                open_list.push(end_vertex.clone());
-                open_set.insert(end_vertex.borrow().index);
             }
         }
 
-        
-
         //A* algorithm - find shortest path from plane to destination
         while let Some(cur) = open_list.pop() {
+            // println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
                 self.clean_graph();
                 return Some(self.generate_waypoint_list(cur));
             }
             closed_set.insert(cur.borrow().index);
 
-            let mut update_vertex = |cur_g_cost: f32, next: &mut Rc<RefCell<Vertex>>, dist: f32| {
+            let mut update_vertex = |cur_g_cost: f32, next: Rc<RefCell<Vertex>>, dist: f32| {
+                if (next.borrow().index == cur.borrow().index) {
+                    return;
+                }
                 let new_g_cost = cur_g_cost + dist;
+                // println!("add vertex to queue {}", next.borrow());
                 {
                     let mut next_mut = next.borrow_mut();
                     if closed_set.contains(&next_mut.index)                                         //vertex is already explored
                         || next_mut.sentinel                                                        //vertex is a sentinel
-                        || (open_set.contains(&next_mut.index) && new_g_cost >= next_mut.g_cost) {  //vertex has been visited and the current cost is better
+                        || (open_set.contains(&next_mut.index) && new_g_cost >= next_mut.g_cost)
+                    {
+                        //vertex has been visited and the current cost is better
+                        // println!("Vertex addition skipped");
                         return;
-                    }                
-                    let new_f_cost = next_mut.g_cost + next_mut.location.distance3d(&Point::from_location(&end, &self.origin));
+                    }
+                    let new_f_cost = next_mut.g_cost
+                        + next_mut
+                            .location
+                            .distance3d(&Point::from_location(&end, &self.origin));
                     next_mut.g_cost = new_g_cost;
                     next_mut.f_cost = new_f_cost;
                     next_mut.parent = Some(cur.clone());
@@ -238,17 +257,27 @@ impl Pathfinder {
                 open_set.insert(next.borrow().index);
             };
 
-            let mut cur_vertex = cur.borrow_mut();
+            let mut cur_vertex = cur.borrow();
             let g_cost = cur_vertex.g_cost;
-            if let Some(ref mut connection) = cur_vertex.connection {
-                let next_vertex = &mut connection.neighbor;
+            if let Some(ref connection) = cur_vertex.connection {
+                let mut next = connection.neighbor.clone();
                 let dist = connection.distance;
-                update_vertex(g_cost, &mut *next_vertex, dist);                
+                update_vertex(g_cost, next, dist);
             }
 
-            let weight = cur_vertex.get_neighbor_weight();
-            if let Some(ref mut next_vertex) = cur_vertex.next {
-                update_vertex(g_cost, &mut *next_vertex, weight);                
+            let mut weight = cur_vertex.get_neighbor_weight();
+            if let Some(ref next_vertex) = cur_vertex.next {
+                let mut next = next_vertex.clone();
+                if (next.borrow().index != HEADER_VERTEX_INDEX) {
+                    update_vertex(g_cost, next, weight);
+                } else {
+                    weight += next.borrow().get_neighbor_weight();
+                    match next.borrow().next {
+                        Some(ref skip_next) => update_vertex(g_cost, skip_next.clone(), weight),
+                        None => panic!("broken chain"),
+                    }
+                    //update_vertex(g_cost, );
+                }
             }
         }
         self.clean_graph();
@@ -264,6 +293,7 @@ impl Pathfinder {
             let loc = cur_vertex.borrow().location.to_location(&self.origin);
             let radius = cur_vertex.borrow().radius;
             waypoint_list.push_front(Waypoint::new(1, loc, radius));
+            println!("{:?}", cur_vertex);
             let parent = match cur_vertex.borrow().parent {
                 Some(ref cur_parent) => cur_parent.clone(),
                 None => panic!("Missing a parent without reaching start point"),
@@ -274,9 +304,7 @@ impl Pathfinder {
         waypoint_list
     }
 
-    fn clean_graph(&self) {
-        
-    }
+    fn clean_graph(&self) {}
 
     pub fn set_process_time(&mut self, max_process_time: u32) {
         self.max_process_time = Duration::from_secs(max_process_time as u64);
@@ -339,7 +367,7 @@ mod tests {
         let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
         let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
         let test_flyzone = vec![vec![a, b, d, c]];
-        let mut pathfinder = Pathfinder::create(1f32,test_flyzone, Vec::new());
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
         assert!(pathfinder.invalid_flyzone(0));
     }
 }

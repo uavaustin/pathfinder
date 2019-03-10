@@ -7,8 +7,8 @@ mod test;
 mod connection;
 mod node;
 mod point;
-mod vertex;
 pub mod util;
+mod vertex;
 
 pub use graph::util::*;
 use obj::{Location, Obstacle};
@@ -22,16 +22,16 @@ pub struct Point {
 
 #[derive(Debug)]
 pub struct Vertex {
-    pub index: i32,                        // Index to identify vertex
-    pub radius: f32,                       // Radius of the node vertex is attached to
-    pub location: Point,                   // Location of the vertex
-    pub angle: f32,                        // Angle with respect to the node
-    pub g_cost: f32,                       //
-    pub f_cost: f32,                       //
-    pub parent: Option<Rc<RefCell<Vertex>>>,//
-    pub connection: Option<Connection>,    // Edge connecting to another node
-    pub next: Option<Rc<RefCell<Vertex>>>, // Neighbor vertex in the same node
-    pub sentinel: bool,                    // Sentinel property marks end of path hugging
+    pub index: i32,                          // Index to identify vertex
+    pub radius: f32,                         // Radius of the node vertex is attached to
+    pub location: Point,                     // Location of the vertex
+    pub angle: f32,                          // Angle with respect to the node
+    pub g_cost: f32,                         //
+    pub f_cost: f32,                         //
+    pub parent: Option<Rc<RefCell<Vertex>>>, //
+    pub connection: Option<Connection>,      // Edge connecting to another node
+    pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
+    pub sentinel: bool,                      // Sentinel property marks end of path hugging
 }
 
 // Represent a connection between two nodes
@@ -40,8 +40,8 @@ pub struct Vertex {
 pub struct Connection {
     pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
     pub distance: f32,
-	// starting and ending vertices must be above threshold to take the connection
-	pub threshold: f32
+    // starting and ending vertices must be above threshold to take the connection
+    pub threshold: f32,
 }
 
 pub enum PathValidity {
@@ -73,37 +73,60 @@ impl Pathfinder {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
             for j in i + 1..self.nodes.len() {
-                let (paths, obs_sentinels) = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
+                let (paths, obs_sentinels) =
+                    self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
                 for (alpha, beta, distance, threshold) in paths {
                     // println!("path: {} {} {}", alpha, beta, distance);
-                    let v = Rc::new(RefCell::new(Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, beta, None)));
+                    let v = Rc::new(RefCell::new(Vertex::new(
+                        self.nodes[i].clone(),
+                        &mut self.num_vertices,
+                        beta,
+                        None,
+                    )));
                     let edge = Connection::new(v, distance, threshold);
-                    let u = Rc::new(RefCell::new(Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, alpha, Some(edge))));
+                    let u = Rc::new(RefCell::new(Vertex::new(
+                        self.nodes[j].clone(),
+                        &mut self.num_vertices,
+                        alpha,
+                        Some(edge),
+                    )));
                     self.nodes[i].borrow_mut().insert_vertex(u);
                     // reciprocal
-                    let v = Rc::new(RefCell::new(Vertex::new(self.nodes[i].clone(), &mut self.num_vertices,
+                    let v = Rc::new(RefCell::new(Vertex::new(
+                        self.nodes[i].clone(),
+                        &mut self.num_vertices,
                         (2f32 * PI - alpha) % (2f32 * PI),
                         None,
                     )));
                     let edge = Connection::new(v, distance, threshold);
-                    let u = Rc::new(RefCell::new(Vertex::new(self.nodes[j].clone(), &mut self.num_vertices,
+                    let u = Rc::new(RefCell::new(Vertex::new(
+                        self.nodes[j].clone(),
+                        &mut self.num_vertices,
                         (2f32 * PI - beta) % (2f32 * PI),
                         Some(edge),
                     )));
                     self.nodes[j].borrow_mut().insert_vertex(u);
                 }
-				if obs_sentinels.is_some() {
-					for (alpha_s, beta_s) in obs_sentinels.unwrap() {
-						let mut a = Vertex::new_sentinel(&mut self.num_vertices, self.nodes[i].borrow().origin.clone(), alpha_s);
-						//a.sentinel = true;
-						let mut b = Vertex::new_sentinel(&mut self.num_vertices, self.nodes[j].borrow().origin.clone(), beta_s);
-						//b.;
-						let s_a = Rc::new(RefCell::new(a));
-						let s_b = Rc::new(RefCell::new(b));
-						self.nodes[i].borrow_mut().insert_vertex(s_a);
-						self.nodes[j].borrow_mut().insert_vertex(s_b);
-					}
-				}
+                if obs_sentinels.is_some() {
+                    for (alpha_s, beta_s) in obs_sentinels.unwrap() {
+                        let mut a = Vertex::new_sentinel(
+                            &mut self.num_vertices,
+                            self.nodes[i].borrow().origin.clone(),
+                            alpha_s,
+                        );
+                        //a.sentinel = true;
+                        let mut b = Vertex::new_sentinel(
+                            &mut self.num_vertices,
+                            self.nodes[j].borrow().origin.clone(),
+                            beta_s,
+                        );
+                        //b.;
+                        let s_a = Rc::new(RefCell::new(a));
+                        let s_b = Rc::new(RefCell::new(b));
+                        self.nodes[i].borrow_mut().insert_vertex(s_a);
+                        self.nodes[j].borrow_mut().insert_vertex(s_b);
+                    }
+                }
             }
         }
 
@@ -155,8 +178,8 @@ impl Pathfinder {
             let vertex = flyzone_points[iter as usize];
             let b = flyzone_points[next as usize];
             println!("{:?} {:?} {:?}", a, vertex, b);
-            let vec_a = (a.x - vertex.x , a.y - vertex.y);
-            let vec_b = (b.x - vertex.x , b.y - vertex.y);
+            let vec_a = (a.x - vertex.x, a.y - vertex.y);
+            let vec_b = (b.x - vertex.x, b.y - vertex.y);
             let mag_a = ((vec_a.0).powi(2) + (vec_a.1).powi(2)).sqrt();
             let mag_b = ((vec_b.0).powi(2) + (vec_b.1).powi(2)).sqrt();
             let bisect = (
@@ -239,36 +262,45 @@ impl Pathfinder {
         let center: Point = node.origin;
         let r: f32 = node.radius;
         for flyzone in self.flyzones.iter() {
-            let size = flyzone.len()+1;
+            let size = flyzone.len() + 1;
             // iterate node over all vertices
             for i in 0..size {
                 let mut v1 = flyzone[i];
-                let mut v2 = flyzone[(i+1)%size];
-                let (x,y,dist,end) = intersect_distance(&Point::from_location(&v1, &self.origin), &Point::from_location(&v2, &self.origin), &center);
+                let mut v2 = flyzone[(i + 1) % size];
+                let (x, y, dist, end) = intersect_distance(
+                    &Point::from_location(&v1, &self.origin),
+                    &Point::from_location(&v2, &self.origin),
+                    &center,
+                );
                 // check intersect is true
                 if dist > r {
                     continue;
                 }
                 // determine both intersect angles in left and right ring
-                let theta = (dist/r).acos();
+                let theta = (dist / r).acos();
                 let dx = x - center.x;
                 let dy = y - center.y;
                 let phi = dy.atan2(dx);
                 let (left, right) = if dy > 0f32 {
-                    (phi, -2f32 * PI +phi)
+                    (phi, -2f32 * PI + phi)
                 } else {
                     (2f32 * PI + phi, phi)
                 };
-                let angles = vec![
-                    (left, theta),
-                    (right, theta)
-                ];
+                let angles = vec![(left, theta), (right, theta)];
                 // create and impliment vertices
-                for (i,j) in angles {
+                for (i, j) in angles {
                     let a = i + j;
                     let b = i - j;
-                    let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(&mut self.num_vertices, node.origin, a)));
-                    let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(&mut self.num_vertices, node.origin, b)));
+                    let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
+                        &mut self.num_vertices,
+                        node.origin,
+                        a,
+                    )));
+                    let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(
+                        &mut self.num_vertices,
+                        node.origin,
+                        b,
+                    )));
                     node.insert_vertex(vertex_a);
                     node.insert_vertex(vertex_b);
                 }
@@ -279,8 +311,12 @@ impl Pathfinder {
     // Generate all valid possible path (tangent lines) between two nodes, and return the
     // shortest valid path if one exists
 
-	// returns: (i, j, distance, threshold), (a_sentinels, b_sentinels)
-   pub fn find_path(&self, a: &Node, b: &Node) -> (Vec<(f32, f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
+    // returns: (i, j, distance, threshold), (a_sentinels, b_sentinels)
+    pub fn find_path(
+        &self,
+        a: &Node,
+        b: &Node,
+    ) -> (Vec<(f32, f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
         let c1: Point = a.origin;
         let c2: Point = b.origin;
         let r1: f32 = a.radius;
@@ -300,7 +336,7 @@ impl Pathfinder {
         let phi3 = -PI + theta3;
         let phi4 = -phi3;
         let candidates;
-		let mut sentinels = None;
+        let mut sentinels = None;
         if r1 != 0f32 && r2 != 0f32 && dist > r1 + r2 {
             candidates = vec![
                 (theta1, phi1),
@@ -310,22 +346,25 @@ impl Pathfinder {
             ];
         } else {
             candidates = vec![(theta1, phi1), (theta2, phi2)];
-			//determine angle locations of sentinels
-			let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2))/(2f32 * r1 * dist)).acos();
-			let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2))/(2f32 * r2 * dist)).acos();
-			println!("Generating Sentinels: Theta = {:?}, Phi = {:?}", theta_s, phi_s);
-			//sentinel vertices on A
-			let a_s1 = theta_s;
-			let a_s2 = -theta_s;
-			let a_s3 = -2f32 * PI + theta_s;
-			let a_s4 = 2f32 * PI - theta_s;
-			//sentinel vertices on B
-			let b_s1 = PI - phi_s;
-			let b_s2 = PI + phi_s;
-			let b_s3 = -PI + phi_s;
-			let b_s4 = -PI - phi_s;
-			sentinels = Some(vec![(a_s1, b_s1), (a_s2, b_s2), (a_s3, b_s3), (a_s4, b_s4)]);
-			println!("{:?}", sentinels)
+            //determine angle locations of sentinels
+            let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2)) / (2f32 * r1 * dist)).acos();
+            let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2)) / (2f32 * r2 * dist)).acos();
+            println!(
+                "Generating Sentinels: Theta = {:?}, Phi = {:?}",
+                theta_s, phi_s
+            );
+            //sentinel vertices on A
+            let a_s1 = theta_s;
+            let a_s2 = -theta_s;
+            let a_s3 = -2f32 * PI + theta_s;
+            let a_s4 = 2f32 * PI - theta_s;
+            //sentinel vertices on B
+            let b_s1 = PI - phi_s;
+            let b_s2 = PI + phi_s;
+            let b_s3 = -PI + phi_s;
+            let b_s4 = -PI - phi_s;
+            sentinels = Some(vec![(a_s1, b_s1), (a_s2, b_s2), (a_s3, b_s3), (a_s4, b_s4)]);
+            println!("{:?}", sentinels)
         }
 
         let mut connections = Vec::new();
@@ -356,10 +395,10 @@ impl Pathfinder {
                     connections.push((*i, *j, p1.distance(&p2), 0f32));
                     point_connections.push((p1, p2));
                 }
-				PathValidity::Flyover(h_min) => {
-					connections.push((*i, *j, p1.distance(&p2), h_min));
+                PathValidity::Flyover(h_min) => {
+                    connections.push((*i, *j, p1.distance(&p2), h_min));
                     point_connections.push((p1, p2));
-				}
+                }
                 _ => {
                     println!("im sad");
                 }
@@ -426,8 +465,8 @@ impl Pathfinder {
                 } else if theta_o < theta1 {
                     return PathValidity::Invalid;
                 } else {
-					return PathValidity::Flyover(obstacle.height);
-				}
+                    return PathValidity::Flyover(obstacle.height);
+                }
             }
         }
         PathValidity::Valid

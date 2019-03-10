@@ -5,7 +5,7 @@ impl Connection {
         Connection {
             neighbor: neighbor,
             distance: distance,
-			threshold: threshold,
+            threshold: threshold,
         }
     }
 }
