@@ -7,27 +7,30 @@ use std::cmp::Ordering;
 
 impl Vertex {
     pub fn new(node: Rc<RefCell<Node>>, num_vertex: &mut i32, angle: f32, connection: Option<Connection>) -> Vertex {
+        Vertex::base_vertex(num_vertex, node.borrow().radius, angle, Point::from_node_and_angle(&node.borrow(), angle), connection, false)
+    }
+
+    pub fn new_sentinel(num_vertex: &mut i32, origin: Point, angle: f32) -> Vertex {
+        Vertex::base_vertex(num_vertex, 0f32, angle, origin, None, true)
+    }
+
+    pub fn new_head(num_vertex: &mut i32, origin: Point) -> Vertex {
+        Vertex::base_vertex(num_vertex, 0f32, 0f32, origin, None, false)
+    }
+
+    fn base_vertex(num_vertex: &mut i32, radius: f32, angle: f32, location: Point, connection: Option<Connection>, sentinel: bool) -> Vertex {
         *num_vertex += 1;
         Vertex {
             index: *num_vertex,
-            radius: node.borrow().radius,
+            radius: radius,
             angle: angle,
-            location: Point::from_node_and_angle(&node.borrow(), angle),
+            location: location,
             f_cost: -1f32,
             g_cost: -1f32,
             parent: None,
-            connection: connection,
-            next: None,
-            sentinel: false,
-        }
-    }
-
-    pub fn new_sentinel(angle: f32) -> Vertex {
-        Vertex {
-            angle: angle,
             connection: None,
             next: None,
-            sentinel: true,
+            sentinel: sentinel,
         }
     }
 

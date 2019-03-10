@@ -14,12 +14,7 @@ use std::collections::HashSet;
 mod graph;
 pub mod obj;
 
-<<<<<<< Updated upstream
 use graph::{Node, Vertex, Connection, Point};
-=======
-use graph::Node;
-use graph::Point;
->>>>>>> Stashed changes
 use obj::{Location, Obstacle, Plane, Waypoint};
 use graph::util::intersect;
 
@@ -33,6 +28,7 @@ const MAX_ANGLE_ASCENT: f32 = PI / 3f32;
 const MAX_ANGLE_DESCENT: f32 = -PI / 3f32;
 const START_VERTEX_INDEX: i32 = -1;
 const END_VERTEX_INDEX: i32 = -2;
+const HEADER_VERTEX_INDEX: i32 = -3;
 
 #[allow(non_snake_case)]
 pub struct Pathfinder {
@@ -219,7 +215,8 @@ impl Pathfinder {
         //A* algorithm - find shortest path from plane to destination
         while let Some(cur) = open_list.pop() {
             if cur.borrow().index == END_VERTEX_INDEX {
-                break;
+                self.clean_graph();
+                return Some(self.generate_waypoint_list(cur));
             }
             closed_set.insert(cur.borrow().index);
 
@@ -254,6 +251,7 @@ impl Pathfinder {
                 update_vertex(g_cost, &mut *next_vertex, weight);                
             }
         }
+        self.clean_graph();
         None
         //TODO: Clean up the graph before we finish
     }
@@ -262,7 +260,7 @@ impl Pathfinder {
         let mut waypoint_list = LinkedList::new();
         let mut cur_vertex = end_vertex;
         let mut index = END_VERTEX_INDEX;
-        while (index != START_VERTEX_INDEX) {
+        while index != START_VERTEX_INDEX {
             let loc = cur_vertex.borrow().location.to_location(&self.origin);
             let radius = cur_vertex.borrow().radius;
             waypoint_list.push_front(Waypoint::new(1, loc, radius));
@@ -274,6 +272,10 @@ impl Pathfinder {
             index = cur_vertex.borrow().index;
         }
         waypoint_list
+    }
+
+    fn clean_graph(&self) {
+        
     }
 
     pub fn set_process_time(&mut self, max_process_time: u32) {

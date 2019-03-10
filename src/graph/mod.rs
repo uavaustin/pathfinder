@@ -4,10 +4,10 @@ use super::*;
 mod connection;
 mod node;
 mod point;
-mod util;
+pub mod util;
 mod vertex;
 
-use graph::util::*;
+pub use graph::util::*;
 use obj::{Location, Obstacle};
 
 #[derive(Copy, Clone, Debug)]
@@ -61,8 +61,8 @@ pub struct Node {
     pub origin: Point,
     pub radius: f32,
     height: f32,
-    left_ring: Option<Rc<RefCell<Vertex>>>,
-    right_ring: Option<Rc<RefCell<Vertex>>>,
+    left_ring: Rc<RefCell<Vertex>>,
+    right_ring: Rc<RefCell<Vertex>>,
 }
 
 impl Pathfinder {
@@ -91,10 +91,10 @@ impl Pathfinder {
                 }
 				if obs_sentinels.is_some() {
 					for (alpha_s, beta_s) in obs_sentinels.unwrap() {
-						let mut a = Vertex::new(self.nodes[i].clone(), &mut self.num_vertices, alpha_s, None);
-						a.set_sentinel();
-						let mut b = Vertex::new(self.nodes[j].clone(), &mut self.num_vertices, beta_s, None);
-						b.set_sentinel();
+						let mut a = Vertex::new_sentinel(&mut self.num_vertices, self.nodes[i].borrow().origin.clone(), alpha_s);
+						//a.sentinel = true;
+						let mut b = Vertex::new_sentinel(&mut self.num_vertices, self.nodes[j].borrow().origin.clone(), beta_s);
+						//b.;
 						let s_a = Rc::new(RefCell::new(a));
 						let s_b = Rc::new(RefCell::new(b));
 						self.nodes[i].borrow_mut().insert_vertex(s_a);
@@ -232,16 +232,16 @@ impl Pathfinder {
     }
 
     // determines vertices of node and flyzone intersection
-    fn sentinel_normal(&self, node: &Node) -> () {
+    fn sentinel_normal(&mut self, node: &mut Node) -> () {
         let center: Point = node.origin;
         let r: f32 = node.radius;
-        for flyzone in self.flyzones {
+        for flyzone in self.flyzones.iter() {
             let size = flyzone.len()+1;
             // iterate node over all vertices
             for i in 0..size {
                 let mut v1 = flyzone[i];
                 let mut v2 = flyzone[(i+1)%size];
-                let (x,y,dist,end) = intersect_distance(v1, v2, center);
+                let (x,y,dist,end) = intersect_distance(&Point::from_location(&v1, &self.origin), &Point::from_location(&v2, &self.origin), &center);
                 // check intersect is true
                 if dist > r {
                     continue;
@@ -251,10 +251,10 @@ impl Pathfinder {
                 let dx = x - center.x;
                 let dy = y - center.y;
                 let phi = dy.atan2(dx);
-                let (left, right) = if dy > 0 {
-                    (phi, -2*PI +phi)
+                let (left, right) = if dy > 0f32 {
+                    (phi, -2f32 * PI +phi)
                 } else {
-                    (2*PI + phi, phi)
+                    (2f32 * PI + phi, phi)
                 };
                 let angles = vec![
                     (left, theta),
@@ -264,8 +264,8 @@ impl Pathfinder {
                 for (i,j) in angles {
                     let a = i + j;
                     let b = i - j;
-                    let vertex_a = Vertex::new_sentinel(a);
-                    let vertex_b = Vertex::new_sentinel(b);
+                    let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(&mut self.num_vertices, node.origin, a)));
+                    let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(&mut self.num_vertices, node.origin, b)));
                     node.insert_vertex(vertex_a);
                     node.insert_vertex(vertex_b);
                 }
@@ -1221,7 +1221,7 @@ mod test {
         }
     }
 
-    #[test]
+    /*#[test]
     fn sentinel_vertex_test() {
         let a = Point::new(0f32, 0f32, 0f32).to_location(&origin);
         let b = Point::new(0f32, 5f32, 0f32).to_location(&origin);
@@ -1235,6 +1235,6 @@ mod test {
         vertex_bl =
         vertex.angle =
         let expected_vertices = []
-    }
+    }*/
 
 }
