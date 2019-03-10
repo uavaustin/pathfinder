@@ -19,7 +19,9 @@ impl Vertex {
     }
 
     fn base_vertex(num_vertex: &mut i32, radius: f32, angle: f32, location: Point, connection: Option<Connection>, sentinel: bool) -> Vertex {
-        *num_vertex += 1;
+        if *num_vertex >= 0 {
+            *num_vertex += 1;
+        }
         Vertex {
             index: *num_vertex,
             radius: radius,

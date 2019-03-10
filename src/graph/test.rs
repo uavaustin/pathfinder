@@ -83,7 +83,7 @@ fn points_to_flyzone(points: Vec<Point>) -> Vec<Location> {
     flyzone
 }
 
-#[test]
+/*#[test]
 fn flyzone_pathing() {
     let a = Point::new(40f32, 0f32, 10f32);
     let b = Point::new(40f32, 40f32, 10f32);
@@ -144,7 +144,7 @@ fn flyzones_pathing() {
     assert_eq!(pathfinder.valid_path(&k, &l), false);
     assert_eq!(pathfinder.valid_path(&k, &m), true);
     */
-}
+}*/
 
 #[test]
 fn obstacles_pathing() {

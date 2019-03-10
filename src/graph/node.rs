@@ -100,18 +100,20 @@ impl Node {
             // Right ring
             (false, self.right_ring.clone())
         };
+        print!("inserting {:?} to header {:?}\n", v.borrow().index, current.borrow().index);
         loop {
             let ref mut vertex = current.clone();
+            //print!("{:?}\n", current.borrow().index);
             let index = match vertex.borrow().next {
                 Some(ref vert) => vert.borrow().index,
                 None => panic!("Next points to null"),
             };
             if index != HEADER_VERTEX_INDEX {
-                let (angle, next_ptr) = match vertex.borrow().next {
+                let (new_angle, next_ptr) = match vertex.borrow().next {
                     Some(ref next) => (next.borrow().angle, next.clone()),
                     None => panic!("Next points to null"),
                 };
-                if (is_left && angle < angle) || (!is_left && angle > angle) {
+                if (is_left && new_angle < angle) || (!is_left && new_angle > angle) {
                     v.borrow_mut().next = Some(next_ptr);
                     vertex.borrow_mut().next = Some(v);
                     return;
