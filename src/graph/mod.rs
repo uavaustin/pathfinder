@@ -61,7 +61,7 @@ impl Pathfinder {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
             for j in i + 1..self.nodes.len() {
-                let (paths, sentinels) = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
+                let (paths, obs_sentinels) = self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
                 for (alpha, beta, distance) in paths {
                     // println!("path: {} {} {}", alpha, beta, distance);
                     let v = Rc::new(RefCell::new(Vertex::new(beta, None)));
@@ -81,8 +81,8 @@ impl Pathfinder {
                     )));
                     self.nodes[j].borrow_mut().insert_vertex(u);
                 }
-				if sentinels.is_some() {
-					for (alpha_s, beta_s) in sentinels.unwrap() {
+				if obs_sentinels.is_some() {
+					for (alpha_s, beta_s) in obs_sentinels.unwrap() {
 						let mut a = Vertex::new(alpha_s, None);
 						a.set_sentinel();
 						let mut b = Vertex::new(beta_s, None);
