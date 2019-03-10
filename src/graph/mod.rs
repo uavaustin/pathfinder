@@ -4,8 +4,9 @@ use super::*;
 mod connection;
 mod node;
 mod point;
-pub mod util;
 mod vertex;
+pub mod util;
+
 
 pub use graph::util::*;
 use obj::{Location, Obstacle};
