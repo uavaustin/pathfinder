@@ -63,9 +63,9 @@ impl From<PathValidity> for bool {
 pub struct Node {
     pub origin: Point,
     pub radius: f32,
-    height: f32,
-    left_ring: Rc<RefCell<Vertex>>,
-    right_ring: Rc<RefCell<Vertex>>,
+    pub height: f32,                        // make private later
+    pub left_ring: Rc<RefCell<Vertex>>,     // make private later
+    pub right_ring: Rc<RefCell<Vertex>>,    // make private later
 }
 
 impl Pathfinder {
@@ -142,9 +142,9 @@ impl Pathfinder {
             let mut node = Node::from_obstacle(obs, &self.origin);
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
-        for i in 0..self.flyzones.len() {
-            self.virtualize_flyzone(i);
-        }
+        // for i in 0..self.flyzones.len() {
+        //     self.virtualize_flyzone(i);
+        // }
     }
 
     pub fn virtualize_flyzone(&mut self, index: usize) {

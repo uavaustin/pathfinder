@@ -99,14 +99,6 @@ impl Pathfinder {
         }
         self.obstacles = obstacles;
         self.build_graph();
-        println!("{}, {}", self.origin.lon_degree(), self.origin.lat_degree());
-        for node in &self.nodes {
-            let loc = node.borrow().origin.to_location(&self.origin);
-            println!("{}, {}", loc.lat_degree(), loc.lon_degree());
-            // let loc = node.borrow().origin;
-            // println!("{}, {}", loc.x, loc.y);
-        }
-        // loop {}
         self.initialized = true;
     }
 
@@ -228,6 +220,33 @@ impl Pathfinder {
             }
         }
 
+        for node in &self.nodes {
+            let loc = node.borrow().origin.to_location(&self.origin);
+            println!("{}, {}", loc.lat_degree(), loc.lon_degree());
+            // let loc = node.borrow().origin;
+            // println!("{}, {}", loc.x, loc.y);
+            if node.borrow().height > 0f32 {
+                let mut current = node.borrow().left_ring.clone();
+                loop {
+                    let ref mut vertex = current.clone();
+                    //print!("{:?}\n", current.borrow().index);
+                    let index = match vertex.borrow().next {
+                        Some(ref vert) => vert.borrow().index,
+                        None => panic!("Next points to null"),
+                    };
+                    if index != HEADER_VERTEX_INDEX {
+                        println!("vertex {}", vertex.borrow().location.to_location(&self.origin));
+                    } else {
+                        break;
+                    }
+                    current = match vertex.borrow().next {
+                        Some(ref v) => v.clone(),
+                        None => panic!("Next points to null"),
+                    };
+                }
+            }
+        }
+
         //A* algorithm - find shortest path from plane to destination
         while let Some(cur) = open_list.pop() {
             // println!("current vertex {}", cur.borrow());
@@ -238,7 +257,7 @@ impl Pathfinder {
             closed_set.insert(cur.borrow().index);
 
             let mut update_vertex = |cur_g_cost: f32, next: Rc<RefCell<Vertex>>, dist: f32| {
-                if (next.borrow().index == cur.borrow().index) {
+                if next.borrow().index == cur.borrow().index {
                     return;
                 }
                 let new_g_cost = cur_g_cost + dist;

@@ -22,6 +22,8 @@ impl Point {
         let radius = node.radius;
         let x = origin.x + radius * angle.cos();
         let y = origin.y + radius * angle.sin();
+        println!("origin ({}, {}), point ({}, {}) r {} a {}",
+            origin.x, origin.y, x, y, radius, angle);
         Point::new(x, y, origin.z)
     }
 
