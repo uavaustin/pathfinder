@@ -393,15 +393,17 @@ impl Pathfinder {
             //probably want to push points in this case later
             match self.valid_path(&p1, &p2) {
                 PathValidity::Valid => {
+					println!("This path is Valid without Flyover.");
                     connections.push((*i, *j, p1.distance(&p2), 0f32));
                     point_connections.push((p1, p2));
                 }
                 PathValidity::Flyover(h_min) => {
+					println!("This path is Valid with Flyover.");
                     connections.push((*i, *j, p1.distance(&p2), h_min));
                     point_connections.push((p1, p2));
                 }
                 _ => {
-                    // println!("im sad");
+                    println!("This Path is Invalid.");
                 }
             }
         }

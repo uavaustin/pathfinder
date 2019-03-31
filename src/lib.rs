@@ -163,14 +163,15 @@ impl Pathfinder {
             next_loc = self.current_wp.location;
 
             if let Some(mut wp_list) = self.adjust_path(current_loc, next_loc) {
+				println!("appending");
                 self.wp_list.append(&mut wp_list);
             } else {
                 println!("no path");
                 break;
             }
             // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
+			// self.wp_list.push_back(Waypoint::from_degrees(0, 30.69, -97.69, 100f32, 10f32));
         }
-
         &self.wp_list
     }
 
@@ -298,7 +299,7 @@ impl Pathfinder {
             let mut weight = cur_vertex.get_neighbor_weight();
             if let Some(ref next_vertex) = cur_vertex.next {
                 let mut next = next_vertex.clone();
-                if (next.borrow().index != HEADER_VERTEX_INDEX) {
+                if next.borrow().index != HEADER_VERTEX_INDEX {
                     update_vertex(g_cost, next, weight);
                 } else {
                     weight += next.borrow().get_neighbor_weight();

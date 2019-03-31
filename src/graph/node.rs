@@ -4,33 +4,33 @@ use std::fmt;
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "loc={:?}, r={} \nleft = [", self.origin, self.radius);
+        write!(f, "loc={:?}, r={} \nleft = [", self.origin, self.radius).expect("error in writing format display");
         let mut current = match self.left_ring.borrow().next {
             Some(ref val) => val.clone(),
             None => panic!("next points to null"),
         };
         while current.borrow().index != HEADER_VERTEX_INDEX {
             let ref mut vertex = current.clone();
-            write!(f, " {} ", vertex.borrow());
+            write!(f, " {} ", vertex.borrow()).expect("error in writing format display");
             current = match vertex.borrow().next {
                 Some(ref val) => val.clone(),
                 None => panic!("next points to null"),
             };
         }
-        write!(f, " ] \nright = [");
+        write!(f, " ] \nright = [").expect("error in writing format display");
         let mut current = match self.right_ring.borrow().next {
             Some(ref val) => val.clone(),
             None => panic!("next points to null"),
         };
         while current.borrow().index != HEADER_VERTEX_INDEX {
             let ref mut vertex = current.clone();
-            write!(f, " {} ", vertex.borrow());
+            write!(f, " {} ", vertex.borrow()).expect("error in writing format display");
             current = match vertex.borrow().next {
                 Some(ref val) => val.clone(),
                 None => panic!("next points to null"),
             };
         }
-        write!(f, "]");
+        write!(f, "]").expect("error in writing format display");
         Ok(())
     }
 }
