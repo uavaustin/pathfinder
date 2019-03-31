@@ -254,7 +254,7 @@ impl Pathfinder {
             }
         }
 
-        self.origin = Location::from_radians(lon, min_lat, 0f32);
+        self.origin = Location::from_radians(min_lat, lon, 0f32);
     }
 
     // determines vertices of node and flyzone intersection
@@ -322,10 +322,10 @@ impl Pathfinder {
         let r1: f32 = a.radius;
         let r2: f32 = b.radius;
         let dist: f32 = c1.distance(&c2);
-        println!(
-            "finding path between {:?} and {:?} w/ distance {}",
-            c1, c2, dist
-        );
+        // println!(
+        //     "finding path between {:?} and {:?} w/ distance {}",
+        //     c1, c2, dist
+        // );
 
         let theta1 = ((r2 - r1).abs() / dist).acos();
         let theta2 = -theta1;
@@ -384,10 +384,10 @@ impl Pathfinder {
                 p1 = a.to_point(*i);
                 p2 = b.to_point(*j);
             }
-            println!(
-                "finding distance between {:?} with angle {:?} and {:?} with angle {:?}",
-                p1, i, p2, j
-            );
+            // println!(
+            //     "finding distance between {:?} with angle {:?} and {:?} with angle {:?}",
+            //     p1, i, p2, j
+            // );
             //            if self.valid_path(&p1, &p2) {
             //probably want to push points in this case later
             match self.valid_path(&p1, &p2) {
@@ -400,7 +400,7 @@ impl Pathfinder {
                     point_connections.push((p1, p2));
                 }
                 _ => {
-                    println!("im sad");
+                    // println!("im sad");
                 }
             }
         }
@@ -414,7 +414,7 @@ impl Pathfinder {
         if theta_o > MAX_ANGLE_ASCENT {
             return PathValidity::Invalid;
         }
-        println!("validating path: {:?}, {:?}", a, b);
+        // println!("validating path: {:?}, {:?}", a, b);
         // latitude is y, longitude is x
         // flyzone is array connected by each index
         // some messy code to link flyzone points, can definitely be better

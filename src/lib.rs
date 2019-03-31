@@ -93,13 +93,20 @@ impl Pathfinder {
         self.buffer = buffer_size.max(MIN_BUFFER);
         self.flyzones = flyzones;
         for i in 0..self.flyzones.len() {
-            let validity = self.invalid_flyzone(i);
-            if validity == true {
+            if self.invalid_flyzone(i) {
                 panic!();
             }
         }
         self.obstacles = obstacles;
         self.build_graph();
+        println!("{}, {}", self.origin.lon_degree(), self.origin.lat_degree());
+        for node in &self.nodes {
+            let loc = node.borrow().origin.to_location(&self.origin);
+            println!("{}, {}", loc.lat_degree(), loc.lon_degree());
+            // let loc = node.borrow().origin;
+            // println!("{}, {}", loc.x, loc.y);
+        }
+        // loop {}
         self.initialized = true;
     }
 
@@ -166,6 +173,7 @@ impl Pathfinder {
             if let Some(mut wp_list) = self.adjust_path(current_loc, next_loc) {
                 self.wp_list.append(&mut wp_list);
             } else {
+                println!("no path");
                 break;
             }
             // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
@@ -225,7 +233,7 @@ impl Pathfinder {
             // println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
                 self.clean_graph();
-                return Some(self.generate_waypoint_list(cur));
+                return Some(self.generate_waypoint(cur));
             }
             closed_set.insert(cur.borrow().index);
 
@@ -285,7 +293,7 @@ impl Pathfinder {
         //TODO: Clean up the graph before we finish
     }
 
-    fn generate_waypoint_list(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint> {
+    fn generate_waypoint(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint> {
         let mut waypoint_list = LinkedList::new();
         let mut cur_vertex = end_vertex;
         let mut index = END_VERTEX_INDEX;

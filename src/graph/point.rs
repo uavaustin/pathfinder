@@ -29,7 +29,7 @@ impl Point {
     pub fn to_location(&self, origin: &Location) -> Location {
         let lat = self.y as f64 / RADIUS + origin.lat();
         let lon = ((self.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
-        Location::from_radians(lon, lat, self.z)
+        Location::from_radians(lat, lon, self.z)
     }
 
     pub fn distance(&self, other: &Point) -> f32 {
