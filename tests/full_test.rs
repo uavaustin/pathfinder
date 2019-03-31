@@ -8,6 +8,9 @@ use pathfinder::obj::*;
 use pathfinder::Pathfinder;
 
 #[test]
+/*
+https://mapmakerapp.com?map=5c81d18b66fa4109168771f774a9
+*/
 fn test0() {
     let waypoints = vec_to_list(vec![
         Waypoint::from_degrees(0, 30.322280883789063, -97.60298156738281, 100f32, 10f32),
@@ -156,10 +159,10 @@ fn vec_to_list(waypoints: Vec<Waypoint>) -> LinkedList<Waypoint> {
 fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoint>, plane: Plane) {
     let mut iter = result.iter();
     eprintln!(
-        "{:.5}, {:.5}, {:.5}",
-        plane.location.lat_degree(),
+        "{:.5}, {:.5}",
         plane.location.lon_degree(),
-        plane.location.alt()
+        plane.location.lat_degree(),
+        // plane.location.alt()
     );
     for wp in waypoints {
         while let Some(node) = iter.next() {
@@ -167,19 +170,19 @@ fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoint>,
                 break;
             }
             eprintln!(
-                "{:.5}, {:.5}, {:.5} {}",
-                node.location.lat_degree(),
+                "{:.5}, {:.5}",
                 node.location.lon_degree(),
-                node.location.alt(),
-                node.index
+                node.location.lat_degree(),
+                // node.location.alt(),
+                // node.index
             );
         }
         eprintln!(
-            "{:.5}, {:.5}, {:.5} {}",
-            wp.location.lat_degree(),
+            "{:.5}, {:.5}",
             wp.location.lon_degree(),
-            wp.location.alt(),
-            wp.index
+            wp.location.lat_degree(),
+            // wp.location.alt(),
+            // wp.index
         );
     }
 
