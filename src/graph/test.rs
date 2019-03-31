@@ -123,8 +123,8 @@ fn flyzones_pathing() {
     let g = Point::new(10f32, 30f32, 10f32);
     let h = Point::new(10f32, 10f32, 10f32);
 
-    let flyzone1 = points_to_flyzone(vec![a, b, d, c]);
-    let flyzone2 = points_to_flyzone(vec![e, f, h, g]);
+    let flyzone1 = points_to_flyzone(vec![a, b, c, d]);
+    let flyzone2 = points_to_flyzone(vec![e, f, g, h]);
 
     let flyzones = vec![flyzone1, flyzone2];
 
