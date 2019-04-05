@@ -1,337 +1,135 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
-#[cfg(feature = "debug")]
-#[macro_use]
-extern crate conrod;
-extern crate toml;
+extern crate ordered_float;
 
-use std::collections::{BinaryHeap, HashSet, LinkedList};
-use std::env;
-use std::f64::consts::SQRT_2;
-use std::fs::File;
-use std::io::Read;
+use std::cell::RefCell;
+use std::collections::BinaryHeap;
+use std::collections::HashSet;
+use std::collections::LinkedList;
+use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
-use toml::Value;
 
-mod node;
-mod obj;
-mod util;
-use node::*;
-pub use obj::*;
-use util::*;
+mod graph;
+pub mod obj;
 
-#[cfg(feature = "debug")]
-#[path = ""]
-mod debug_block {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    pub mod debug;
-    pub use std::borrow::BorrowMut;
+use graph::util::intersect;
+use graph::{Connection, Node, Point, Vertex};
+use obj::{Location, Obstacle, Plane, Waypoint};
 
-    use self::debug::Debugger;
-    use conrod;
-    use std::cell::RefCell;
-    thread_local!(
-        pub static DEBUGGER: RefCell<Debugger> = RefCell::new(Debugger::new())
-    );
-    pub const THRESHOLD: u32 = 750;
-}
-
-#[cfg(feature = "debug")]
-pub use debug_block::*;
-
-const UNIT_COST: f64 = 1f64; //TODO: dynamically balance G and H cost base on weights
-const OFFSET: [(i32, i32, f64); 8] = [
-    (-1, -1, UNIT_COST * SQRT_2),
-    (1, 1, UNIT_COST * SQRT_2),
-    (-1, 1, UNIT_COST * SQRT_2),
-    (1, -1, UNIT_COST * SQRT_2),
-    (1, 0, UNIT_COST),
-    (-1, 0, UNIT_COST),
-    (0, -1, UNIT_COST),
-    (0, 1, UNIT_COST),
-];
-
-const CFG_FILE_NAME: &'static str = "pathfinder.toml";
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
 const RADIUS: f64 = 6371000.0;
 const MIN_BUFFER: f32 = 5f32;
-const DEFAULT_DIRECT_PATH_MODIFIER_WEIGHT: f64 = 0.001;
-const DEFAULT_HEADING_MODIFIER_WEIGHT: f64 = 0.15;
+const TURNING_RADIUS: f32 = 5f32; // In meters
+const MAX_ANGLE: f32 = PI / 6f32;
+const MAX_ANGLE_ASCENT: f32 = PI / 3f32;
+const MAX_ANGLE_DESCENT: f32 = -PI / 3f32;
+const START_VERTEX_INDEX: i32 = -1;
+const END_VERTEX_INDEX: i32 = -2;
+const HEADER_VERTEX_INDEX: i32 = -3;
 
 #[allow(non_snake_case)]
 pub struct Pathfinder {
     // exposed API
-    grid_size: f32,             // In meters
     buffer: f32,                // In meters
     max_process_time: Duration, // In seconds
-    flyzones: Vec<Vec<Point>>,
+    flyzones: Vec<Vec<Location>>,
     obstacles: Vec<Obstacle>,
     // private
     initialized: bool,
     start_time: SystemTime,
-    origin: Point,
-    heading: (f32, f32),
     current_wp: Waypoint,
     wp_list: LinkedList<Waypoint>,
-    obstacle_list: HashSet<Node>,
-    start_node: Node,
-    end_node: Node,
-    open_heap: BinaryHeap<Rc<Node>>,
-    open_set: HashSet<Rc<Node>>,
-    close_list: HashSet<Rc<Node>>,
-    obstacle_found: bool,
-    critical_nodes: HashSet<Rc<Node>>,
-    // #TODO: possibly use lazy static variable instead
-    DIRECT_PATH_MODIFIER_WEIGHT: f64,
-    HEADING_MODIFIER_WEIGHT: f64,
-}
-
-// utility functions
-fn load_config() -> Result<String, Box<std::error::Error>> {
-    let mut p = env::current_dir()?;
-    p.push(CFG_FILE_NAME);
-    let mut file = File::open(p.as_path())?;
-    let mut buffer = String::new();
-    file.read_to_string(&mut buffer)?;
-    Ok(buffer)
-}
-fn get_modifiers() -> (f64, f64) {
-    let (mut direct_path_modifier_weight, mut heading_modifier_weight) = (
-        DEFAULT_DIRECT_PATH_MODIFIER_WEIGHT,
-        DEFAULT_HEADING_MODIFIER_WEIGHT,
-    );
-    if let Ok(buffer) = load_config() {
-        if let Ok(values) = buffer.parse::<Value>() {
-            let convert = |index: &str| -> Option<f64> { Some(values.get(index)?.as_float()?) };
-            if let Some(val) = convert("direct_path_modifier_weight") {
-                direct_path_modifier_weight = val;
-            }
-            if let Some(val) = convert("heading_modifier_weight") {
-                heading_modifier_weight = val;
-            }
-        }
-    };
-    (direct_path_modifier_weight, heading_modifier_weight)
+    origin: Location, // Reference point defining each node
+    nodes: Vec<Rc<RefCell<Node>>>,
+    num_vertices: i32,
 }
 
 impl Pathfinder {
     pub fn new() -> Pathfinder {
-        let (mut direct_path_modifier_weight, mut heading_modifier_weight) = get_modifiers();
-        if let Ok(env) = env::var("DIRECT_PATH_MODIFIER_WEIGHT") {
-            if let Ok(val) = str::parse::<f64>(&env) {
-                direct_path_modifier_weight = val;
-            }
-        }
-        if let Ok(env) = env::var("HEADING_MODIFIER_WEIGHT") {
-            if let Ok(val) = str::parse::<f64>(&env) {
-                heading_modifier_weight = val;
-            }
-        }
-        eprintln!(
-            "Direct path modifier weight: {}",
-            direct_path_modifier_weight
-        );
-        eprintln!("Heading modifier weight: {}", heading_modifier_weight);
-        Pathfinder {
+        Self {
             // exposed API
-            grid_size: 1f32,
-            buffer: 1f32,
-            start_time: SystemTime::now(),
+            buffer: MIN_BUFFER,
             max_process_time: Duration::from_secs(10u64),
             flyzones: Vec::new(),
             obstacles: Vec::new(),
-            wp_list: LinkedList::new(),
             // private
             initialized: false,
-            origin: Point::from_degrees(0f64, 0f64, 0f32),
-            heading: (0f32, 0f32),
-            current_wp: Waypoint::new(0, Point::from_degrees(0f64, 0f64, 0f32), 0f32),
-            obstacle_list: HashSet::new(),
-            start_node: Node::new(0, 0),
-            end_node: Node::new(0, 0),
-            open_heap: BinaryHeap::new(),
-            open_set: HashSet::new(),
-            close_list: HashSet::new(),
-            obstacle_found: false,
-            critical_nodes: HashSet::new(),
-            DIRECT_PATH_MODIFIER_WEIGHT: direct_path_modifier_weight,
-            HEADING_MODIFIER_WEIGHT: heading_modifier_weight,
+            start_time: SystemTime::now(),
+            current_wp: Waypoint::from_degrees(0u32, 0f64, 0f64, 0f32, 1f32),
+            wp_list: LinkedList::new(),
+            origin: Location::from_degrees(0f64, 0f64, 0f32),
+            nodes: Vec::new(),
+            num_vertices: 0i32,
         }
     }
 
-    pub fn init(&mut self, grid_size: f32, flyzones: Vec<Vec<Point>>, obstacles: Vec<Obstacle>) {
-        self.grid_size = grid_size;
-        self.buffer = grid_size.max(MIN_BUFFER);
-        self.origin = Pathfinder::find_origin(&flyzones);
-        self.flyzones = flyzones;
-        self.obstacles = obstacles;
-        self.populate_map();
-        self.initialized = true;
+    // Helper function to return an initialized pathfinder
+    pub fn create(
+        buffer_size: f32,
+        flyzones: Vec<Vec<Location>>,
+        obstacles: Vec<Obstacle>,
+    ) -> Self {
+        let mut pathfinder = Pathfinder::new();
+        pathfinder.init(buffer_size, flyzones, obstacles);
+        pathfinder
+    } //          let p1 = a.to_point(*j + theta0);
+      //          println!("{} {:?}", j, &p1);
+      //          let p2 = b.to_point(*i + theta0);
+      //          println!("{} {:?}", i, &
 
-        #[cfg(feature = "debug")]
-        DEBUGGER.with(|debugger| {
-            let (mut max_x, mut max_y): (u32, u32) = (0, 0);
-            for i in &self.obstacle_list {
-                if i.x > 0 && i.x as u32 > max_x {
-                    max_x = i.x as u32;
-                }
-                if i.y > 0 && i.y as u32 > max_y {
-                    max_y = i.y as u32;
-                }
-            }
-
-            debugger
-                .borrow_mut()
-                .set_size(max_x.min(THRESHOLD), max_y.min(THRESHOLD));
-            debugger
-                .borrow_mut()
-                .set_obstacles(self.obstacle_list.clone());
-        });
-    }
-
-    // Initilization
-    fn find_origin(flyzones: &Vec<Vec<Point>>) -> Point {
-        const MAX_RADIAN: f64 = 2f64 * std::f64::consts::PI;
-        let mut min_lat = MAX_RADIAN;
-        let mut min_lon = MAX_RADIAN;
-        let mut max_lon = 0f64;
-        let mut lon = min_lon;
-
-        assert!(flyzones.len() > 0, "Require at least one flyzone");
-        for i in 0..flyzones.len() {
-            let flyzone_points = &flyzones[i];
-            assert!(
-                flyzone_points.len() > 2,
-                "Require at least 3 points to construct fly zone."
-            );
-
-            for point in flyzone_points {
-                if point.lat() < min_lat {
-                    min_lat = point.lat();
-                }
-                if point.lon() < min_lon {
-                    min_lon = point.lon();
-                }
-                if point.lon() > max_lon {
-                    max_lon = point.lon();
-                }
-            }
-            lon = min_lon;
-            if max_lon - min_lon > MAX_RADIAN {
-                lon = max_lon;
-            }
-        }
-
-        Point::from_radians(min_lat, lon, 0f32)
-    }
-
-    fn populate_map(&mut self) {
-        self.obstacle_list.clear();
-        self.generate_fly_zone();
-        self.generate_obstacles();
-    }
-
-    fn draw_line(
+    pub fn init(
         &mut self,
-        mut indep: f32,
-        mut dep: f32,
-        indep_goal: f32,
-        dep_goal: f32,
-        slope: f32,
-        invert: bool,
+        buffer_size: f32,
+        flyzones: Vec<Vec<Location>>,
+        obstacles: Vec<Obstacle>,
     ) {
-        const INCREMENT: f32 = 0.1;
-        if indep > indep_goal {
-            while indep > indep_goal && !(indep == indep_goal && dep == dep_goal) {
-                indep -= INCREMENT;
-                dep -= INCREMENT * slope;
-                let buffer;
-                if invert {
-                    self.obstacle_list
-                        .insert(Node::new(dep.floor() as i32, indep.floor() as i32));
-                    buffer = Node::new(dep as i32, indep as i32 + 1);
-                } else {
-                    self.obstacle_list
-                        .insert(Node::new(indep.floor() as i32, dep.floor() as i32));
-                    buffer = Node::new(indep as i32 + 1, dep as i32);
-                }
-                self.obstacle_list.insert(buffer);
-            }
-        } else {
-            while indep < indep_goal && !(indep == indep_goal && dep == dep_goal) {
-                indep += INCREMENT;
-                dep += INCREMENT * slope;
-                let buffer;
-                if invert {
-                    self.obstacle_list
-                        .insert(Node::new(dep.floor() as i32, indep.floor() as i32));
-                    buffer = Node::new(dep as i32, indep as i32 - 1);
-                } else {
-                    self.obstacle_list
-                        .insert(Node::new(indep.floor() as i32, dep.floor() as i32));
-                    buffer = Node::new(indep as i32 - 1, dep as i32);
-                }
-                self.obstacle_list.insert(buffer);
-            }
+        assert!(flyzones.len() >= 1);
+        for flyzone in &flyzones {
+            assert!(flyzone.len() >= 3);
         }
-    }
-
-    fn generate_fly_zone(&mut self) {
+        self.buffer = buffer_size.max(MIN_BUFFER);
+        self.flyzones = flyzones;
         for i in 0..self.flyzones.len() {
-            let flyzone_points = self.flyzones[i].clone();
-            let mut pre_node: Node = flyzone_points[flyzone_points.len() - 1].to_node(&self);
-            let mut end_node;
-
-            for end_point in flyzone_points {
-                end_node = end_point.to_node(&self);
-
-                let slope = (end_node.y - pre_node.y) as f32 / (end_node.x - pre_node.x) as f32;
-                if slope.abs() <= 1f32 {
-                    self.draw_line(
-                        pre_node.x as f32,
-                        pre_node.y as f32,
-                        end_node.x as f32,
-                        end_node.y as f32,
-                        slope,
-                        false,
-                    );
-                } else {
-                    self.draw_line(
-                        pre_node.y as f32,
-                        pre_node.x as f32,
-                        end_node.y as f32,
-                        end_node.x as f32,
-                        1f32 / slope,
-                        true,
-                    );
-                }
-                pre_node = end_node;
+            if self.invalid_flyzone(i) {
+                panic!();
             }
         }
+        self.obstacles = obstacles;
+        self.build_graph();
+        self.initialized = true;
     }
 
-    fn generate_obstacles(&mut self) {
-        for obst in &self.obstacles {
-            let radius = ((obst.radius + self.buffer) / (self.grid_size)) as i32;
-            let n = obst.coords.to_node(&self);
-
-            for x in n.x - radius..n.x + radius {
-                let dy = ((radius.pow(2) - (x - n.x).pow(2)) as f32).sqrt() as i32;
-                self.obstacle_list.insert(Node::new(x, n.y + dy));
-                self.obstacle_list.insert(Node::new(x, n.y + dy - 1));
-                self.obstacle_list.insert(Node::new(x, n.y - dy));
-                self.obstacle_list.insert(Node::new(x, n.y - dy - 1));
-            }
-            for y in n.y - radius..n.y + radius {
-                let dx = ((radius.pow(2) - (y - n.y).pow(2)) as f32).sqrt() as i32;
-                self.obstacle_list.insert(Node::new(n.x + dx, y));
-                self.obstacle_list.insert(Node::new(n.x + dx - 1, y));
-                self.obstacle_list.insert(Node::new(n.x - dx, y));
-                self.obstacle_list.insert(Node::new(n.x - dx - 1, y));
+    // determine if flyzone intersects itself (correct order)
+    // inputs (self,flyzones indices), outputs true if invalid
+    fn invalid_flyzone(&mut self, iter: usize) -> (bool) {
+        let flyzone = &self.flyzones[iter];
+        let mut vertices = Vec::new();
+        for loc in 0..flyzone.len() {
+            let i = flyzone[loc];
+            let point = Point::from_location(&i, &self.origin);
+            vertices.push(point);
+        }
+        let n = vertices.len();
+        // compares any side of flyzone, ab, with any non-adjacent side, cd
+        for ab in 0..n - 2 {
+            let a = vertices[ab];
+            let b = vertices[ab + 1];
+            for i in 2..n - 1 {
+                let cd = ab + i;
+                let c = vertices[cd];
+                let d = vertices[(cd + 1) % n];
+                if intersect(&a, &b, &c, &d) {
+                    return true;
+                }
+                if cd + 1 == n {
+                    break;
+                }
             }
         }
+        return false;
     }
 
     pub fn get_adjust_path(
@@ -342,41 +140,21 @@ impl Pathfinder {
         assert!(self.initialized);
         self.start_time = SystemTime::now();
         self.wp_list = LinkedList::new();
-        let mut current_loc: Point;
-        let mut next_loc: Point;
+        let mut current_loc: Location;
+        let mut next_loc: Location;
 
-        #[cfg(feature = "debug")]
-        DEBUGGER.with(|debugger| {
-            debugger.borrow().draw();
-        });
         // First destination is first waypoint
         match wp_list.pop_front() {
             Some(wp) => self.current_wp = wp,
             None => return &self.wp_list,
         }
 
-        if plane.yaw > 0f32 {
-            let adjust_yaw = (90f32 - plane.yaw).to_radians();
-            self.heading = (adjust_yaw.cos(), adjust_yaw.sin());
-        };
         current_loc = plane.location;
         next_loc = self.current_wp.location;
         self.adjust_path(current_loc, next_loc);
         // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
 
         loop {
-            let mut reference = current_loc;
-            if let Some(previous) = self.wp_list.back() {
-                // New waypoints inserted
-                if previous.index == self.current_wp.index {
-                    reference = previous.location;
-                }
-            }
-            let (p_node, c_node) = (reference.to_node(&self), next_loc.to_node(&self));
-            let (dx, dy) = node_vector(&p_node, &c_node);
-            let dist = dx.hypot(dy);
-            self.heading = (dx / dist, dy / dist); //normalize vector
-
             current_loc = self.current_wp.location;
             match wp_list.pop_front() {
                 Some(wp) => self.current_wp = wp,
@@ -387,280 +165,189 @@ impl Pathfinder {
             if let Some(mut wp_list) = self.adjust_path(current_loc, next_loc) {
                 self.wp_list.append(&mut wp_list);
             } else {
+                println!("no path");
                 break;
             }
             // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
         }
-
-        #[cfg(feature = "debug")]
-        DEBUGGER.with(|debugger| {
-            debugger.borrow().draw();
-        });
 
         &self.wp_list
     }
 
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
-    fn adjust_path(&mut self, start: Point, end: Point) -> Option<LinkedList<Waypoint>> {
-        self.open_heap = BinaryHeap::new();
-        self.open_set = HashSet::new();
-        self.close_list = HashSet::new();
-        self.start_node = start.to_node(&self);
-        self.end_node = end.to_node(&self);
-        self.obstacle_found = false;
+    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
+        let mut num_vertices = self.num_vertices;
+        let mut open_list: BinaryHeap<Rc<RefCell<Vertex>>> = BinaryHeap::new();
+        let mut open_set: HashSet<i32> = HashSet::new();
+        let mut closed_set: HashSet<i32> = HashSet::new();
+        let mut vertices_to_remove: LinkedList<Rc<RefCell<Vertex>>> = LinkedList::new();
+        let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
+        let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
+        let start_vertex = Vertex::new(start_node.clone(), &mut START_VERTEX_INDEX, 0f32, None);
 
-        let dx = (self.end_node.x - self.start_node.x).abs();
-        let dy = (self.end_node.y - self.start_node.y).abs();
-        let start_node = Rc::new(Node {
-            x: self.start_node.x,
-            y: self.start_node.y,
-            g_cost: 0f64,
-            f_cost: (dx + dy) as f64 + (SQRT_2 - 2f64 * UNIT_COST) * dx.min(dy) as f64,
-            parent: None,
-            depth: 0,
-        });
-        self.open_set.insert(start_node.clone());
-        self.open_heap.push(start_node.clone());
-        let mut current_node: Rc<Node>;
-
-        loop {
-            if let Ok(elapsed) = self.start_time.elapsed() {
-                if elapsed > self.max_process_time {
-                    return None;
-                }
-            } else {
-                return None;
+        //Prepare graph for A*
+        for i in 0..self.nodes.len() {
+            let temp_node = &self.nodes[i];
+            let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
+            for (a, b, dist, thresh) in temp_paths.iter() {
+                let vertex = Rc::new(RefCell::new(Vertex::new(
+                    temp_node.clone(),
+                    &mut num_vertices,
+                    *b,
+                    None,
+                )));
+                temp_node.borrow_mut().insert_vertex(vertex.clone());
+                open_list.push(vertex.clone());
+                vertices_to_remove.push_back(vertex.clone());
+                open_set.insert(vertex.borrow().index);
             }
 
-            if let Some(node) = self.open_heap.pop() {
-                current_node = node;
-            } else {
-                break;
+            let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
+            for (a, b, dist, thresh) in temp_paths.iter() {
+                let end_vertex = Rc::new(RefCell::new(Vertex::new(
+                    end_node.clone(),
+                    &mut END_VERTEX_INDEX,
+                    *b,
+                    None,
+                )));
+                let connection = Connection::new(end_vertex.clone(), *dist, *thresh);
+                let vertex = Rc::new(RefCell::new(Vertex::new(
+                    temp_node.clone(),
+                    &mut num_vertices,
+                    *a,
+                    Some(connection),
+                )));
+                vertices_to_remove.push_back(vertex.clone());
+                temp_node.borrow_mut().insert_vertex(vertex.clone());
             }
-
-            if *current_node == self.end_node {
-                if self.obstacle_found {
-                    return Some(self.generate_path(current_node.clone(), end.alt() - start.alt()));
-                }
-                return Some(LinkedList::new());
-            }
-            self.open_set.take(&current_node);
-            self.close_list.insert(current_node.clone());
-
-            // Regular a* node discovery
-            self.discover_node(current_node.clone());
-        }
-        eprintln!("No path found!");
-        return None;
-    }
-
-    fn discover_node(&mut self, current_node: Rc<Node>) {
-        for &(x_offset, y_offset, g_cost) in OFFSET.into_iter() {
-            let mut new_node;
-            new_node = Node::new(current_node.x + x_offset, current_node.y + y_offset);
-
-            #[cfg(feature = "debug")]
-            DEBUGGER.with(|debugger| {
-                debugger.borrow_mut().add_to_explored(new_node.clone());
-            });
-
-            if self.obstacle_list.contains(&new_node) {
-                self.critical_nodes.insert(current_node.clone());
-                self.obstacle_found = true;
-                continue;
-            }
-            if self.close_list.contains(&new_node) {
-                continue;
-            }
-            new_node.g_cost = current_node.g_cost + g_cost;
-
-            if let Some(node) = self.open_set.take(&new_node) {
-                if new_node.g_cost >= node.g_cost {
-                    self.open_set.insert(node);
-                    continue;
-                }
-            }
-
-            let v = node_vector(&new_node, &self.end_node);
-            let (dx, dy) = (v.0.abs() as f64, v.1.abs() as f64);
-            let base_f_cost = dx + dy + (SQRT_2 - 2f64 * UNIT_COST) * dx.min(dy);
-
-            let direct_path_modifier =
-                cross_product(node_vector(&self.start_node, &self.end_node), v).abs();
-            // Signs flipped because heading is start -> end whereas path backtracks
-            // (except flipping start and end doesn't work??? WTF geometry????)
-            // #TODO: figure out how the math is working
-            /*
-                Experimental vector normalization using matrices
-                #BUG: should not be using self.heading as it is not an accurate representation
-                    of the heading of the node
-                    Solution 1: use immediate parent
-                    Solution 2: trace back to last critical node
-                        - Memoizing vs dynamic traceback
-                    currently using solution 1
-            */
-            let current_heading = match current_node.parent {
-                Some(ref parent) => node_vector(&parent, &current_node),
-                None => self.heading,
-            };
-            println!("current heading: {:?}", current_heading);
-            let dir_vector = halve_vector(current_heading, (x_offset as f32, y_offset as f32));
-            println!("offset: {:?}", (x_offset, y_offset));
-            println!("dir vector: {:?}", dir_vector);
-            let heading_modifier = cross_product(current_heading, dir_vector).abs();
-            println!("heading modifier: {:?}\n", heading_modifier);
-            //*/
-            // let heading_modifier =
-            // if dot_product(self.heading, node_vector(&new_node, &self.end_node)) < 0f32 {
-            //     cross_product(self.heading, node_vector(&new_node, &self.end_node)).abs()
-            // } else {
-            //     node_distance(&new_node, &self.end_node)
-            // };
-            new_node.f_cost = new_node.g_cost
-                + direct_path_modifier as f64 * self.DIRECT_PATH_MODIFIER_WEIGHT
-                // + heading_modifier as f64 * self.HEADING_MODIFIER_WEIGHT
-                + base_f_cost;
-
-            new_node.parent = Some(current_node.clone());
-            new_node.depth = current_node.depth + 1;
-            let new_node = Rc::new(new_node);
-            self.open_set.insert(new_node.clone());
-            self.open_heap.push(new_node.clone());
-        }
-    }
-
-    fn generate_path(&mut self, mut current_node: Rc<Node>, alt_diff: f32) -> LinkedList<Waypoint> {
-        let mut wp_list = LinkedList::new();
-        let mut previous_node;
-        let mut wp_cluster_count = 1;
-        // Node representing the sum of a cluster of nodes
-        let mut wp_cluster = Node::new(current_node.x, current_node.y);
-        let mut last_critical_node = current_node.clone();
-        let mut last_vertex = current_node.clone();
-        let mut new_inst_dir;
-        let mut new_dir;
-        let mut inst_dir = (0, 0);
-        let mut dir = (0, 0);
-        let current_alt = self.current_wp.location.alt();
-        let alt_increment = alt_diff / current_node.depth as f32;
-
-        if let Some(ref parent) = current_node.parent {
-            dir = (current_node.x - parent.x, current_node.y - parent.y);
         }
 
-        loop {
-            previous_node = current_node;
-            current_node = match previous_node.parent {
-                Some(ref parent) => parent.clone(),
-                None => break,
-            };
-
-            #[cfg(feature = "debug")]
-            DEBUGGER.with(|debugger| {
-                debugger.borrow_mut().add_to_path((*current_node).clone());
-            });
-
-            new_inst_dir = (
-                current_node.x - previous_node.x,
-                current_node.y - previous_node.y,
-            );
-            if new_inst_dir.0 != inst_dir.0 || new_inst_dir.1 != inst_dir.1 {
-                inst_dir = new_inst_dir;
-                new_dir = (
-                    current_node.x - last_vertex.x,
-                    current_node.y - last_vertex.y,
-                );
-
-                if new_dir == dir {
-                    continue;
+        for node in &self.nodes {
+            let loc = node.borrow().origin.to_location(&self.origin);
+            println!("{}, {}", loc.lat_degree(), loc.lon_degree());
+            // let loc = node.borrow().origin;
+            // println!("{}, {}", loc.x, loc.y);
+            if node.borrow().height > 0f32 {
+                let mut current = node.borrow().left_ring.clone();
+                loop {
+                    let ref mut vertex = current.clone();
+                    //print!("{:?}\n", current.borrow().index);
+                    let index = match vertex.borrow().next {
+                        Some(ref vert) => vert.borrow().index,
+                        None => panic!("Next points to null"),
+                    };
+                    if index != HEADER_VERTEX_INDEX {
+                        println!("vertex {}", vertex.borrow().location.to_location(&self.origin));
+                    } else {
+                        break;
+                    }
+                    current = match vertex.borrow().next {
+                        Some(ref v) => v.clone(),
+                        None => panic!("Next points to null"),
+                    };
                 }
-                dir = new_dir;
-                last_vertex = current_node.clone();
+            }
+        }
 
-                if !self.critical_nodes.contains(&current_node) {
-                    continue;
+        //A* algorithm - find shortest path from plane to destination
+        while let Some(cur) = open_list.pop() {
+            // println!("current vertex {}", cur.borrow());
+            if cur.borrow().index == END_VERTEX_INDEX {
+                Node::remove_extra_vertices(vertices_to_remove);
+                return Some(self.generate_waypoint(cur));
+            }
+            closed_set.insert(cur.borrow().index);
+
+            let mut update_vertex = |cur_g_cost: f32, next: Rc<RefCell<Vertex>>, dist: f32| {
+                if next.borrow().index == cur.borrow().index {
+                    return;
                 }
-                let waypoint;
-                if node_distance(&current_node, &last_critical_node) * self.grid_size
-                    < 2f32 * self.current_wp.radius
+                let new_g_cost = cur_g_cost + dist;
+                // println!("add vertex to queue {}", next.borrow());
                 {
-                    let _old = wp_list.pop_front();
-
-                    #[cfg(feature = "debug")]
-                    DEBUGGER.with(|debugger| {
-                        if let Some(_old) = _old {
-                            debugger.borrow_mut().remove_from_wp(&last_critical_node);
-                        }
-                    });
-
-                    wp_cluster_count += 1;
-                    wp_cluster.advance(current_node.x, current_node.y);
-                    wp_cluster.depth += current_node.depth;
-                    let mut midpoint = Node::new(
-                        wp_cluster.x / wp_cluster_count,
-                        wp_cluster.y / wp_cluster_count,
-                    );
-                    midpoint.depth = wp_cluster.depth / wp_cluster_count;
-
-                    #[cfg(feature = "debug")]
-                    DEBUGGER.with(|debugger| {
-                        debugger.borrow_mut().add_to_wp(midpoint.clone());
-                    });
-
-                    waypoint = self.current_wp.extend(
-                        midpoint.to_point(&self),
-                        current_alt - alt_increment * midpoint.depth as f32,
-                    );
-                    last_critical_node = Rc::new(midpoint);
-                } else {
-                    wp_cluster_count = 1;
-                    wp_cluster = Node::new(current_node.x, current_node.y);
-                    last_critical_node = current_node.clone();
-
-                    #[cfg(feature = "debug")]
-                    DEBUGGER.with(|debugger| {
-                        debugger.borrow_mut().add_to_wp((*current_node).clone());
-                    });
-
-                    waypoint = self.current_wp.extend(
-                        current_node.to_point(&self),
-                        current_alt - alt_increment * current_node.depth as f32,
-                    );
+                    let mut next_mut = next.borrow_mut();
+                    if closed_set.contains(&next_mut.index)                                         //vertex is already explored
+                        || next_mut.sentinel                                                        //vertex is a sentinel
+                        || (open_set.contains(&next_mut.index) && new_g_cost >= next_mut.g_cost)
+                    {
+                        //vertex has been visited and the current cost is better
+                        // println!("Vertex addition skipped");
+                        return;
+                    }
+                    let new_f_cost = next_mut.g_cost
+                        + next_mut
+                            .location
+                            .distance3d(&Point::from_location(&end, &self.origin));
+                    next_mut.g_cost = new_g_cost;
+                    next_mut.f_cost = new_f_cost;
+                    next_mut.parent = Some(cur.clone());
                 }
-                wp_list.push_front(waypoint);
+                open_list.push(next.clone());
+                open_set.insert(next.borrow().index);
+            };
+
+            let mut cur_vertex = cur.borrow();
+            let g_cost = cur_vertex.g_cost;
+            if let Some(ref connection) = cur_vertex.connection {
+                let mut next = connection.neighbor.clone();
+                let dist = connection.distance;
+                update_vertex(g_cost, next, dist);
+            }
+
+            let mut weight = cur_vertex.get_neighbor_weight();
+            if let Some(ref next_vertex) = cur_vertex.next {
+                let mut next = next_vertex.clone();
+                if (next.borrow().index != HEADER_VERTEX_INDEX) {
+                    update_vertex(g_cost, next, weight);
+                } else {
+                    weight += next.borrow().get_neighbor_weight();
+                    match next.borrow().next {
+                        Some(ref skip_next) => update_vertex(g_cost, skip_next.clone(), weight),
+                        None => panic!("broken chain"),
+                    }
+                    //update_vertex(g_cost, );
+                }
             }
         }
-
-        wp_list
+        None
+        //TODO: Clean up the graph before we finish
     }
 
-    pub fn set_grid_size(&mut self, grid_size: f32) {
-        self.grid_size = grid_size;
-        self.populate_map();
+    fn generate_waypoint(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint> {
+        let mut waypoint_list = LinkedList::new();
+        let mut cur_vertex = end_vertex;
+        let mut index = END_VERTEX_INDEX;
+        while index != START_VERTEX_INDEX {
+            let loc = cur_vertex.borrow().location.to_location(&self.origin);
+            let radius = cur_vertex.borrow().radius;
+            waypoint_list.push_front(Waypoint::new(1, loc, radius));
+            println!("{:?}", cur_vertex);
+            let parent = match cur_vertex.borrow().parent {
+                Some(ref cur_parent) => cur_parent.clone(),
+                None => panic!("Missing a parent without reaching start point"),
+            };
+            cur_vertex = parent;
+            index = cur_vertex.borrow().index;
+        }
+        waypoint_list
     }
-
-    pub fn set_buffer(&mut self, new_buffer: f32) {
-        self.buffer = new_buffer;
-        self.populate_map();
-    }
-
     pub fn set_process_time(&mut self, max_process_time: u32) {
         self.max_process_time = Duration::from_secs(max_process_time as u64);
     }
 
-    pub fn set_flyzone(&mut self, flyzone: Vec<Vec<Point>>) {
+    pub fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>) {
         self.flyzones = flyzone;
-        self.populate_map();
+        self.build_graph();
     }
 
-    pub fn set_obstacle_list(&mut self, obstacle_list: Vec<Obstacle>) {
-        self.obstacles = obstacle_list;
-        self.populate_map();
+    pub fn set_obstacles(&mut self, obstacles: Vec<Obstacle>) {
+        self.obstacles = obstacles;
+        self.build_graph();
     }
 
-    pub fn get_grid_size(&self) -> f32 {
-        self.grid_size
+    pub fn get_buffer_size(&self) -> f32 {
+        self.buffer
     }
 
     pub fn get_buffer(&self) -> f32 {
@@ -671,7 +358,7 @@ impl Pathfinder {
         self.max_process_time.as_secs() as u32
     }
 
-    pub fn get_flyzone(&mut self) -> &Vec<Vec<Point>> {
+    pub fn get_flyzone(&mut self) -> &Vec<Vec<Location>> {
         &self.flyzones
     }
 
@@ -683,6 +370,7 @@ impl Pathfinder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use graph::Point;
 
     #[test]
     #[should_panic]
@@ -697,39 +385,15 @@ mod tests {
     }
 
     #[test]
-    fn origin_test() {
-        let mut pathfinder = Pathfinder::new();
-        pathfinder.init(
-            1.0,
-            vec![vec![
-                Point::from_degrees(50.06638888888889, -5.714722222222222, 0f32),
-                Point::from_degrees(58.64388888888889, -5.714722222222222, 0f32),
-                Point::from_degrees(50.06638888888889, -3.0700000000000003, 0f32),
-            ]],
-            Vec::new(),
-        );
-        let origin = pathfinder.origin;
-        println!("Origin: {}, {}", origin.lat_degree(), origin.lon_degree());
-        assert_eq!(origin.lat_degree(), 50.06638888888889);
-        assert_eq!(origin.lon_degree(), -5.714722222222222);
+    #[should_panic]
+    fn fz_fz_intersection_test() {
+        let origin = Location::from_degrees(0f64, 0f64, 0f32);
+        let a = Point::new(0f32, 0f32, 10f32).to_location(&origin);
+        let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
+        let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
+        let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+        let test_flyzone = vec![vec![a, b, d, c]];
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+        assert!(pathfinder.invalid_flyzone(0));
     }
-
-    #[test]
-    fn irregular_origin_test() {
-        let mut pathfinder = Pathfinder::new();
-        pathfinder.init(
-            1.0,
-            vec![vec![
-                Point::from_degrees(30.32276, -97.60398, 0f32),
-                Point::from_degrees(30.32173, -97.60008, 0f32),
-                Point::from_degrees(30.32082, -97.60368, 0f32),
-            ]],
-            Vec::new(),
-        );
-        let origin = pathfinder.origin;
-        println!("Origin: {}, {}", origin.lat_degree(), origin.lon_degree());
-        assert_eq!(origin.lat_degree(), 30.32082);
-        assert_eq!(origin.lon_degree(), -97.60398);
-    }
-
 }

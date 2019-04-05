@@ -8,13 +8,12 @@ license = "MIT"
 travis-ci = { repository = "uavaustin/pathfinder", branch = "master" }
 
 [dependencies]
-conrod = { version = "0.60.0", features = ["glium", "winit"], optional = true }
-toml = "0.4"
+ordered-float = "1.0.1"
 
 [dev-dependencies]
 rand = "0.5.1"
+criterion = "0.2"
 
-# debug flag
-[features]
-# default = ["debug"]
-debug = ["conrod"]
+[[bench]]
+name = "my_benchmark"
+harness = false
