@@ -181,6 +181,7 @@ impl Pathfinder {
         let mut open_list: BinaryHeap<Rc<RefCell<Vertex>>> = BinaryHeap::new();
         let mut open_set: HashSet<i32> = HashSet::new();
         let mut closed_set: HashSet<i32> = HashSet::new();
+        let mut vertices_to_remove: LinkedList<Rc<RefCell<Vertex>>> = LinkedList::new();
         let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
         let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
         let start_vertex = Vertex::new(start_node.clone(), &mut START_VERTEX_INDEX, 0f32, None);
@@ -198,6 +199,7 @@ impl Pathfinder {
                 )));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 open_list.push(vertex.clone());
+                vertices_to_remove.push_back(vertex.clone());
                 open_set.insert(vertex.borrow().index);
             }
 
@@ -216,6 +218,7 @@ impl Pathfinder {
                     *a,
                     Some(connection),
                 )));
+                vertices_to_remove.push_back(vertex.clone());
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
             }
         }
@@ -251,7 +254,7 @@ impl Pathfinder {
         while let Some(cur) = open_list.pop() {
             // println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
-                self.clean_graph();
+                Node::remove_extra_vertices(vertices_to_remove);
                 return Some(self.generate_waypoint(cur));
             }
             closed_set.insert(cur.borrow().index);
@@ -307,7 +310,6 @@ impl Pathfinder {
                 }
             }
         }
-        self.clean_graph();
         None
         //TODO: Clean up the graph before we finish
     }
@@ -330,9 +332,6 @@ impl Pathfinder {
         }
         waypoint_list
     }
-
-    fn clean_graph(&self) {}
-
     pub fn set_process_time(&mut self, max_process_time: u32) {
         self.max_process_time = Duration::from_secs(max_process_time as u64);
     }

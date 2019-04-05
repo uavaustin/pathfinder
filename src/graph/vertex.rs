@@ -50,6 +50,7 @@ impl Vertex {
             g_cost: -1f32,
             parent: None,
             connection: None,
+            prev: None,
             next: None,
             sentinel: sentinel,
         }

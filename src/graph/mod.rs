@@ -28,8 +28,9 @@ pub struct Vertex {
     pub angle: f32,                          // Angle with respect to the node
     pub g_cost: f32,                         //
     pub f_cost: f32,                         //
-    pub parent: Option<Rc<RefCell<Vertex>>>, //
+    pub parent: Option<Rc<RefCell<Vertex>>>, // Paren of vertex 
     pub connection: Option<Connection>,      // Edge connecting to another node
+    pub prev: Option<Rc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
     pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
     pub sentinel: bool,                      // Sentinel property marks end of path hugging
 }
@@ -142,9 +143,9 @@ impl Pathfinder {
             let mut node = Node::from_obstacle(obs, &self.origin);
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
-        // for i in 0..self.flyzones.len() {
-        //     self.virtualize_flyzone(i);
-        // }
+         for i in 0..self.flyzones.len() {
+             self.virtualize_flyzone(i);
+        }
     }
 
     pub fn virtualize_flyzone(&mut self, index: usize) {

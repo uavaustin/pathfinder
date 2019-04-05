@@ -42,11 +42,13 @@ impl Node {
             origin,
         )));
         left_head.borrow_mut().next = Some(left_head.clone());
+        left_head.borrow_mut().prev = Some(left_head.clone());
         let right_head = Rc::new(RefCell::new(Vertex::new_head(
             &mut HEADER_VERTEX_INDEX,
             origin,
         )));
         right_head.borrow_mut().next = Some(right_head.clone());
+        right_head.borrow_mut().prev = Some(right_head.clone());
         Node {
             origin: origin,
             radius: radius,
@@ -124,13 +126,21 @@ impl Node {
                     None => panic!("Next points to null"),
                 };
                 if (is_left && new_angle < angle) || (!is_left && new_angle > angle) {
+                    next_ptr.borrow_mut().prev = Some(v.clone());
                     v.borrow_mut().next = Some(next_ptr);
-                    vertex.borrow_mut().next = Some(v);
+                    v.borrow_mut().prev = Some(vertex.clone());
+                    vertex.borrow_mut().next = Some(v.clone());
                     return;
                 }
             } else {
+                v.borrow_mut().prev = Some(vertex.clone());
                 v.borrow_mut().next = vertex.borrow().next.clone();
-                vertex.borrow_mut().next = Some(v);
+                vertex.borrow_mut().next = Some(v.clone());
+                let next = match v.borrow().next {
+                    Some(ref vert) => vert.clone(),
+                    None => panic!("Next points to null"),
+                };
+                next.borrow_mut().prev = Some(v.clone());
                 return;
             }
             current = match vertex.borrow().next {
@@ -140,28 +150,18 @@ impl Node {
         }
     }
 
-    //add header node to linked list for rings
-    //check if left_ring is start/end node and if so remove it before looping
-    /*pub fn remove_extra_vertices(&mut self, start_index: i32, end_index: i32) {
-        let mut current = self.left_ring;
-        if current.index == start_index || current.index == end_index {
-            self.left_ring = current.next;
-        }
-        while let Some(ref mut v) = current.clone() {
-            let vertex = match v {
+    pub fn remove_extra_vertices(to_remove: LinkedList<Rc<RefCell<Vertex>>>) {
+        for v in to_remove.iter() {
+            let prev = match v.borrow_mut().prev {
                 Some(ref vert) => vert.clone(),
-                None => return,
+                None => panic!("Next points to null"),
             };
-            let next = match vertex.borrow().next {
-                Some(ref next_v) => next_v.clone(),
-                None => return,
-
+            let next = match v.borrow_mut().next {
+                Some(ref vert) => vert.clone(),
+                None => panic!("Next points to null"),
             };
-            let next_vertex = next.borrow();
-            if next_vertex.index == start_index || next_vertex.index == end_index {
-                vertex.borrow_mut().next = next.borrow().next;
-            }
-            current = vertex.borrow().next;
+            prev.borrow_mut().next = Some(next.clone());
+            next.borrow_mut().prev = Some(prev.clone());
         }
-    }*/
+    }
 }
