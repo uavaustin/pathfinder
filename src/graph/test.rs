@@ -28,6 +28,7 @@ fn assert_vec3_eqp(v1: &Vec<(f32, f32, f32)>, v2: &Vec<(f32, f32, f32)>) {
     for i in 0..v1.len() {
         let a = v1[i];
         let b = v2[i];
+		println!("comparing {:?} with {:?}", a, b);
         assert_eqp!(a.0, b.0, THRESHOLD);
         assert_eqp!(a.1, b.1, THRESHOLD);
         assert_eqp!(a.2, b.2, THRESHOLD);
@@ -38,6 +39,7 @@ fn assert_vec4_eqp(v1: &Vec<(f32, f32, f32, f32)>, v2: &Vec<(f32, f32, f32, f32)
     for i in 0..v1.len() {
         let a = v1[i];
         let b = v2[i];
+		println!("comparing {:?} with {:?}", a, b);
         assert_eqp!(a.0, b.0, THRESHOLD);
         assert_eqp!(a.1, b.1, THRESHOLD);
         assert_eqp!(a.2, b.2, THRESHOLD);
@@ -381,6 +383,9 @@ fn same_radius_test() {
 
     let n1 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 1_f32, 0_f32);
     let n2 = Node::new(Point::new(20_f32, 30_f32, 0_f32), 1_f32, 0_f32);
+	let p1 = n2.to_point((2_f32 / 10f32).acos());
+	let p2 = n1.to_point( -PI + (2_f32 / 10f32).acos());
+	println!("p1:{:?}, p2:{:?}", p1, p2);
     let a1 = Rc::new(n1);
     let b1 = Rc::new(n2);
     let expected = vec![
@@ -389,7 +394,8 @@ fn same_radius_test() {
         (
             (2_f32 / 10f32).acos(),
             -PI + (2_f32 / 10f32).acos(),
-            96f32.sqrt(),
+			p1.distance(&p2),
+            //96f32.sqrt(),
             0f32,
         ),
         (
@@ -400,6 +406,23 @@ fn same_radius_test() {
         ),
     ];
     assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
+}
+
+#[test]
+fn same_radius_offset_test() {
+	let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+	let n1 = Node::new(Point::new(20_f32, 20_f32, 0_f32), 5_f32, 0_f32);
+    let n2 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 5_f32, 0_f32);
+    let a1 = Rc::new(n1);
+    let b1 = Rc::new(n2);
+
+	let expected = vec![(3_f32 * PI / 4_f32, 3_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
+						(-PI / 4_f32, -PI / 4_f32, 200f32.sqrt(), 0f32),
+						(PI / 2_f32, -PI / 2_f32, 10f32, 0f32),
+						(0_f32, PI, 10f32, 0f32)
+						];
+						
+	assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
 }
 
 #[test]

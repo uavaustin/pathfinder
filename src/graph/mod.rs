@@ -327,7 +327,12 @@ impl Pathfinder {
         //     "finding path between {:?} and {:?} w/ distance {}",
         //     c1, c2, dist
         // );
-
+		let norm_angle = if c1.x > c2.x || c1.y > c2.y {
+            	PI - (c2.y - c1.y).atan2(c2.x - c1.x)
+            } else {
+              	(c2.y - c1.y).atan2(c2.x - c1.x)			
+            };
+		println!("x1:{}, y1:{}, x2:{}, y2:{}, norm angle:{}", c1.x, c1.y, c2.x, c2.y, norm_angle);
         let theta1 = ((r2 - r1).abs() / dist).acos();
         let theta2 = -theta1;
         let phi1 = theta1;
@@ -340,13 +345,14 @@ impl Pathfinder {
         let mut sentinels = None;
         if r1 != 0f32 && r2 != 0f32 && dist > r1 + r2 {
             candidates = vec![
-                (theta1, phi1),
-                (theta2, phi2),
-                (theta3, phi3),
-                (theta4, phi4),
+                (norm_angle + theta1, norm_angle + phi1),
+                (norm_angle + theta2, norm_angle + phi2),
+                (norm_angle + theta3, norm_angle + phi3),
+                (norm_angle + theta4, norm_angle + phi4),
             ];
         } else {
-            candidates = vec![(theta1, phi1), (theta2, phi2)];
+            candidates = vec![(norm_angle + theta1, norm_angle + phi1), 
+				(norm_angle + theta2, norm_angle + phi2)];
             //determine angle locations of sentinels
             let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2)) / (2f32 * r1 * dist)).acos();
             let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2)) / (2f32 * r2 * dist)).acos();
@@ -379,11 +385,12 @@ impl Pathfinder {
             let p1;
             let p2;
             if c1.x > c2.x || c1.y > c2.y {
-                p1 = a.to_point(PI - *i);
-                p2 = b.to_point(PI - *j);
+               p1 = a.to_point(PI - *i);
+               p2 = b.to_point(PI - *j);
             } else {
                 p1 = a.to_point(*i);
                 p2 = b.to_point(*j);
+			
             }
             // println!(
             //     "finding distance between {:?} with angle {:?} and {:?} with angle {:?}",
