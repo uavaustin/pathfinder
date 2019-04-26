@@ -163,10 +163,10 @@ impl Pathfinder {
             next_loc = self.current_wp.location;
 
             if let Some(mut wp_list) = self.adjust_path(current_loc, next_loc) {
-				println!("appending");
+				//println!("appending");
                 self.wp_list.append(&mut wp_list);
             } else {
-                println!("no path");
+                //println!("no path");
                 break;
             }
             // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint

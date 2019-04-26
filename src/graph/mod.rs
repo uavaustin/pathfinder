@@ -28,7 +28,7 @@ pub struct Vertex {
     pub angle: f32,                          // Angle with respect to the node
     pub g_cost: f32,                         //
     pub f_cost: f32,                         //
-    pub parent: Option<Rc<RefCell<Vertex>>>, // Paren of vertex 
+    pub parent: Option<Rc<RefCell<Vertex>>>, // Paren of vertex
     pub connection: Option<Connection>,      // Edge connecting to another node
     pub prev: Option<Rc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
     pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
@@ -112,13 +112,13 @@ impl Pathfinder {
                     for (alpha_s, beta_s) in obs_sentinels.unwrap() {
                         let mut a = Vertex::new_sentinel(
                             &mut self.num_vertices,
-                            self.nodes[i].borrow().origin.clone(),
+                            &self.nodes[i].borrow(),
                             alpha_s,
                         );
                         //a.sentinel = true;
                         let mut b = Vertex::new_sentinel(
                             &mut self.num_vertices,
-                            self.nodes[j].borrow().origin.clone(),
+                            &self.nodes[j].borrow(),
                             beta_s,
                         );
                         //b.;
@@ -139,13 +139,14 @@ impl Pathfinder {
     fn populate_nodes(&mut self) {
         self.nodes.clear();
         self.find_origin();
-        for obs in &self.obstacles {
-            let mut node = Node::from_obstacle(obs, &self.origin);
+        for i in 0..self.obstacles.len() {
+            let mut node = Node::from_obstacle(&self.obstacles[i], &self.origin);
+            self.insert_flyzone_sentinel(&mut node);
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
-         for i in 0..self.flyzones.len() {
+        /* for i in 0..self.flyzones.len() {
              self.virtualize_flyzone(i);
-        }
+        } */
     }
 
     pub fn virtualize_flyzone(&mut self, index: usize) {
@@ -173,12 +174,10 @@ impl Pathfinder {
             } else {
                 (iter - 1, iter + 1)
             };
-            println!("prev iter next: {} {} {}", prev, iter, next);
             // initalize obstacle location
             let a = flyzone_points[prev as usize];
             let vertex = flyzone_points[iter as usize];
             let b = flyzone_points[next as usize];
-            println!("{:?} {:?} {:?}", a, vertex, b);
             let vec_a = (a.x - vertex.x, a.y - vertex.y);
             let vec_b = (b.x - vertex.x, b.y - vertex.y);
             let mag_a = ((vec_a.0).powi(2) + (vec_a.1).powi(2)).sqrt();
@@ -214,7 +213,7 @@ impl Pathfinder {
                         dis * bisection.1 + vertex.y,
                         0f32,
                     );
-                    println!("center: {:?}", center);
+                    //println!("center: {:?}", center);
                     let virt_ob = Node::new(center, TURNING_RADIUS, 0f32);
                     self.nodes.push(Rc::new(RefCell::new(virt_ob)));
                 }
@@ -259,29 +258,32 @@ impl Pathfinder {
     }
 
     // determines vertices of node and flyzone intersection
-    fn sentinel_normal(&mut self, node: &mut Node) -> () {
+    fn insert_flyzone_sentinel(&mut self, node: &mut Node) {
         let center: Point = node.origin;
         let r: f32 = node.radius;
         for flyzone in self.flyzones.iter() {
-            let size = flyzone.len() + 1;
+            let size = flyzone.len();
             // iterate node over all vertices
             for i in 0..size {
                 let mut v1 = flyzone[i];
                 let mut v2 = flyzone[(i + 1) % size];
-                let (x, y, dist, end) = intersect_distance(
+                let (x, y, dist_squared, end) = intersect_distance(
                     &Point::from_location(&v1, &self.origin),
                     &Point::from_location(&v2, &self.origin),
                     &center,
                 );
+                let dist = dist_squared.sqrt();
+                // println!("dist: {:?}",dist);
                 // check intersect is true
                 if dist > r {
                     continue;
                 }
                 // determine both intersect angles in left and right ring
-                let theta = (dist / r).acos();
-                let dx = x - center.x;
-                let dy = y - center.y;
-                let phi = dy.atan2(dx);
+                let theta = (dist / r).acos();          //check
+                let dx = x - center.x;                  //check
+                let dy = y - center.y;                  //check
+                let phi = dy.atan2(dx);                 //check
+                /*
                 let (left, right) = if dy > 0f32 {
                     (phi, -2f32 * PI + phi)
                 } else {
@@ -289,6 +291,8 @@ impl Pathfinder {
                 };
                 let angles = vec![(left, theta), (right, theta)];
                 // create and impliment vertices
+
+
                 for (i, j) in angles {
                     let a = i + j;
                     let b = i - j;
@@ -302,9 +306,38 @@ impl Pathfinder {
                         node.origin,
                         b,
                     )));
+
+                    let a_lat = vertex_a.borrow().location.to_location(&self.origin).lat_degree();
+                    let a_lon = vertex_a.borrow().location.to_location(&self.origin).lon_degree();
+                    let b_lat = vertex_b.borrow().location.to_location(&self.origin).lat_degree();
+                    let b_lon = vertex_b.borrow().location.to_location(&self.origin).lon_degree();
+                    println!("flyzone/node vertices: {:?},{:?}", a_lat, a_lon);
+                    println!("flyzone/node vertices: {:?},{:?}", b_lat, b_lon);
                     node.insert_vertex(vertex_a);
                     node.insert_vertex(vertex_b);
                 }
+                */
+                let a = phi + theta;
+                let b = phi - theta;
+                let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
+                    &mut self.num_vertices,
+                    node,
+                    a,
+                )));
+                let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(
+                    &mut self.num_vertices,
+                    node,
+                    b,
+                )));
+
+                let a_lat = vertex_a.borrow().location.to_location(&self.origin).lat_degree();  // These are pulling as obstacle center coordinates
+                let a_lon = vertex_a.borrow().location.to_location(&self.origin).lon_degree();
+                let b_lat = vertex_b.borrow().location.to_location(&self.origin).lat_degree();
+                let b_lon = vertex_b.borrow().location.to_location(&self.origin).lon_degree();
+                println!("flyzone/node vertices: {:?},{:?}", a_lat, a_lon);
+                println!("flyzone/node vertices: {:?},{:?}", b_lat, b_lon);
+                node.insert_vertex(vertex_a);
+                node.insert_vertex(vertex_b);
             }
         }
     }
@@ -330,9 +363,9 @@ impl Pathfinder {
 		let norm_angle = if c1.x > c2.x || c1.y > c2.y {
             	PI - (c2.y - c1.y).atan2(c2.x - c1.x)
             } else {
-              	(c2.y - c1.y).atan2(c2.x - c1.x)			
+              	(c2.y - c1.y).atan2(c2.x - c1.x)
             };
-		println!("x1:{}, y1:{}, x2:{}, y2:{}, norm angle:{}", c1.x, c1.y, c2.x, c2.y, norm_angle);
+		//println!("x1:{}, y1:{}, x2:{}, y2:{}, norm angle:{}", c1.x, c1.y, c2.x, c2.y, norm_angle);
         let theta1 = ((r2 - r1).abs() / dist).acos();
         let theta2 = -theta1;
         let phi1 = theta1;
@@ -351,15 +384,15 @@ impl Pathfinder {
                 (norm_angle + theta4, norm_angle + phi4),
             ];
         } else {
-            candidates = vec![(norm_angle + theta1, norm_angle + phi1), 
+            candidates = vec![(norm_angle + theta1, norm_angle + phi1),
 				(norm_angle + theta2, norm_angle + phi2)];
             //determine angle locations of sentinels
             let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2)) / (2f32 * r1 * dist)).acos();
             let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2)) / (2f32 * r2 * dist)).acos();
-            println!(
-                "Generating Sentinels: Theta = {:?}, Phi = {:?}",
-                theta_s, phi_s
-            );
+            //println!(
+            //    "Generating Sentinels: Theta = {:?}, Phi = {:?}",
+            //    theta_s, phi_s
+            //);
             //sentinel vertices on A
             let a_s1 = theta_s;
             let a_s2 = -theta_s;
@@ -371,7 +404,7 @@ impl Pathfinder {
             let b_s3 = -PI + phi_s;
             let b_s4 = -PI - phi_s;
             sentinels = Some(vec![(a_s1, b_s1), (a_s2, b_s2), (a_s3, b_s3), (a_s4, b_s4)]);
-            println!("{:?}", sentinels)
+            //println!("{:?}", sentinels)
         }
 
         let mut connections = Vec::new();
@@ -390,7 +423,7 @@ impl Pathfinder {
             } else {
                 p1 = a.to_point(*i);
                 p2 = b.to_point(*j);
-			
+
             }
             // println!(
             //     "finding distance between {:?} with angle {:?} and {:?} with angle {:?}",
@@ -398,7 +431,7 @@ impl Pathfinder {
             // );
             //            if self.valid_path(&p1, &p2) {
             //probably want to push points in this case later
-            match self.valid_path(&p1, &p2) {
+             match self.valid_path(&p1, &p2) {
                 PathValidity::Valid => {
 					println!("This path is Valid without Flyover.");
                     connections.push((*i, *j, p1.distance(&p2), 0f32));
@@ -454,7 +487,7 @@ impl Pathfinder {
             // catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
             // check if there are two points of intersect, for flyover cases
             if let (Some(p1), Some(p2)) = self.perpendicular_intersect(a, b, obstacle) {
-                println!("p1:{:?}, p2:{:?}", p1, p2);
+                //println!("p1:{:?}, p2:{:?}", p1, p2);
                 let theta1 =
                 //if a.z > b.z {
                 //   (p2.z - a.z).atan2(a.distance(&p2))

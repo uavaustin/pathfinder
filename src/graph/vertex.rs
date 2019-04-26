@@ -22,8 +22,8 @@ impl Vertex {
         )
     }
 
-    pub fn new_sentinel(num_vertex: &mut i32, origin: Point, angle: f32) -> Vertex {
-        Vertex::base_vertex(num_vertex, 0f32, angle, origin, None, true)
+    pub fn new_sentinel(num_vertex: &mut i32, node: &Node, angle: f32) -> Vertex {
+        Vertex::base_vertex(num_vertex, node.radius, angle, Point::from_node_and_angle(node, angle), None, true)
     }
 
     pub fn new_head(num_vertex: &mut i32, origin: Point) -> Vertex {
