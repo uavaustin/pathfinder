@@ -17,7 +17,7 @@ impl Point {
         )
     }
 
-    pub fn from_node_and_angle(node: &Node, angle: f32) -> Self {
+    pub fn from_reference(node: &Node, angle: f32) -> Self {
         let origin = node.origin;
         let radius = node.radius;
         let x = origin.x + radius * angle.cos();

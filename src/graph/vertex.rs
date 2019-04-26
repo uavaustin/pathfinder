@@ -7,8 +7,8 @@ use std::hash::Hasher;
 
 impl Vertex {
     pub fn new(
-        node: Rc<RefCell<Node>>,
         num_vertex: &mut i32,
+        node: Rc<RefCell<Node>>,
         angle: f32,
         connection: Option<Connection>,
     ) -> Vertex {
@@ -16,14 +16,21 @@ impl Vertex {
             num_vertex,
             node.borrow().radius,
             angle,
-            Point::from_node_and_angle(&node.borrow(), angle),
+            Point::from_reference(&node.borrow(), angle),
             connection,
             false,
         )
     }
 
     pub fn new_sentinel(num_vertex: &mut i32, node: &Node, angle: f32) -> Vertex {
-        Vertex::base_vertex(num_vertex, node.radius, angle, Point::from_node_and_angle(node, angle), None, true)
+        Vertex::base_vertex(
+            num_vertex,
+            node.radius,
+            angle,
+            Point::from_reference(node, angle),
+            None,
+            true,
+        )
     }
 
     pub fn new_head(num_vertex: &mut i32, origin: Point) -> Vertex {

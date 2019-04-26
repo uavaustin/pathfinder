@@ -16,6 +16,16 @@ pub fn normalize_angle(positive: bool, n: f32) -> f32 {
     }
 }
 
+// Reverse the polarity of an angle
+// Left side angle is converted to the equivilent right side angle and vice versa
+pub fn reverse_polarity(alpha: f32) -> f32 {
+    if alpha < 0f32 {
+        alpha + 2f32*PI
+    } else {
+        alpha - 2f32*PI
+    }
+}
+
 // helper function for intersection calculation
 // returns the area between three points
 fn area(a: &Point, b: &Point, c: &Point) -> f32 {
@@ -130,6 +140,27 @@ pub fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
     }
 }
 
+fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
+    let temp = match current.borrow().next {
+        Some(ref v) => v.clone(),
+        None => panic!("Next points to null"),
+    };
+    current = temp;
+    loop {
+        let ref mut vertex = current.clone();
+        if vertex.borrow().index != HEADER_VERTEX_INDEX {
+            let v_loc = vertex.borrow().location.to_location(origin);
+            println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
+        } else {
+            break;
+        }
+        current = match vertex.borrow().next {
+            Some(ref v) => v.clone(),
+            None => panic!("Next points to null"),
+        };
+    }
+}
+
 // Debug method to output vertices
 pub fn output_graph(finder: &Pathfinder) {
     println!("\n------------------------------");
@@ -148,25 +179,7 @@ pub fn output_graph(finder: &Pathfinder) {
         // let loc = node.borrow().origin;
         // println!("{}, {}", loc.x, loc.y);
         if node.borrow().height > 0f32 {
-            let mut current = node.borrow().left_ring.clone();
-            loop {
-                let ref mut vertex = current.clone();
-                //print!("{:?}\n", current.borrow().index);
-                let index = match vertex.borrow().next {
-                    Some(ref vert) => vert.borrow().index,
-                    None => panic!("Next points to null"),
-                };
-                if index != HEADER_VERTEX_INDEX {
-                    let v_loc = vertex.borrow().location.to_location(&finder.origin);
-                    println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
-                } else {
-                    break;
-                }
-                current = match vertex.borrow().next {
-                    Some(ref v) => v.clone(),
-                    None => panic!("Next points to null"),
-                };
-            }
+            output_ring(&finder.origin, node.borrow().left_ring.clone());
         }
     }
 
@@ -177,25 +190,7 @@ pub fn output_graph(finder: &Pathfinder) {
         // let loc = node.borrow().origin;
         // println!("{}, {}", loc.x, loc.y);
         if node.borrow().height > 0f32 {
-            let mut current = node.borrow().right_ring.clone();
-            loop {
-                let ref mut vertex = current.clone();
-                //print!("{:?}\n", current.borrow().index);
-                let index = match vertex.borrow().next {
-                    Some(ref vert) => vert.borrow().index,
-                    None => panic!("Next points to null"),
-                };
-                if index != HEADER_VERTEX_INDEX {
-                    let v_loc = vertex.borrow().location.to_location(&finder.origin);
-                    println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
-                } else {
-                    break;
-                }
-                current = match vertex.borrow().next {
-                    Some(ref v) => v.clone(),
-                    None => panic!("Next points to null"),
-                };
-            }
+            output_ring(&finder.origin, node.borrow().right_ring.clone());
         }
     }
 

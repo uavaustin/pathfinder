@@ -101,7 +101,7 @@ impl Node {
 
     pub fn insert_vertex(&mut self, v: Rc<RefCell<Vertex>>) {
         let new_angle: f32 = v.borrow().angle;
-        let (is_left, mut current) = if new_angle > 0f32 {
+        let (is_left, mut current) = if new_angle >= 0f32 {
             // Left ring
             (true, self.left_ring.clone())
         } else {
@@ -150,7 +150,7 @@ impl Node {
         }
     }
 
-    pub fn remove_extra_vertices(to_remove: LinkedList<Rc<RefCell<Vertex>>>) {
+    pub fn prune_vertices(to_remove: LinkedList<Rc<RefCell<Vertex>>>) {
         for v in to_remove.iter() {
             let prev = match v.borrow_mut().prev {
                 Some(ref vert) => vert.clone(),

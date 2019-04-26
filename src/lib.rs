@@ -182,10 +182,10 @@ impl Pathfinder {
         let mut open_list: BinaryHeap<Rc<RefCell<Vertex>>> = BinaryHeap::new();
         let mut open_set: HashSet<i32> = HashSet::new();
         let mut closed_set: HashSet<i32> = HashSet::new();
-        let mut vertices_to_remove: LinkedList<Rc<RefCell<Vertex>>> = LinkedList::new();
+        let mut temp_vertices: LinkedList<Rc<RefCell<Vertex>>> = LinkedList::new();
         let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
         let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
-        let start_vertex = Vertex::new(start_node.clone(), &mut START_VERTEX_INDEX, 0f32, None);
+        let start_vertex = Vertex::new(&mut START_VERTEX_INDEX, start_node.clone(), 0f32, None);
 
         //Prepare graph for A*
         for i in 0..self.nodes.len() {
@@ -193,33 +193,33 @@ impl Pathfinder {
             let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
             for (a, b, dist, thresh) in temp_paths.iter() {
                 let vertex = Rc::new(RefCell::new(Vertex::new(
-                    temp_node.clone(),
                     &mut num_vertices,
+                    temp_node.clone(),
                     *b,
                     None,
                 )));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 open_list.push(vertex.clone());
-                vertices_to_remove.push_back(vertex.clone());
+                temp_vertices.push_back(vertex.clone());
                 open_set.insert(vertex.borrow().index);
             }
 
             let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
             for (a, b, dist, thresh) in temp_paths.iter() {
                 let end_vertex = Rc::new(RefCell::new(Vertex::new(
-                    end_node.clone(),
                     &mut END_VERTEX_INDEX,
+                    end_node.clone(),
                     *b,
                     None,
                 )));
                 let connection = Connection::new(end_vertex.clone(), *dist, *thresh);
                 let vertex = Rc::new(RefCell::new(Vertex::new(
-                    temp_node.clone(),
                     &mut num_vertices,
+                    temp_node.clone(),
                     *a,
                     Some(connection),
                 )));
-                vertices_to_remove.push_back(vertex.clone());
+                temp_vertices.push_back(vertex.clone());
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
             }
         }
@@ -228,7 +228,7 @@ impl Pathfinder {
         while let Some(cur) = open_list.pop() {
             // println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
-                Node::remove_extra_vertices(vertices_to_remove);
+                Node::prune_vertices(temp_vertices);
                 return Some(self.generate_waypoint(cur));
             }
             closed_set.insert(cur.borrow().index);

@@ -70,6 +70,32 @@ impl From<PathValidity> for bool {
 }
 
 impl Pathfinder {
+    fn insert_edge(&mut self, i: usize, j: usize,
+        (alpha, beta, distance, threshold): (f32, f32, f32, f32)) {
+        println!(
+            "\npath: alpha {} beta {} distance {}",
+            alpha * 180f32 / PI,
+            beta * 180f32 / PI,
+            distance
+        );
+        // Insert edge from u -> v
+        let v = Rc::new(RefCell::new(Vertex::new(
+            &mut self.num_vertices,
+            self.nodes[j].clone(),
+            beta,
+            None,
+        )));
+        let edge = Connection::new(v.clone(), distance, threshold);
+        let u = Rc::new(RefCell::new(Vertex::new(
+            &mut self.num_vertices,
+            self.nodes[i].clone(),
+            alpha,
+            Some(edge),
+        )));
+        self.nodes[i].borrow_mut().insert_vertex(u);
+        self.nodes[j].borrow_mut().insert_vertex(v);
+    }
+
     pub fn build_graph(&mut self) {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
@@ -77,45 +103,19 @@ impl Pathfinder {
                 let (paths, obs_sentinels) =
                     self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
                 println!("[{} {}]: path count -> {}", i, j, paths.len());
-                for (alpha, beta, distance, threshold) in paths {
-                    println!(
-                        "\npath: alpha {} beta {} distance {}",
-                        alpha * 180f32 / PI,
-                        beta * 180f32 / PI,
-                        distance
-                    );
-                    let v = Rc::new(RefCell::new(Vertex::new(
-                        self.nodes[i].clone(),
-                        &mut self.num_vertices,
-                        beta,
-                        None,
-                    )));
-                    let edge = Connection::new(v.clone(), distance, threshold);
-                    let u = Rc::new(RefCell::new(Vertex::new(
-                        self.nodes[j].clone(),
-                        &mut self.num_vertices,
-                        alpha,
-                        Some(edge),
-                    )));
-                    self.nodes[i].borrow_mut().insert_vertex(v);
-                    self.nodes[j].borrow_mut().insert_vertex(u);
-                    // reciprocal
-                    let v = Rc::new(RefCell::new(Vertex::new(
-                        self.nodes[i].clone(),
-                        &mut self.num_vertices,
-                        (2f32 * PI - alpha) % (2f32 * PI),
-                        None,
-                    )));
-                    let edge = Connection::new(v.clone(), distance, threshold);
-                    let u = Rc::new(RefCell::new(Vertex::new(
-                        self.nodes[j].clone(),
-                        &mut self.num_vertices,
-                        (2f32 * PI - beta) % (2f32 * PI),
-                        Some(edge),
-                    )));
-                    self.nodes[i].borrow_mut().insert_vertex(v);
-                    self.nodes[j].borrow_mut().insert_vertex(u);
+
+                // Inserting edge
+                for mut path in paths {
+                    // Edge from i to j
+                    self.insert_edge(i, j, path);
+                    // Reciprocal edge from j to i
+                    let (beta, alpha) = (reverse_polarity(path.0), reverse_polarity(path.1));
+                    path.0 = alpha;
+                    path.1 = beta;
+                    self.insert_edge(j, i, path);
                 }
+
+                // Inserting sentinels
                 if obs_sentinels.is_some() {
                     for (alpha_s, beta_s) in obs_sentinels.unwrap() {
                         let mut a = Vertex::new_sentinel(
@@ -140,9 +140,6 @@ impl Pathfinder {
         }
 
         output_graph(&self);
-        // for i in 0..self.nodes.len() {
-        //     println!("Node {}: {}\n", i, self.nodes[i].borrow());
-        // }
     }
 
     fn populate_nodes(&mut self) {
@@ -293,44 +290,44 @@ impl Pathfinder {
                     continue;
                 }
                 // determine both intersect angles in left and right ring
-                let theta = (dist / r).acos();          //check
-                let dx = x - center.x;                  //check
-                let dy = y - center.y;                  //check
-                let phi = dy.atan2(dx);                 //check
-                /*
-                let (left, right) = if dy > 0f32 {
-                    (phi, -2f32 * PI + phi)
-                } else {
-                    (2f32 * PI + phi, phi)
-                };
-                let angles = vec![(left, theta), (right, theta)];
-                // create and impliment vertices
+                let theta = (dist / r).acos(); //check
+                let dx = x - center.x; //check
+                let dy = y - center.y; //check
+                let phi = dy.atan2(dx); //check
+                                        /*
+                                        let (left, right) = if dy > 0f32 {
+                                            (phi, -2f32 * PI + phi)
+                                        } else {
+                                            (2f32 * PI + phi, phi)
+                                        };
+                                        let angles = vec![(left, theta), (right, theta)];
+                                        // create and impliment vertices
 
 
-                for (i, j) in angles {
-                    let a = i + j;
-                    let b = i - j;
-                    let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
-                        &mut self.num_vertices,
-                        node.origin,
-                        a,
-                    )));
-                    let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(
-                        &mut self.num_vertices,
-                        node.origin,
-                        b,
-                    )));
+                                        for (i, j) in angles {
+                                            let a = i + j;
+                                            let b = i - j;
+                                            let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
+                                                &mut self.num_vertices,
+                                                node.origin,
+                                                a,
+                                            )));
+                                            let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(
+                                                &mut self.num_vertices,
+                                                node.origin,
+                                                b,
+                                            )));
 
-                    let a_lat = vertex_a.borrow().location.to_location(&self.origin).lat_degree();
-                    let a_lon = vertex_a.borrow().location.to_location(&self.origin).lon_degree();
-                    let b_lat = vertex_b.borrow().location.to_location(&self.origin).lat_degree();
-                    let b_lon = vertex_b.borrow().location.to_location(&self.origin).lon_degree();
-                    println!("flyzone/node vertices: {:?},{:?}", a_lat, a_lon);
-                    println!("flyzone/node vertices: {:?},{:?}", b_lat, b_lon);
-                    node.insert_vertex(vertex_a);
-                    node.insert_vertex(vertex_b);
-                }
-                */
+                                            let a_lat = vertex_a.borrow().location.to_location(&self.origin).lat_degree();
+                                            let a_lon = vertex_a.borrow().location.to_location(&self.origin).lon_degree();
+                                            let b_lat = vertex_b.borrow().location.to_location(&self.origin).lat_degree();
+                                            let b_lon = vertex_b.borrow().location.to_location(&self.origin).lon_degree();
+                                            println!("flyzone/node vertices: {:?},{:?}", a_lat, a_lon);
+                                            println!("flyzone/node vertices: {:?},{:?}", b_lat, b_lon);
+                                            node.insert_vertex(vertex_a);
+                                            node.insert_vertex(vertex_b);
+                                        }
+                                        */
                 let a = phi + theta;
                 let b = phi - theta;
                 let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
@@ -344,10 +341,26 @@ impl Pathfinder {
                     b,
                 )));
 
-                let a_lat = vertex_a.borrow().location.to_location(&self.origin).lat_degree();  // These are pulling as obstacle center coordinates
-                let a_lon = vertex_a.borrow().location.to_location(&self.origin).lon_degree();
-                let b_lat = vertex_b.borrow().location.to_location(&self.origin).lat_degree();
-                let b_lon = vertex_b.borrow().location.to_location(&self.origin).lon_degree();
+                let a_lat = vertex_a
+                    .borrow()
+                    .location
+                    .to_location(&self.origin)
+                    .lat_degree(); // These are pulling as obstacle center coordinates
+                let a_lon = vertex_a
+                    .borrow()
+                    .location
+                    .to_location(&self.origin)
+                    .lon_degree();
+                let b_lat = vertex_b
+                    .borrow()
+                    .location
+                    .to_location(&self.origin)
+                    .lat_degree();
+                let b_lon = vertex_b
+                    .borrow()
+                    .location
+                    .to_location(&self.origin)
+                    .lon_degree();
                 println!("flyzone/node vertices: {:?},{:?}", a_lat, a_lon);
                 println!("flyzone/node vertices: {:?},{:?}", b_lat, b_lon);
                 node.insert_vertex(vertex_a);
