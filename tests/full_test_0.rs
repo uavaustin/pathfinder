@@ -28,11 +28,14 @@ fn test0() {
         Location::from_degrees(30.32613, -97.60339, 0f32),
         Location::from_degrees(30.32537, -97.60453, 0f32),
     ]];
-    let obstacles = vec![Obstacle::from_degrees(30.32228, -97.60198, 50f32, 10f32)];
 
+    let obstacles = vec![
+        Obstacle::from_degrees(30.32228, -97.60198, 50f32, 200f32),
+        Obstacle::from_degrees(30.32332,-97.60183, 30f32, 200f32),
+    ];
     let mut pathfinder = Pathfinder::new();
     pathfinder.init(5.0, flyzone, obstacles);
     let plane = Plane::from_degrees(30.32298, -97.60310, 100.0).yaw(170f32);
-    let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());
-    output_result(waypoints, result, plane);
+    // let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());
+    // output_result(waypoints, result, plane);
 }
