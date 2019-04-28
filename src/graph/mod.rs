@@ -290,44 +290,10 @@ impl Pathfinder {
                     continue;
                 }
                 // determine both intersect angles in left and right ring
-                let theta = (dist / r).acos(); //check
-                let dx = x - center.x; //check
-                let dy = y - center.y; //check
-                let phi = dy.atan2(dx); //check
-                                        /*
-                                        let (left, right) = if dy > 0f32 {
-                                            (phi, -2f32 * PI + phi)
-                                        } else {
-                                            (2f32 * PI + phi, phi)
-                                        };
-                                        let angles = vec![(left, theta), (right, theta)];
-                                        // create and impliment vertices
-
-
-                                        for (i, j) in angles {
-                                            let a = i + j;
-                                            let b = i - j;
-                                            let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
-                                                &mut self.num_vertices,
-                                                node.origin,
-                                                a,
-                                            )));
-                                            let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(
-                                                &mut self.num_vertices,
-                                                node.origin,
-                                                b,
-                                            )));
-
-                                            let a_lat = vertex_a.borrow().location.to_location(&self.origin).lat_degree();
-                                            let a_lon = vertex_a.borrow().location.to_location(&self.origin).lon_degree();
-                                            let b_lat = vertex_b.borrow().location.to_location(&self.origin).lat_degree();
-                                            let b_lon = vertex_b.borrow().location.to_location(&self.origin).lon_degree();
-                                            println!("flyzone/node vertices: {:?},{:?}", a_lat, a_lon);
-                                            println!("flyzone/node vertices: {:?},{:?}", b_lat, b_lon);
-                                            node.insert_vertex(vertex_a);
-                                            node.insert_vertex(vertex_b);
-                                        }
-                                        */
+                let theta = (dist / r).acos();
+                let dx = x - center.x;
+                let dy = y - center.y;
+                let phi = dy.atan2(dx);
                 let a = phi + theta;
                 let b = phi - theta;
                 let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
@@ -345,7 +311,7 @@ impl Pathfinder {
                     .borrow()
                     .location
                     .to_location(&self.origin)
-                    .lat_degree(); // These are pulling as obstacle center coordinates
+                    .lat_degree();
                 let a_lon = vertex_a
                     .borrow()
                     .location
