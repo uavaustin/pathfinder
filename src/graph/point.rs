@@ -17,6 +17,7 @@ impl Point {
         )
     }
 
+    // #TODO: overlap with to_point, consider removing one
     pub fn from_reference(node: &Node, angle: f32) -> Self {
         let origin = node.origin;
         let radius = node.radius;

@@ -109,8 +109,8 @@ impl Node {
             (false, self.right_ring.clone())
         };
         print!(
-            "inserting {:?} to header {:?}\n",
-            v.borrow().index,
+            "inserting {} to header {:?}\n",
+            v.borrow(),
             current.borrow().index
         );
         loop {

@@ -56,7 +56,7 @@ impl Vertex {
             f_cost: -1f32,
             g_cost: -1f32,
             parent: None,
-            connection: None,
+            connection: connection,
             prev: None,
             next: None,
             sentinel: sentinel,
@@ -113,7 +113,10 @@ impl fmt::Display for Vertex {
             "(index={}, angle={}, connection={} next={})",
             self.index,
             self.angle,
-            self.connection.is_some(),
+            match self.connection {
+                Some(ref edge) => "Some",
+                None => "None"
+            },
             self.next.is_some()
         )
     }

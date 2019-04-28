@@ -70,8 +70,12 @@ impl From<PathValidity> for bool {
 }
 
 impl Pathfinder {
-    fn insert_edge(&mut self, i: usize, j: usize,
-        (alpha, beta, distance, threshold): (f32, f32, f32, f32)) {
+    fn insert_edge(
+        &mut self,
+        i: usize,
+        j: usize,
+        (alpha, beta, distance, threshold): (f32, f32, f32, f32),
+    ) {
         println!(
             "\npath: alpha {} beta {} distance {}",
             alpha * 180f32 / PI,
@@ -92,6 +96,7 @@ impl Pathfinder {
             alpha,
             Some(edge),
         )));
+
         self.nodes[i].borrow_mut().insert_vertex(u);
         self.nodes[j].borrow_mut().insert_vertex(v);
     }
@@ -290,10 +295,10 @@ impl Pathfinder {
                     continue;
                 }
                 // determine both intersect angles in left and right ring
-                let theta = (dist / r).acos();
-                let dx = x - center.x;
-                let dy = y - center.y;
-                let phi = dy.atan2(dx);
+                let theta = (dist / r).acos(); //check
+                let dx = x - center.x; //check
+                let dy = y - center.y; //check
+                let phi = dy.atan2(dx); //check
                 let a = phi + theta;
                 let b = phi - theta;
                 let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
@@ -356,7 +361,7 @@ impl Pathfinder {
         let (theta1, theta2) = if theta > 0f32 {
             (theta, theta + PI)
         } else {
-            (theta + PI, theta - PI)
+            (theta + 2f32 * PI, theta + PI)
         };
 
         println!(
@@ -365,7 +370,8 @@ impl Pathfinder {
         );
 
         println!(
-            "theta1:{}, theta2: {}",
+            "theta: {}, theta1: {}, theta2: {}",
+            theta * 180f32 / PI,
             theta1 * 180f32 / PI,
             theta2 * 180f32 / PI
         );
@@ -373,7 +379,12 @@ impl Pathfinder {
         // gamma1 and gamma2 are the angle between reference axis and the tangents
         // gamma1 is angle to inner tangent, gamma2 is angle to outer tangent
         let gamma1 = ((r1 + r2).abs() / dist).acos();
-        let gamma2 = ((r1 - r2).abs() / dist).acos();
+        let mut gamma2 = ((r1 - r2).abs() / dist).acos();
+
+        // we assume r1 is greater than r2 for the math to work, so find complement if otherwise
+        if r2 > r1 {
+            gamma2 = PI - gamma2;
+        }
 
         println!(
             "gamma1: {}, gamma2: {}",
@@ -431,26 +442,21 @@ impl Pathfinder {
 
         let mut connections = Vec::new();
         let mut point_connections = Vec::new();
-        for (i, j) in candidates.iter() {
-            let p1;
-            let p2;
-            if c1.x > c2.x || c1.y > c2.y {
-                p1 = a.to_point(PI - *i);
-                p2 = b.to_point(PI - *j);
-            } else {
-                p1 = a.to_point(*i);
-                p2 = b.to_point(*j);
-            }
+        for (i, j) in candidates {
+            let p1 = a.to_point(i);
+            let p2 = b.to_point(j);
+            println!("angles {} -> {}", i * 180f32 / PI, j * 180f32 / PI);
+            println!("validating path {:?} -> {:?}", p1, p2);
 
             match self.valid_path(&p1, &p2) {
                 PathValidity::Valid => {
                     println!("This path is Valid without Flyover.");
-                    connections.push((*i, *j, p1.distance(&p2), 0f32));
+                    connections.push((i, j, p1.distance(&p2), 0f32));
                     point_connections.push((p1, p2));
                 }
                 PathValidity::Flyover(h_min) => {
                     println!("This path is Valid with Flyover.");
-                    connections.push((*i, *j, p1.distance(&p2), h_min));
+                    connections.push((i, j, p1.distance(&p2), h_min));
                     point_connections.push((p1, p2));
                 }
                 _ => {
@@ -464,10 +470,11 @@ impl Pathfinder {
     // check if a path is valid (not blocked by flightzone or obstacles)
     fn valid_path(&self, a: &Point, b: &Point) -> PathValidity {
         let theta_o = (b.z - a.z).atan2(a.distance(b));
-        //check if angle of waypoints is valid
-        if theta_o > MAX_ANGLE_ASCENT {
-            return PathValidity::Invalid;
-        }
+        // //check if angle of waypoints is valid
+        // if theta_o > MAX_ANGLE_ASCENT {
+        //     return PathValidity::Invalid;
+        // }
+
         // println!("validating path: {:?}, {:?}", a, b);
         // latitude is y, longitude is x
         // flyzone is array connected by each index
@@ -498,29 +505,26 @@ impl Pathfinder {
             // catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
             // check if there are two points of intersect, for flyover cases
             if let (Some(p1), Some(p2)) = self.perpendicular_intersect(a, b, obstacle) {
-                //println!("p1:{:?}, p2:{:?}", p1, p2);
-                let theta1 =
-                //if a.z > b.z {
-                //   (p2.z - a.z).atan2(a.distance(&p2))
-                //}
-				//else if a.z < b.z {
-                //    (p1.z - a.z).atan2(a.distance(&p1))
-                //}
-				//else {
-				//	0.0
-				//};
-				match (a.z, b.z) {
-					(ah, bh) if ah > bh => (p2.z - a.z).atan2(a.distance(&p2)),
-					(ah, bh) if ah < bh =>	(p1.z - a.z).atan2(a.distance(&p1)),
-					_ => 0f32
-				};
+                println!("intersect with obstacle p1:{:?}, p2:{:?}", p1, p2);
+                return PathValidity::Flyover(obstacle.height);
+                /*
+                // Minimum angle to fly over obstacles
+                let theta1 = match (a.z, b.z) {
+                    (ah, bh) if ah > bh => (p2.z - a.z).atan2(a.distance(&p2)),
+                    (ah, bh) if ah < bh => (p1.z - a.z).atan2(a.distance(&p1)),
+                    _ => 0f32,
+                };
                 if theta1 == 0f32 && a.z < obstacle.height {
+                    // If angle between waypoints is flat and less than height, cannot fly over
                     return PathValidity::Invalid;
                 } else if theta_o < theta1 {
+                    // If angle between waypoints is less than required angle, cannot fly over
                     return PathValidity::Invalid;
                 } else {
+                    // If angle between waypoints is greater than required angle, can fly over
                     return PathValidity::Flyover(obstacle.height);
                 }
+                */
             }
         }
         PathValidity::Valid

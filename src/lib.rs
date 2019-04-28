@@ -14,7 +14,7 @@ use std::time::{Duration, SystemTime};
 mod graph;
 pub mod obj;
 
-use graph::util::intersect;
+use graph::util::{intersect, output_graph};
 use graph::{Connection, Node, Point, Vertex};
 use obj::{Location, Obstacle, Plane, Waypoint};
 
@@ -143,16 +143,7 @@ impl Pathfinder {
         let mut current_loc: Location;
         let mut next_loc: Location;
 
-        // First destination is first waypoint
-        match wp_list.pop_front() {
-            Some(wp) => self.current_wp = wp,
-            None => return &self.wp_list,
-        }
-
-        current_loc = plane.location;
-        next_loc = self.current_wp.location;
-        self.adjust_path(current_loc, next_loc);
-        // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
+        self.current_wp.location = plane.location;
 
         loop {
             current_loc = self.current_wp.location;
@@ -163,14 +154,14 @@ impl Pathfinder {
             next_loc = self.current_wp.location;
 
             if let Some(mut wp_list) = self.adjust_path(current_loc, next_loc) {
-				//println!("appending");
+                println!("appending");
                 self.wp_list.append(&mut wp_list);
             } else {
-                //println!("no path");
+                println!("no path");
                 break;
             }
             // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
-			// self.wp_list.push_back(Waypoint::from_degrees(0, 30.69, -97.69, 100f32, 10f32));
+            // self.wp_list.push_back(Waypoint::from_degrees(0, 30.69, -97.69, 100f32, 10f32));
         }
         &self.wp_list
     }
@@ -178,58 +169,73 @@ impl Pathfinder {
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
     fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
-        let mut num_vertices = self.num_vertices;
+        let mut path = None;
         let mut open_list: BinaryHeap<Rc<RefCell<Vertex>>> = BinaryHeap::new();
         let mut open_set: HashSet<i32> = HashSet::new();
         let mut closed_set: HashSet<i32> = HashSet::new();
         let mut temp_vertices: LinkedList<Rc<RefCell<Vertex>>> = LinkedList::new();
         let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
         let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
-        let start_vertex = Vertex::new(&mut START_VERTEX_INDEX, start_node.clone(), 0f32, None);
+        let start_vertex = Rc::new(RefCell::new(Vertex::new(
+            &mut START_VERTEX_INDEX,
+            start_node.clone(),
+            0f32,
+            None,
+        )));
 
         //Prepare graph for A*
+        println!("[ Inserting temp vertices ]");
         for i in 0..self.nodes.len() {
             let temp_node = &self.nodes[i];
             let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
-            for (a, b, dist, thresh) in temp_paths.iter() {
+            println!("[start {}]: path count -> {}", i, temp_paths.len());
+
+            for (a, b, dist, thresh) in temp_paths {
+                println!("Inserting start vertex {}", self.num_vertices);
                 let vertex = Rc::new(RefCell::new(Vertex::new(
-                    &mut num_vertices,
+                    &mut self.num_vertices,
                     temp_node.clone(),
-                    *b,
+                    b,
                     None,
                 )));
+                vertex.borrow_mut().parent = Some(start_vertex.clone());
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 open_list.push(vertex.clone());
-                temp_vertices.push_back(vertex.clone());
                 open_set.insert(vertex.borrow().index);
+                temp_vertices.push_back(vertex.clone());
             }
 
             let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
-            for (a, b, dist, thresh) in temp_paths.iter() {
+            println!("[end {}]: path count -> {}", i, temp_paths.len());
+
+            for (a, b, dist, thresh) in temp_paths {
+                println!("Inserting end vertex {}", self.num_vertices);
                 let end_vertex = Rc::new(RefCell::new(Vertex::new(
                     &mut END_VERTEX_INDEX,
                     end_node.clone(),
-                    *b,
+                    b,
                     None,
                 )));
-                let connection = Connection::new(end_vertex.clone(), *dist, *thresh);
+                let connection = Connection::new(end_vertex.clone(), dist, thresh);
                 let vertex = Rc::new(RefCell::new(Vertex::new(
-                    &mut num_vertices,
+                    &mut self.num_vertices,
                     temp_node.clone(),
-                    *a,
+                    a,
                     Some(connection),
                 )));
-                temp_vertices.push_back(vertex.clone());
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
+                temp_vertices.push_back(vertex.clone());
             }
         }
 
+        output_graph(&self);
+
         //A* algorithm - find shortest path from plane to destination
         while let Some(cur) = open_list.pop() {
-            // println!("current vertex {}", cur.borrow());
+            println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
-                Node::prune_vertices(temp_vertices);
-                return Some(self.generate_waypoint(cur));
+                path = Some(self.generate_waypoint(cur));
+                break;
             }
             closed_set.insert(cur.borrow().index);
 
@@ -264,6 +270,7 @@ impl Pathfinder {
             let mut cur_vertex = cur.borrow();
             let g_cost = cur_vertex.g_cost;
             if let Some(ref connection) = cur_vertex.connection {
+                println!("Advancing to next node");
                 let mut next = connection.neighbor.clone();
                 let dist = connection.distance;
                 update_vertex(g_cost, next, dist);
@@ -271,6 +278,7 @@ impl Pathfinder {
 
             let mut weight = cur_vertex.get_neighbor_weight();
             if let Some(ref next_vertex) = cur_vertex.next {
+                println!("Going around same node");
                 let mut next = next_vertex.clone();
                 if next.borrow().index != HEADER_VERTEX_INDEX {
                     update_vertex(g_cost, next, weight);
@@ -284,8 +292,8 @@ impl Pathfinder {
                 }
             }
         }
-        None
-        //TODO: Clean up the graph before we finish
+        Node::prune_vertices(temp_vertices);
+        path
     }
 
     fn generate_waypoint(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint> {
@@ -296,7 +304,7 @@ impl Pathfinder {
             let loc = cur_vertex.borrow().location.to_location(&self.origin);
             let radius = cur_vertex.borrow().radius;
             waypoint_list.push_front(Waypoint::new(1, loc, radius));
-            println!("{:?}", cur_vertex);
+            println!("{}", cur_vertex.borrow());
             let parent = match cur_vertex.borrow().parent {
                 Some(ref cur_parent) => cur_parent.clone(),
                 None => panic!("Missing a parent without reaching start point"),

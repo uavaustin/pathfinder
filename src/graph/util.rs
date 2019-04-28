@@ -150,7 +150,7 @@ fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
         let ref mut vertex = current.clone();
         if vertex.borrow().index != HEADER_VERTEX_INDEX {
             let v_loc = vertex.borrow().location.to_location(origin);
-            println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
+            println!("{}, {}, {}", v_loc.lat_degree(), v_loc.lon_degree(), vertex.borrow());
         } else {
             break;
         }
@@ -177,7 +177,7 @@ pub fn output_graph(finder: &Pathfinder) {
     for node in &finder.nodes {
         let loc = node.borrow().origin.to_location(&finder.origin);
         // let loc = node.borrow().origin;
-        // println!("{}, {}", loc.x, loc.y);
+        println!("Node {:?} vertices", node.borrow().origin);
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().left_ring.clone());
         }
@@ -188,7 +188,7 @@ pub fn output_graph(finder: &Pathfinder) {
     for node in &finder.nodes {
         let loc = node.borrow().origin.to_location(&finder.origin);
         // let loc = node.borrow().origin;
-        // println!("{}, {}", loc.x, loc.y);
+        println!("Node {:?} vertices", node.borrow().origin);
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().right_ring.clone());
         }
