@@ -155,9 +155,9 @@ impl Pathfinder {
             self.insert_flyzone_sentinel(&mut node);
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
-        /* for i in 0..self.flyzones.len() {
+        for i in 0..self.flyzones.len() {
              self.virtualize_flyzone(i);
-        } */
+        }
     }
 
     pub fn virtualize_flyzone(&mut self, index: usize) {
@@ -475,7 +475,7 @@ impl Pathfinder {
         //     return PathValidity::Invalid;
         // }
 
-        // println!("validating path: {:?}, {:?}", a, b);
+        println!("validating path: {:?}, {:?}", a, b);
         // latitude is y, longitude is x
         // flyzone is array connected by each index
         // some messy code to link flyzone points, can definitely be better
@@ -488,14 +488,14 @@ impl Pathfinder {
                 let point = Point::from_location(&location, &self.origin);
                 //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &point);
                 if intersect(a, b, &temp, &point) {
-                    //println!("false due to flyzone");
+                    println!("false due to flyzone");
                     return PathValidity::Invalid;
                 }
                 temp = point;
             }
             //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &first);
             if intersect(a, b, &temp, &first) {
-                //println!("false due to flyzone");
+                println!("false due to flyzone");
                 return PathValidity::Invalid;
             }
         }
@@ -504,9 +504,15 @@ impl Pathfinder {
         for obstacle in &self.obstacles {
             // catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
             // check if there are two points of intersect, for flyover cases
-            if let (Some(p1), Some(p2)) = self.perpendicular_intersect(a, b, obstacle) {
+            if let (Some(p1), Some(p2)) = self.perpendicular_intersect(a, b, obstacle)
+            {
+                // Intersect with obstacle, check if both start and end are above
                 println!("intersect with obstacle p1:{:?}, p2:{:?}", p1, p2);
-                return PathValidity::Flyover(obstacle.height);
+                if p1.z > obstacle.height && p2.z > obstacle.height {
+                    return PathValidity::Flyover(obstacle.height);
+                } else {
+                    return PathValidity::Invalid;
+                }
                 /*
                 // Minimum angle to fly over obstacles
                 let theta1 = match (a.z, b.z) {
