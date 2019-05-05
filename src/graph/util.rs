@@ -173,25 +173,34 @@ pub fn output_graph(finder: &Pathfinder) {
     println!("---- Node List ----");
     for node in &finder.nodes {
         let loc = node.borrow().origin.to_location(&finder.origin);
-        println!("{}, {}", loc.lat_degree(), loc.lon_degree());
+        //println!("{}, {}", loc.lat_degree(), loc.lon_degree());
     }
-    println!("\n---- Left Vertex List ----");
+    //println!("\n---- Left Vertex List ----");
 
     for node in &finder.nodes {
         let loc = node.borrow().origin.to_location(&finder.origin);
+<<<<<<< Updated upstream
         // let loc = node.borrow().origin;
         // println!("Node {:?} vertices", node.borrow().origin);
+=======
+        //let loc = node.borrow().origin;
+        //println!("Node {:?} vertices", node.borrow().origin);
+>>>>>>> Stashed changes
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().left_ring.clone());
         }
     }
 
-    println!("\n---- Right Vertex List ----");
+    //println!("\n---- Right Vertex List ----");
 
     for node in &finder.nodes {
         let loc = node.borrow().origin.to_location(&finder.origin);
         // let loc = node.borrow().origin;
+<<<<<<< Updated upstream
         // println!("Node {:?} vertices", node.borrow().origin);
+=======
+        //println!("Node {:?} vertices", node.borrow().origin);
+>>>>>>> Stashed changes
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().right_ring.clone());
         }

@@ -11,7 +11,7 @@ https://mapmakerapp.com/?map=5cb3b0b4c2b5038585071257c428
 */
 
 #[test]
-fn test5() {
+fn test6() {
     let waypoints = vec_to_list(vec![
         Waypoint::from_degrees(0, 30.32551, -97.60331, 150f32, 10f32),
         Waypoint::from_degrees(1, 30.32222, -97.60060, 70f32, 10f32),

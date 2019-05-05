@@ -415,6 +415,7 @@ fn same_radius_offset_test() {
     let a1 = Rc::new(n1);
     let b1 = Rc::new(n2);
 
+<<<<<<< Updated upstream
     let expected = vec![
         (7_f32 * PI / 4_f32, 7_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
         (-5_f32 * PI / 4_f32, -5_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
@@ -423,6 +424,15 @@ fn same_radius_offset_test() {
     ];
 
     assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
+=======
+	let expected = vec![(3_f32 * PI / 4_f32, 3_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
+						(-PI / 4_f32, -PI / 4_f32, 200f32.sqrt(), 0f32),
+						(PI / 2_f32, -PI / 2_f32, 10f32, 0f32),
+						(0_f32, PI, 10f32, 0f32)
+						];
+
+	assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
+>>>>>>> Stashed changes
 }
 
 #[test]
@@ -434,15 +444,15 @@ fn overlap_test() {
     let d = Rc::new(n4);
     let expected = vec![
         (
-            (1_f32 / 5_f32).acos(),
-            (1_f32 / 5_f32).acos(),
-            24f32.sqrt(),
+            4.913799976f32,
+            4.913799976f32,
+            4.898979486f32,
             0f32,
         ),
         (
-            -(1_f32 / 5_f32).acos(),
-            -(1_f32 / 5_f32).acos(),
-            24f32.sqrt(),
+            -4.913799976f32,
+            -4.913799976f32,
+            4.898979486f32,
             0f32,
         ),
     ];
@@ -475,26 +485,26 @@ fn different_radius_no_overlap_test() {
     let f = Rc::new(n6);
     let expected = vec![
         (
-            (1_f32 / 8_f32).acos(),
-            (1_f32 / 8_f32).acos(),
+            4.83770361,
+            4.83770361,
             63f32.sqrt(),
             0f32,
         ),
         (
-            -(1_f32 / 8_f32).acos(),
-            -(1_f32 / 8_f32).acos(),
+            -4.83770361,
+            -4.83770361,
             63f32.sqrt(),
             0f32,
         ),
         (
-            (3_f32 / 8_f32).acos(),
-            -PI + (3_f32 / 8_f32).acos(),
+            1.955117828,
+            -1.955117828,
             55f32.sqrt(),
             0f32,
         ),
         (
-            -(3_f32 / 8_f32).acos(),
-            PI - (3_f32 / 8_f32).acos(),
+            1.955117828,
+            -1.955117828,
             55f32.sqrt(),
             0f32,
         ),
