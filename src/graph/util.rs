@@ -161,7 +161,7 @@ fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
             None => panic!("Next points to null"),
         };
     }
-    println!("Node vertex count {}", count);
+    // println!("Node vertex count {}", count);
 }
 
 // Debug method to output vertices
@@ -179,13 +179,7 @@ pub fn output_graph(finder: &Pathfinder) {
 
     for node in &finder.nodes {
         let loc = node.borrow().origin.to_location(&finder.origin);
-<<<<<<< Updated upstream
-        // let loc = node.borrow().origin;
-        // println!("Node {:?} vertices", node.borrow().origin);
-=======
-        //let loc = node.borrow().origin;
-        //println!("Node {:?} vertices", node.borrow().origin);
->>>>>>> Stashed changes
+        // println!("Node origin {:?}", node.borrow().origin);
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().left_ring.clone());
         }
@@ -196,11 +190,7 @@ pub fn output_graph(finder: &Pathfinder) {
     for node in &finder.nodes {
         let loc = node.borrow().origin.to_location(&finder.origin);
         // let loc = node.borrow().origin;
-<<<<<<< Updated upstream
-        // println!("Node {:?} vertices", node.borrow().origin);
-=======
-        //println!("Node {:?} vertices", node.borrow().origin);
->>>>>>> Stashed changes
+        // println!("Node origin {:?}", node.borrow().origin);
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().right_ring.clone());
         }

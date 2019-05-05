@@ -380,6 +380,7 @@ fn generate_graph_test() {
 }
 
 #[test]
+// https://www.geogebra.org/graphing/hbtydqcz
 fn same_radius_test() {
     let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
 
@@ -390,18 +391,8 @@ fn same_radius_test() {
     let expected = vec![
         (PI / 2_f32, PI / 2_f32, 10f32, 0f32),
         (-PI / 2_f32, -PI / 2_f32, 10f32, 0f32),
-        (
-            101.537 * PI / 180f32,
-            -78.463 * PI / 180f32,
-            9.798,
-            0f32,
-        ),
-        (
-            -101.537 * PI / 180f32,
-            78.463 * PI / 180f32,
-            9.798,
-            0f32,
-        ),
+        (101.537 * PI / 180f32, -78.463 * PI / 180f32, 9.798, 0f32),
+        (-101.537 * PI / 180f32, 78.463 * PI / 180f32, 9.798, 0f32),
     ];
     assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
 }
@@ -415,24 +406,19 @@ fn same_radius_offset_test() {
     let a1 = Rc::new(n1);
     let b1 = Rc::new(n2);
 
-<<<<<<< Updated upstream
     let expected = vec![
         (7_f32 * PI / 4_f32, 7_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
-        (-5_f32 * PI / 4_f32, -5_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
+        (
+            -5_f32 * PI / 4_f32,
+            -5_f32 * PI / 4_f32,
+            200f32.sqrt(),
+            0f32,
+        ),
         (0_f32, -PI, 10f32, 0f32),
         (-3_f32 * PI / 2_f32, 3_f32 * PI / 2_f32, 10f32, 0f32),
     ];
 
     assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
-=======
-	let expected = vec![(3_f32 * PI / 4_f32, 3_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
-						(-PI / 4_f32, -PI / 4_f32, 200f32.sqrt(), 0f32),
-						(PI / 2_f32, -PI / 2_f32, 10f32, 0f32),
-						(0_f32, PI, 10f32, 0f32)
-						];
-
-	assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
->>>>>>> Stashed changes
 }
 
 #[test]
@@ -443,18 +429,8 @@ fn overlap_test() {
     let c = Rc::new(n3);
     let d = Rc::new(n4);
     let expected = vec![
-        (
-            4.913799976f32,
-            4.913799976f32,
-            4.898979486f32,
-            0f32,
-        ),
-        (
-            -4.913799976f32,
-            -4.913799976f32,
-            4.898979486f32,
-            0f32,
-        ),
+        (4.913799976f32, 4.913799976f32, 4.898979486f32, 0f32),
+        (-4.913799976f32, -4.913799976f32, 4.898979486f32, 0f32),
     ];
     assert_vec4_eqp(&pathfinder.find_path(&c, &d).0, &expected);
 }
@@ -484,30 +460,10 @@ fn different_radius_no_overlap_test() {
     let e = Rc::new(n5);
     let f = Rc::new(n6);
     let expected = vec![
-        (
-            4.83770361,
-            4.83770361,
-            63f32.sqrt(),
-            0f32,
-        ),
-        (
-            -4.83770361,
-            -4.83770361,
-            63f32.sqrt(),
-            0f32,
-        ),
-        (
-            1.955117828,
-            -1.955117828,
-            55f32.sqrt(),
-            0f32,
-        ),
-        (
-            1.955117828,
-            -1.955117828,
-            55f32.sqrt(),
-            0f32,
-        ),
+        (1.6961242, 1.6961241, 63f32.sqrt(), 0f32),
+        (-1.6961241, -1.6961241, 63f32.sqrt(), 0f32),
+        (1.9551932, -1.1863995, 55f32.sqrt(), 0f32),
+        (-1.955193, 1.1863995, 55f32.sqrt(), 0f32),
     ];
     assert_vec4_eqp(&pathfinder.find_path(&e, &f).0, &expected);
 }

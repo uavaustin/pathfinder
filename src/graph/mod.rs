@@ -144,7 +144,7 @@ impl Pathfinder {
             }
         }
 
-        output_graph(&self);
+        // output_graph(&self);
     }
 
     fn populate_nodes(&mut self) {

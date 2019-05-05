@@ -13,6 +13,7 @@ use std::time::{Duration, SystemTime};
 
 mod graph;
 pub mod obj;
+mod queue;
 
 use graph::util::{intersect, output_graph};
 use graph::{Connection, Node, Point, Vertex};
@@ -45,6 +46,12 @@ pub struct Pathfinder {
     origin: Location, // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
     num_vertices: i32,
+}
+
+// Simple wrapper around heap and set for efficient data retrival
+struct Queue {
+    heap: BinaryHeap<Rc<RefCell<Vertex>>>, // Efficiently get min
+    set: HashSet<i32>,                     // Efficiently check of existence
 }
 
 impl Pathfinder {
@@ -170,9 +177,8 @@ impl Pathfinder {
     // Return path if found and none if any error occured or no path found
     fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
         let mut path = None;
-        let mut open_list: BinaryHeap<Rc<RefCell<Vertex>>> = BinaryHeap::new();
-        let mut open_set: HashSet<i32> = HashSet::new();
-        let mut closed_set: HashSet<i32> = HashSet::new();
+        let mut open_set = Queue::new(); // candidate vertices
+        let mut closed_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
         let mut temp_vertices: LinkedList<Rc<RefCell<Vertex>>> = LinkedList::new();
         let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
         let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
@@ -182,6 +188,7 @@ impl Pathfinder {
             0f32,
             None,
         )));
+        let end_point = Point::from_location(&end, &self.origin);
 
         //Prepare graph for A*
         println!("[ Inserting temp vertices ]");
@@ -200,8 +207,7 @@ impl Pathfinder {
                 )));
                 vertex.borrow_mut().parent = Some(start_vertex.clone());
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
-                open_list.push(vertex.clone());
-                open_set.insert(vertex.borrow().index);
+                open_set.push(vertex.clone());
                 temp_vertices.push_back(vertex.clone());
             }
 
@@ -231,7 +237,7 @@ impl Pathfinder {
         output_graph(&self);
 
         //A* algorithm - find shortest path from plane to destination
-        while let Some(cur) = open_list.pop() {
+        while let Some(cur) = open_set.pop() {
             println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
                 path = Some(self.generate_waypoint(cur));
@@ -246,25 +252,21 @@ impl Pathfinder {
                 let new_g_cost = cur_g_cost + dist;
                 // println!("add vertex to queue {}", next.borrow());
                 {
-                    let mut next_mut = next.borrow_mut();
-                    if closed_set.contains(&next_mut.index)                                         //vertex is already explored
-                        || next_mut.sentinel                                                        //vertex is a sentinel
-                        || (open_set.contains(&next_mut.index) && new_g_cost >= next_mut.g_cost)
+                    if closed_set.contains(&next.borrow().index)                                         //vertex is already explored
+                        || next.borrow().sentinel                                                        //vertex is a sentinel
+                        || (open_set.contains(&next) && new_g_cost >= next.borrow().g_cost)
                     {
                         //vertex has been visited and the current cost is better
                         // println!("Vertex addition skipped");
                         return;
                     }
-                    let new_f_cost = next_mut.g_cost
-                        + next_mut
-                            .location
-                            .distance3d(&Point::from_location(&end, &self.origin));
+                    let mut next_mut = next.borrow_mut();
+                    let new_f_cost = next_mut.g_cost + next_mut.location.distance(&end_point);
                     next_mut.g_cost = new_g_cost;
                     next_mut.f_cost = new_f_cost;
                     next_mut.parent = Some(cur.clone());
                 }
-                open_list.push(next.clone());
-                open_set.insert(next.borrow().index);
+                open_set.push(next.clone());
             };
 
             let mut cur_vertex = cur.borrow();
