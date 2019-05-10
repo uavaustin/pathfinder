@@ -16,7 +16,7 @@ pub mod obj;
 
 use graph::util::intersect;
 use graph::{Connection, Node, Point, Vertex};
-use obj::{Location, Obstacle, Plane, Waypoint};
+pub use obj::{Location, Obstacle, Plane, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
