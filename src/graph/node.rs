@@ -4,33 +4,33 @@ use std::fmt;
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "loc={:?}, r={} \nleft = [", self.origin, self.radius);
+        write!(f, "loc={:?}, r={} \nleft = [", self.origin, self.radius).expect("error in writing format display");
         let mut current = match self.left_ring.borrow().next {
             Some(ref val) => val.clone(),
             None => panic!("next points to null"),
         };
         while current.borrow().index != HEADER_VERTEX_INDEX {
             let ref mut vertex = current.clone();
-            write!(f, " {} ", vertex.borrow());
+            write!(f, " {} ", vertex.borrow()).expect("error in writing format display");
             current = match vertex.borrow().next {
                 Some(ref val) => val.clone(),
                 None => panic!("next points to null"),
             };
         }
-        write!(f, " ] \nright = [");
+        write!(f, " ] \nright = [").expect("error in writing format display");
         let mut current = match self.right_ring.borrow().next {
             Some(ref val) => val.clone(),
             None => panic!("next points to null"),
         };
         while current.borrow().index != HEADER_VERTEX_INDEX {
             let ref mut vertex = current.clone();
-            write!(f, " {} ", vertex.borrow());
+            write!(f, " {} ", vertex.borrow()).expect("error in writing format display");
             current = match vertex.borrow().next {
                 Some(ref val) => val.clone(),
                 None => panic!("next points to null"),
             };
         }
-        write!(f, "]");
+        write!(f, "]").expect("error in writing format display");
         Ok(())
     }
 }
@@ -101,7 +101,7 @@ impl Node {
 
     pub fn insert_vertex(&mut self, v: Rc<RefCell<Vertex>>) {
         let new_angle: f32 = v.borrow().angle;
-        let (is_left, mut current) = if new_angle > 0f32 {
+        let (is_left, mut current) = if new_angle >= 0f32 {
             // Left ring
             (true, self.left_ring.clone())
         } else {
@@ -109,8 +109,8 @@ impl Node {
             (false, self.right_ring.clone())
         };
         print!(
-            "inserting {:?} to header {:?}\n",
-            v.borrow().index,
+            "inserting {} to header {:?}\n",
+            v.borrow(),
             current.borrow().index
         );
         loop {
@@ -150,7 +150,7 @@ impl Node {
         }
     }
 
-    pub fn remove_extra_vertices(to_remove: LinkedList<Rc<RefCell<Vertex>>>) {
+    pub fn prune_vertices(to_remove: LinkedList<Rc<RefCell<Vertex>>>) {
         for v in to_remove.iter() {
             let prev = match v.borrow_mut().prev {
                 Some(ref vert) => vert.clone(),

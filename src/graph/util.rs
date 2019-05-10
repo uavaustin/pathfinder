@@ -2,6 +2,30 @@
 
 use super::*;
 
+// helper function to remap angle between range
+// range can be either -2PI to 0 or 0 to 2PI
+// Input:
+// positive is true if range is between 0 to 2PI, -2PI to 0 otherwise
+// n is angle in radians
+pub fn normalize_angle(positive: bool, n: f32) -> f32 {
+    let angle = (n - (n / (2f32*PI)).floor() * (2f32 * PI)).abs();
+    if positive {
+        angle
+    } else {
+        angle - 2f32*PI
+    }
+}
+
+// Reverse the polarity of an angle
+// Left side angle is converted to the equivilent right side angle and vice versa
+pub fn reverse_polarity(alpha: f32) -> f32 {
+    if alpha < 0f32 {
+        alpha + 2f32*PI
+    } else {
+        alpha - 2f32*PI
+    }
+}
+
 // helper function for intersection calculation
 // returns the area between three points
 fn area(a: &Point, b: &Point, c: &Point) -> f32 {
@@ -66,7 +90,7 @@ pub fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
 }
 
 // calculate distance of shortest distance from obstacle c to a segment defined by a and b
-// returns x, y of intersection, distance, and whether intersection is at endpoint
+// returns x, y of intersection, distance SQUARED, and whether intersection is at endpoint
 pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bool) {
     //calculate distance from a to b, squared
     let pd2 = (a.x - b.x).powi(2) + (a.y - b.y).powi(2);
@@ -116,9 +140,92 @@ pub fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
     }
 }
 
+fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
+    let temp = match current.borrow().next {
+        Some(ref v) => v.clone(),
+        None => panic!("Next points to null"),
+    };
+    current = temp;
+    let mut count = 0;
+    loop {
+        let ref mut vertex = current.clone();
+        if vertex.borrow().index != HEADER_VERTEX_INDEX {
+            count += 1;
+            let v_loc = vertex.borrow().location.to_location(origin);
+            println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
+        } else {
+            break;
+        }
+        current = match vertex.borrow().next {
+            Some(ref v) => v.clone(),
+            None => panic!("Next points to null"),
+        };
+    }
+    // println!("Node vertex count {}", count);
+}
+
+// Debug method to output vertices
+pub fn output_graph(finder: &Pathfinder) {
+    println!("\n------------------------------");
+    println!("pathfinder graph");
+    println!("node count: {}", finder.nodes.len());
+    println!("vertex count: {}\n", finder.num_vertices);
+    println!("---- Node List ----");
+    for node in &finder.nodes {
+        let loc = node.borrow().origin.to_location(&finder.origin);
+        //println!("{}, {}", loc.lat_degree(), loc.lon_degree());
+    }
+    //println!("\n---- Left Vertex List ----");
+
+    for node in &finder.nodes {
+        let loc = node.borrow().origin.to_location(&finder.origin);
+        // println!("Node origin {:?}", node.borrow().origin);
+        if node.borrow().height > 0f32 {
+            output_ring(&finder.origin, node.borrow().left_ring.clone());
+        }
+    }
+
+    //println!("\n---- Right Vertex List ----");
+
+    for node in &finder.nodes {
+        let loc = node.borrow().origin.to_location(&finder.origin);
+        // let loc = node.borrow().origin;
+        // println!("Node origin {:?}", node.borrow().origin);
+        if node.borrow().height > 0f32 {
+            output_ring(&finder.origin, node.borrow().right_ring.clone());
+        }
+    }
+
+    println!("------------------------------");
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    const THRESHOLD: f32 = 0.001;
+
+    //assert equa for float
+    macro_rules! assert_eqf {
+        ($x:expr, $y:expr) => {
+            if !((($x - $y) as f32).abs() < THRESHOLD) {
+                //println!("{} vs {}", $x, $y);
+                panic!();
+            }
+        };
+    }
+
+    #[test]
+    fn normalize_angle_test() {
+        assert_eqf!(normalize_angle(true, 3f32*PI), PI);
+        assert_eqf!(normalize_angle(false, 3f32*PI), -PI);
+        assert_eqf!(normalize_angle(true, -3f32*PI), PI);
+        assert_eqf!(normalize_angle(false, -3f32*PI), -PI);
+        assert_eqf!(normalize_angle(true, 3f32*PI/2f32), 3f32*PI/2f32);
+        assert_eqf!(normalize_angle(false, 3f32*PI/2f32), -PI/2f32);
+        assert_eqf!(normalize_angle(true, -3f32*PI/2f32), PI/2f32);
+        assert_eqf!(normalize_angle(false, -3f32*PI/2f32), -3f32*PI/2f32);
+    }
 
     #[test]
     fn is_between() {

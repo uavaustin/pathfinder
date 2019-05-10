@@ -15,8 +15,8 @@ pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoi
     let mut iter = result.iter();
     eprintln!(
         "{:.5}, {:.5}",
-        plane.location.lon_degree(),
         plane.location.lat_degree(),
+        plane.location.lon_degree(),
         // plane.location.alt()
     );
     for wp in waypoints {
@@ -26,16 +26,16 @@ pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoi
             }
             eprintln!(
                 "{:.5}, {:.5}",
-                node.location.lon_degree(),
                 node.location.lat_degree(),
+                node.location.lon_degree(),
                 // node.location.alt(),
                 // node.index
             );
         }
         eprintln!(
             "{:.5}, {:.5}",
-            wp.location.lon_degree(),
             wp.location.lat_degree(),
+            wp.location.lon_degree(),
             // wp.location.alt(),
             // wp.index
         );
