@@ -371,7 +371,7 @@ impl Pathfinder {
                 if obstacle.height > max_height {
                     max_height = obstacle.height;
                 }
-                return PathValidity::Invalid; // Temporarily disable fly over
+                // return PathValidity::Invalid; // Temporarily disable fly over
             }
         }
         println!("path valid with threshold {}", max_height);

@@ -149,6 +149,7 @@ fn flyzones_pathing() {
 }
 
 #[test]
+// https://www.geogebra.org/graphing/mfqccnkb
 fn obstacles_pathing() {
     let a = Point::new(20f32, 40f32, 10f32);
     let b = Point::new(20f32, 1f32, 10f32);
@@ -161,10 +162,20 @@ fn obstacles_pathing() {
 
     let mut pathfinder = Pathfinder::new();
     pathfinder.init(1f32, dummy_flyzones(), obstacles);
+    pathfinder.set_buffer(0f32);
 
-    assert_eq!(bool::from(pathfinder.valid_path(&a, &b)), false);
-    assert_eq!(bool::from(pathfinder.valid_path(&c, &d)), true);
-    assert_eq!(bool::from(pathfinder.valid_path(&c, &e)), false);
+    match pathfinder.valid_path(&a, &b) {
+        PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
+        _ => panic!()
+    }
+    match pathfinder.valid_path(&c, &d) {
+        PathValidity::Flyover(threshold) => assert_eq!(threshold, 0f32),
+        _ => panic!()
+    }
+    match pathfinder.valid_path(&c, &e) {
+        PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
+        _ => panic!()
+    }
 }
 
 #[test]

@@ -337,6 +337,13 @@ impl Pathfinder {
         }
         waypoint_list
     }
+
+    // Note: bypasses min buffer restriction
+    pub fn set_buffer(&mut self, buffer: f32) {
+        self.buffer = buffer;
+        self.build_graph();
+    }
+
     pub fn set_process_time(&mut self, max_process_time: u32) {
         self.max_process_time = Duration::from_secs(max_process_time as u64);
     }
@@ -349,10 +356,6 @@ impl Pathfinder {
     pub fn set_obstacles(&mut self, obstacles: Vec<Obstacle>) {
         self.obstacles = obstacles;
         self.build_graph();
-    }
-
-    pub fn get_buffer_size(&self) -> f32 {
-        self.buffer
     }
 
     pub fn get_buffer(&self) -> f32 {
