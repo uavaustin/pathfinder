@@ -149,6 +149,7 @@ fn flyzones_pathing() {
 }
 
 #[test]
+// https://www.geogebra.org/graphing/mfqccnkb
 fn obstacles_pathing() {
     let a = Point::new(20f32, 40f32, 10f32);
     let b = Point::new(20f32, 1f32, 10f32);
@@ -161,10 +162,20 @@ fn obstacles_pathing() {
 
     let mut pathfinder = Pathfinder::new();
     pathfinder.init(1f32, dummy_flyzones(), obstacles);
+    pathfinder.set_buffer(0f32);
 
-    assert_eq!(bool::from(pathfinder.valid_path(&a, &b)), false);
-    assert_eq!(bool::from(pathfinder.valid_path(&c, &d)), true);
-    assert_eq!(bool::from(pathfinder.valid_path(&c, &e)), false);
+    match pathfinder.valid_path(&a, &b) {
+        PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
+        _ => panic!()
+    }
+    match pathfinder.valid_path(&c, &d) {
+        PathValidity::Flyover(threshold) => assert_eq!(threshold, 0f32),
+        _ => panic!()
+    }
+    match pathfinder.valid_path(&c, &e) {
+        PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
+        _ => panic!()
+    }
 }
 
 #[test]
@@ -180,7 +191,7 @@ fn intersects_circle() {
     let a = Point::new(0f32, 0f32, 0f32);
     let b = Point::new(30f32, 0f32, 0f32);
 
-    let (c1, c2) = pathfinder.circular_intersect(&a, &b, &ob);
+    let (c1, c2) = circular_intersect(&pathfinder.origin, &a, &b, &ob);
     assert!(c1.is_some());
     assert_eq!(c1.unwrap().x, 10f32);
     assert_eq!(c1.unwrap().y, 0f32);
@@ -194,7 +205,7 @@ fn intersects_circle() {
     let d = Point::new(0f32, 5f32, 0f32);
     let e = Point::new(30f32, 5f32, 0f32);
 
-    let (f1, f2) = pathfinder.circular_intersect(&d, &e, &ob);
+    let (f1, f2) = circular_intersect(&pathfinder.origin, &d, &e, &ob);
     assert!(f1.is_some());
     assert_eq!(f1.unwrap().x, 15f32);
     assert_eq!(f1.unwrap().y, 5f32);
@@ -206,7 +217,7 @@ fn intersects_circle() {
     let g = Point::new(10f32, -5f32, 0f32);
     let h = Point::new(10f32, 5f32, 0f32);
 
-    let (i1, i2) = pathfinder.circular_intersect(&g, &h, &ob);
+    let (i1, i2) = circular_intersect(&pathfinder.origin, &g, &h, &ob);
     assert!(i1.is_some());
     assert_eq!(i1.unwrap().x, 10f32);
     assert_eq!(i1.unwrap().y, 0f32);
@@ -218,7 +229,7 @@ fn intersects_circle() {
     let j = Point::new(10f32, -5f32, 0f32);
     let k = Point::new(20f32, 5f32, 0f32);
 
-    let (l1, l2) = pathfinder.circular_intersect(&j, &k, &ob);
+    let (l1, l2) = circular_intersect(&pathfinder.origin, &j, &k, &ob);
     assert!(l1.is_some());
     assert_eq!((l1.unwrap().x * 1000.0).round() / 1000.0, 11.464f32); //Rounded to 3 decimal
     assert_eq!((l1.unwrap().y * 1000.0).round() / 1000.0, -3.536f32); //Rounded to 3 decimal
@@ -232,7 +243,7 @@ fn intersects_circle() {
     let m = Point::new(10f32, 10f32, 0f32);
     let n = Point::new(15f32, -10f32, 0f32);
 
-    let (o1, o2) = pathfinder.circular_intersect(&m, &n, &ob);
+    let (o1, o2) = circular_intersect(&pathfinder.origin, &m, &n, &ob);
     assert!(o1.is_some());
     assert_eq!((o1.unwrap().x * 1000.0).round() / 1000.0, 11.587f32); //Rounded to 3 decimal
     assert_eq!((o1.unwrap().y * 1000.0).round() / 1000.0, 3.654f32); //Rounded to 3 decimal
@@ -263,7 +274,7 @@ fn intersection_distance() {
         .2,
         0f32
     );
-    let result = pathfinder.perpendicular_intersect(&ax, &ay, &ob);
+    let result = perpendicular_intersect(&pathfinder.origin, &ax, &ay, &ob);
     println!("{:?} {:?}", result.0.unwrap(), result.1.unwrap());
     assert_point_eq(&result.0.unwrap(), &bx);
     assert_point_eq(&result.1.unwrap(), &by);
@@ -281,7 +292,7 @@ fn circular_intersection() {
     let ob = obstacle_from_meters(15f32, 0f32, 5f32, 20f32);
 
     let pathfinder = dummy_pathfinder();
-    let (c1, c2) = pathfinder.perpendicular_intersect(&a, &b, &ob);
+    let (c1, c2) = perpendicular_intersect(&pathfinder.origin, &a, &b, &ob);
     assert!(c1.is_some());
     assert_eq!(c1.unwrap().y, 0f32);
     assert_eq!(c1.unwrap().x, 10f32);
@@ -295,7 +306,7 @@ fn circular_intersection() {
     let d = Point::new(0f32, 5f32, 0f32);
     let e = Point::new(30f32, 5f32, 0f32);
 
-    let (f1, f2) = pathfinder.perpendicular_intersect(&d, &e, &ob);
+    let (f1, f2) = perpendicular_intersect(&pathfinder.origin, &d, &e, &ob);
     assert!(f1.is_none());
     assert!(f2.is_none());
 
@@ -304,7 +315,7 @@ fn circular_intersection() {
     let g = Point::new(10f32, -5f32, 0f32);
     let h = Point::new(10f32, 5f32, 0f32);
 
-    let (i1, i2) = pathfinder.perpendicular_intersect(&g, &h, &ob);
+    let (i1, i2) = perpendicular_intersect(&pathfinder.origin, &g, &h, &ob);
     assert!(i1.is_none());
     //assert_eq!(i1.unwrap().y, 15f32);
     //assert_eq!(i1.unwrap().x, 5f32);
@@ -315,7 +326,7 @@ fn circular_intersection() {
     let j = Point::new(8f32, -2f32, 0f32);
     let k = Point::new(16f32, 6f32, 0f32);
 
-    let (l1, l2) = pathfinder.perpendicular_intersect(&j, &k, &ob);
+    let (l1, l2) = perpendicular_intersect(&pathfinder.origin, &j, &k, &ob);
     assert!(l1.is_some());
 
     assert_eqp!(l1.unwrap().y, 0f32, 0.0001);
@@ -329,7 +340,7 @@ fn circular_intersection() {
     let m = Point::new(8f32, 4f32, 0f32);
     let n = Point::new(30f32, -6f32, 0f32);
 
-    let (o1, o2) = pathfinder.perpendicular_intersect(&m, &n, &ob);
+    let (o1, o2) = perpendicular_intersect(&pathfinder.origin, &m, &n, &ob);
     assert_eqp!(o1.unwrap().x, 10.807f32, 0.001);
     assert_eqp!(o1.unwrap().y, 2.724f32, 0.001);
     assert_eqp!(o2.unwrap().x, 19.809f32, 0.001);

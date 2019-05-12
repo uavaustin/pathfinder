@@ -65,11 +65,21 @@ impl Vertex {
 
     pub fn get_neighbor_weight(&self) -> f32 {
         if let Some(ref neighbor) = self.next {
-            let angle = (self.angle - neighbor.borrow().angle).abs();
+            let mut angle = if self.angle >= 0f32 {
+                // Left case
+                neighbor.borrow().angle - self.angle
+            } else {
+                self.angle - neighbor.borrow().angle
+            };
+
+            if angle < 0f32 {
+                angle += 2f32*PI;
+            }
+            println!("neighbor angle diff {}", angle);
             let radius = self.radius;
             (angle * radius)
         } else {
-            0f32
+            panic!("broken chain");
         }
     }
 }
@@ -90,10 +100,11 @@ impl PartialEq for Vertex {
 
 impl Ord for Vertex {
     fn cmp(&self, other: &Self) -> Ordering {
+        // Order flipped for max heap
         if self.f_cost < other.f_cost {
-            Ordering::Less
-        } else if self.f_cost > other.f_cost {
             Ordering::Greater
+        } else if self.f_cost > other.f_cost {
+            Ordering::Less
         } else {
             Ordering::Equal
         }
@@ -110,14 +121,16 @@ impl fmt::Display for Vertex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "(index={}, angle={}, connection={} next={})",
+            "(index={}, angle={}, connection={} next={} g_cost={} f_cost={})",
             self.index,
             self.angle,
             match self.connection {
                 Some(ref edge) => "Some",
                 None => "None"
             },
-            self.next.is_some()
+            self.next.is_some(),
+            self.g_cost,
+            self.f_cost,
         )
     }
 }
