@@ -21,9 +21,9 @@ pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoi
     );
     for wp in waypoints {
         while let Some(node) = iter.next() {
-            if node.index != wp.index {
-                break;
-            }
+            // if node.index != wp.index {
+            //     break;
+            // }
             eprintln!(
                 "{:.5}, {:.5}",
                 node.location.lat_degree(),

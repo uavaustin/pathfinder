@@ -192,8 +192,8 @@ impl Node {
         current.borrow_mut().next = Some(v.clone());
     }
 
-    pub fn prune_vertices(to_remove: LinkedList<Rc<RefCell<Vertex>>>) {
-        for v in to_remove.iter() {
+    pub fn prune_vertices(target: LinkedList<Rc<RefCell<Vertex>>>) {
+        for v in target {
             let prev = match v.borrow_mut().prev {
                 Some(ref vert) => vert.clone(),
                 None => panic!("Next points to null"),

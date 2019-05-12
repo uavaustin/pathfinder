@@ -176,34 +176,28 @@ impl Pathfinder {
         &self.wp_list
     }
 
-    // Find best path using the a* algorithm
-    // Return path if found and none if any error occured or no path found
-    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
-        let mut path = None;
-        let mut open_set = Queue::new(); // candidate vertices
-        let mut closed_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
-        let mut temp_vertices: LinkedList<Rc<RefCell<Vertex>>> = LinkedList::new();
-        let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
-        let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
+    // Helper function to add temp vertices connecting start and end
+    fn add_temp_vertices(
+        &mut self,
+        start_node: &Node,
+        end_node: &Node,
+        min_height: f32,
+        end_point: &Point,
+        open_set: &mut Queue,
+    ) -> LinkedList<Rc<RefCell<Vertex>>> {
+        let mut temp_vertices = LinkedList::new();
         let start_vertex = Rc::new(RefCell::new(Vertex::new(
             &mut START_VERTEX_INDEX,
-            &start_node.borrow(),
+            &start_node,
             0f32,
             vec![],
         )));
-        let end_point = Point::from_location(&end, &self.origin);
-        let min_height = if start.alt() > end.alt() {
-            end.alt()
-        } else {
-            start.alt()
-        };
-        println!("Height threshold {}", min_height);
 
         //Prepare graph for A*
         println!("\n[ Inserting temp vertices ]");
         for i in 0..self.nodes.len() {
             let temp_node = &self.nodes[i];
-            let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
+            let (temp_paths, _) = self.find_path(&start_node, &temp_node.borrow());
             println!("[start {}]: path count -> {}", i, temp_paths.len());
 
             for (a, b, dist, threshold) in temp_paths {
@@ -216,21 +210,21 @@ impl Pathfinder {
                     Vertex::new(&mut self.num_vertices, &temp_node.borrow(), b, vec![]);
                 vertex.parent = Some(start_vertex.clone());
                 vertex.g_cost = dist;
-                vertex.f_cost = dist + vertex.location.distance(&end_point);
+                vertex.f_cost = dist + vertex.location.distance(end_point);
                 let vertex_p = Rc::new(RefCell::new(vertex));
                 temp_node.borrow_mut().insert_vertex(vertex_p.clone());
                 open_set.push(vertex_p.clone());
-                temp_vertices.push_back(vertex_p.clone());
+                temp_vertices.push_front(vertex_p.clone());
             }
 
-            let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
+            let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node);
             println!("[end {}]: path count -> {}", i, temp_paths.len());
 
             for (a, b, dist, threshold) in temp_paths {
                 println!("Inserting end vertex {}", self.num_vertices);
                 let end_vertex = Rc::new(RefCell::new(Vertex::new(
                     &mut END_VERTEX_INDEX,
-                    &end_node.borrow(),
+                    &end_node,
                     b,
                     vec![],
                 )));
@@ -242,9 +236,38 @@ impl Pathfinder {
                     vec![connection],
                 )));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
-                temp_vertices.push_back(vertex.clone());
+                temp_vertices.push_front(vertex.clone());
             }
         }
+
+        temp_vertices
+    }
+
+    // Find best path using the a* algorithm
+    // Return path if found and none if any error occured or no path found
+    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
+        let mut path = None;
+        let mut open_set = Queue::new(); // candidate vertices
+        let mut closed_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
+
+        let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
+        let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
+
+        let end_point = Point::from_location(&end, &self.origin);
+        let min_height = if start.alt() > end.alt() {
+            end.alt()
+        } else {
+            start.alt()
+        };
+        println!("Height threshold {}", min_height);
+
+        let temp_vertices = self.add_temp_vertices(
+            &start_node.borrow(),
+            &end_node.borrow(),
+            min_height,
+            &end_point,
+            &mut open_set,
+        );
 
         output_graph(&self);
         println!("temporary vertices");
