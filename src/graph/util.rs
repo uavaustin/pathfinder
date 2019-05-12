@@ -8,11 +8,11 @@ use super::*;
 // positive is true if range is between 0 to 2PI, -2PI to 0 otherwise
 // n is angle in radians
 pub fn normalize_angle(positive: bool, n: f32) -> f32 {
-    let angle = (n - (n / (2f32*PI)).floor() * (2f32 * PI)).abs();
+    let angle = (n - (n / (2f32 * PI)).floor() * (2f32 * PI)).abs();
     if positive {
         angle
     } else {
-        angle - 2f32*PI
+        angle - 2f32 * PI
     }
 }
 
@@ -20,9 +20,9 @@ pub fn normalize_angle(positive: bool, n: f32) -> f32 {
 // Left side angle is converted to the equivilent right side angle and vice versa
 pub fn reverse_polarity(alpha: f32) -> f32 {
     if alpha < 0f32 {
-        alpha + 2f32*PI
+        alpha + 2f32 * PI
     } else {
-        alpha - 2f32*PI
+        alpha - 2f32 * PI
     }
 }
 
@@ -89,7 +89,7 @@ pub fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
     }
 }
 
-// calculate distance of shortest distance from obstacle c to a segment defined by a and b
+// calculate distance of shortest distance from point c to a segment defined by a and b
 // returns x, y of intersection, distance SQUARED, and whether intersection is at endpoint
 pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bool) {
     //calculate distance from a to b, squared
@@ -199,6 +199,145 @@ pub fn output_graph(finder: &Pathfinder) {
     println!("------------------------------");
 }
 
+// find the intersection of line ab with obstacle c, if they exist
+pub fn perpendicular_intersect(
+    origin: &Location,
+    a: &Point,
+    b: &Point,
+    c: &Obstacle,
+) -> (Option<Point>, Option<Point>) {
+    // intersect distance gives x and y of intersect point, then distance squared
+    // calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
+    let (x, y, distance, endpoint) =
+        intersect_distance(a, b, &Point::from_location(&c.location, origin));
+    if distance.sqrt() < c.radius as f32 {
+        println!("intersect with obstacle: dist {} r {}", distance.sqrt(), c.radius);
+        // immediately check if the endpoint is the shortest distance; can't fly over in this case
+        // EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
+        // if endpoint {
+        //     // not technically none, but should be considered as such as we will stop calculations
+        //     return (None, None);
+        // }
+        let mag = (c.radius.powi(2) - distance).sqrt();
+        //println!("mag: {}", mag);
+        //calculate unit vectors for y and x directions
+        let dx = (a.x - b.x) / a.distance(b);
+        let dy = (a.y - b.y) / a.distance(b);
+
+        let p1 = Point::new(x + dx * mag, y + dy * mag, c.height);
+        let p2 = Point::new(x - dx * mag, y - dy * mag, c.height);
+        return (Some(p1), Some(p2));
+    } else {
+        return (None, None);
+    }
+}
+
+// Return intersection point(s) of line given by Point A and B and circle at point C with radius r
+pub fn circular_intersect(
+    origin: &Location,
+    a: &Point,
+    b: &Point,
+    obstacle: &Obstacle,
+) -> (Option<Point>, Option<Point>) {
+    //y = mx + b for point a and b
+
+    let mut c = Point::from_location(&obstacle.location, origin);
+    c.z = obstacle.height;
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+
+    let (indep, dep, slope, slope_intercept) = if dx >= dy {
+        let indep = c.x;
+        let dep = c.y;
+        let slope = (b.y - a.y) / (b.x - a.x);
+        let slope_intercept = b.y - slope * b.x;
+        (indep, dep, slope, slope_intercept)
+    } else {
+        let indep = c.y;
+        let dep = c.x;
+        let slope = (b.x - a.x) / (b.y - a.y);
+        let slope_intercept = b.x - slope * b.y;
+        (indep, dep, slope, slope_intercept)
+    };
+
+    //Quadratic to solve for intersects
+    let quad_a = slope.powi(2) + 1.0;
+    let quad_b = 2.0 * (slope * slope_intercept - slope * dep - indep);
+    let quad_c = indep.powi(2) + dep.powi(2) + slope_intercept.powi(2)
+        - 2.0 * slope_intercept * dep
+        - obstacle.radius.powi(2);
+
+    //Check discriminant (if > 0, 2 intersects; if = 0, 1 intersect; if < 0, no intersects)
+    let discriminant = quad_b.powi(2) - 4.0 * quad_a * quad_c;
+
+    //Returning value of NAN for no solution points
+    if discriminant < 0.0 {
+        (None, None)
+    } else if discriminant == 0.0 {
+        let intersect_1: Point = if dx >= dy {
+            Point::new(
+                (-1.0) * quad_b / (2.0 * quad_a),
+                slope * ((-1.0) * quad_b / (2.0 * quad_a)) + slope_intercept,
+                c.z,
+            ) //CURRENTLY JUST USES OBS HEIGHT
+        } else {
+            Point::new(
+                slope * ((-1.0) * quad_b / (2.0 * quad_a)) + slope_intercept,
+                (-1.0) * quad_b / (2.0 * quad_a),
+                c.z,
+            ) //CURRENTLY JUST USES OBS HEIGHT
+        };
+        (Some(intersect_1), None)
+    } else
+    //if(discriminant > 0.0)
+    {
+        let (intersect_1, intersect_2) = if dx >= dy {
+            (
+                Point::new(
+                    ((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                        / (2.0 * quad_a),
+                    slope
+                        * (((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a))
+                        + slope_intercept,
+                    c.z,
+                ),
+                Point::new(
+                    ((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                        / (2.0 * quad_a),
+                    slope
+                        * (((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a))
+                        + slope_intercept,
+                    c.z,
+                ),
+            )
+        } else {
+            (
+                Point::new(
+                    slope
+                        * (((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a))
+                        + slope_intercept,
+                    ((-1.0) * quad_b - (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                        / (2.0 * quad_a),
+                    c.z,
+                ),
+                Point::new(
+                    slope
+                        * (((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                            / (2.0 * quad_a))
+                        + slope_intercept,
+                    ((-1.0) * quad_b + (quad_b.powi(2) - 4.0 * quad_a * quad_c).sqrt())
+                        / (2.0 * quad_a),
+                    c.z,
+                ),
+            )
+        };
+        (Some(intersect_1), Some(intersect_2))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -217,14 +356,14 @@ mod test {
 
     #[test]
     fn normalize_angle_test() {
-        assert_eqf!(normalize_angle(true, 3f32*PI), PI);
-        assert_eqf!(normalize_angle(false, 3f32*PI), -PI);
-        assert_eqf!(normalize_angle(true, -3f32*PI), PI);
-        assert_eqf!(normalize_angle(false, -3f32*PI), -PI);
-        assert_eqf!(normalize_angle(true, 3f32*PI/2f32), 3f32*PI/2f32);
-        assert_eqf!(normalize_angle(false, 3f32*PI/2f32), -PI/2f32);
-        assert_eqf!(normalize_angle(true, -3f32*PI/2f32), PI/2f32);
-        assert_eqf!(normalize_angle(false, -3f32*PI/2f32), -3f32*PI/2f32);
+        assert_eqf!(normalize_angle(true, 3f32 * PI), PI);
+        assert_eqf!(normalize_angle(false, 3f32 * PI), -PI);
+        assert_eqf!(normalize_angle(true, -3f32 * PI), PI);
+        assert_eqf!(normalize_angle(false, -3f32 * PI), -PI);
+        assert_eqf!(normalize_angle(true, 3f32 * PI / 2f32), 3f32 * PI / 2f32);
+        assert_eqf!(normalize_angle(false, 3f32 * PI / 2f32), -PI / 2f32);
+        assert_eqf!(normalize_angle(true, -3f32 * PI / 2f32), PI / 2f32);
+        assert_eqf!(normalize_angle(false, -3f32 * PI / 2f32), -3f32 * PI / 2f32);
     }
 
     #[test]

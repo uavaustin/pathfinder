@@ -22,7 +22,7 @@ use obj::{Location, Obstacle, Plane, Waypoint};
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
 const RADIUS: f64 = 6371000.0;
-const MIN_BUFFER: f32 = 5f32;
+const MIN_BUFFER: f32 = 2f32;
 const TURNING_RADIUS: f32 = 5f32; // In meters
 const MAX_ANGLE: f32 = PI / 6f32;
 const MAX_ANGLE_ASCENT: f32 = PI / 3f32;
@@ -82,10 +82,7 @@ impl Pathfinder {
         let mut pathfinder = Pathfinder::new();
         pathfinder.init(buffer_size, flyzones, obstacles);
         pathfinder
-    } //          let p1 = a.to_point(*j + theta0);
-      //          println!("{} {:?}", j, &p1);
-      //          let p2 = b.to_point(*i + theta0);
-      //          println!("{} {:?}", i, &
+    }
 
     pub fn init(
         &mut self,
@@ -189,32 +186,40 @@ impl Pathfinder {
             None,
         )));
         let end_point = Point::from_location(&end, &self.origin);
+        let min_height = if start.alt() > end.alt() {
+            end.alt()
+        } else {
+            start.alt()
+        };
+        println!("Height threshold {}", min_height);
 
         //Prepare graph for A*
-        println!("[ Inserting temp vertices ]");
+        println!("\n[ Inserting temp vertices ]");
         for i in 0..self.nodes.len() {
             let temp_node = &self.nodes[i];
             let (temp_paths, _) = self.find_path(&start_node.borrow(), &temp_node.borrow());
             println!("[start {}]: path count -> {}", i, temp_paths.len());
 
-            for (a, b, dist, thresh) in temp_paths {
+            for (a, b, dist, threshold) in temp_paths {
+                if min_height < threshold {
+                    continue;
+                }
+
                 println!("Inserting start vertex {}", self.num_vertices);
-                let vertex = Rc::new(RefCell::new(Vertex::new(
-                    &mut self.num_vertices,
-                    temp_node.clone(),
-                    b,
-                    None,
-                )));
-                vertex.borrow_mut().parent = Some(start_vertex.clone());
-                temp_node.borrow_mut().insert_vertex(vertex.clone());
-                open_set.push(vertex.clone());
-                temp_vertices.push_back(vertex.clone());
+                let mut vertex = Vertex::new(&mut self.num_vertices, temp_node.clone(), b, None);
+                vertex.parent = Some(start_vertex.clone());
+                vertex.g_cost = dist;
+                vertex.f_cost = dist + vertex.location.distance(&end_point);
+                let vertex_p = Rc::new(RefCell::new(vertex));
+                temp_node.borrow_mut().insert_vertex(vertex_p.clone());
+                open_set.push(vertex_p.clone());
+                temp_vertices.push_back(vertex_p.clone());
             }
 
             let (temp_paths, _) = self.find_path(&temp_node.borrow(), &end_node.borrow());
             println!("[end {}]: path count -> {}", i, temp_paths.len());
 
-            for (a, b, dist, thresh) in temp_paths {
+            for (a, b, dist, threshold) in temp_paths {
                 println!("Inserting end vertex {}", self.num_vertices);
                 let end_vertex = Rc::new(RefCell::new(Vertex::new(
                     &mut END_VERTEX_INDEX,
@@ -222,7 +227,7 @@ impl Pathfinder {
                     b,
                     None,
                 )));
-                let connection = Connection::new(end_vertex.clone(), dist, thresh);
+                let connection = Connection::new(end_vertex.clone(), dist, threshold);
                 let vertex = Rc::new(RefCell::new(Vertex::new(
                     &mut self.num_vertices,
                     temp_node.clone(),
@@ -235,6 +240,11 @@ impl Pathfinder {
         }
 
         output_graph(&self);
+        println!("temporary vertices");
+        for vert in &temp_vertices {
+            let v_loc = vert.borrow().location.to_location(&self.origin);
+            println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
+        }
 
         //A* algorithm - find shortest path from plane to destination
         while let Some(cur) = open_set.pop() {
@@ -246,14 +256,15 @@ impl Pathfinder {
             closed_set.insert(cur.borrow().index);
 
             let mut update_vertex = |cur_g_cost: f32, next: Rc<RefCell<Vertex>>, dist: f32| {
+                // Handle edge case when node only has one vertex
                 if next.borrow().index == cur.borrow().index {
                     return;
                 }
                 let new_g_cost = cur_g_cost + dist;
                 // println!("add vertex to queue {}", next.borrow());
                 {
-                    if closed_set.contains(&next.borrow().index)                                         //vertex is already explored
-                        || next.borrow().sentinel                                                        //vertex is a sentinel
+                    if closed_set.contains(&next.borrow().index)    //vertex is already explored
+                        || next.borrow().sentinel                   //vertex is a sentinel
                         || (open_set.contains(&next) && new_g_cost >= next.borrow().g_cost)
                     {
                         //vertex has been visited and the current cost is better
@@ -269,31 +280,39 @@ impl Pathfinder {
                 open_set.push(next.clone());
             };
 
-            let mut cur_vertex = cur.borrow();
+            let cur_vertex = cur.borrow();
             let g_cost = cur_vertex.g_cost;
             if let Some(ref connection) = cur_vertex.connection {
-                println!("Advancing to next node");
-                let mut next = connection.neighbor.clone();
-                let dist = connection.distance;
-                update_vertex(g_cost, next, dist);
+                println!(
+                    "Adding connection {} to queue",
+                    connection.neighbor.borrow().index
+                );
+                // Only add vertex if height meets threshold requirement
+                if min_height > connection.threshold {
+                    println!("Met threshold requirement of {}", connection.threshold);
+                    let mut next = connection.neighbor.clone();
+                    let dist = connection.distance;
+                    update_vertex(g_cost, next, dist);
+                }
             }
 
             let mut weight = cur_vertex.get_neighbor_weight();
             if let Some(ref next_vertex) = cur_vertex.next {
-                println!("Going around same node");
+                println!("Adding neighbor {} to queue", next_vertex.borrow().index);
                 let mut next = next_vertex.clone();
-                if next.borrow().index != HEADER_VERTEX_INDEX {
-                    update_vertex(g_cost, next, weight);
-                } else {
+                // If next is header, skip to header neighbor
+                if next.borrow().index == HEADER_VERTEX_INDEX {
                     weight += next.borrow().get_neighbor_weight();
-                    match next.borrow().next {
-                        Some(ref skip_next) => update_vertex(g_cost, skip_next.clone(), weight),
+                    next = match next_vertex.borrow().next {
+                        Some(ref true_next) => true_next.clone(),
                         None => panic!("broken chain"),
                     }
-                    //update_vertex(g_cost, );
                 }
+
+                update_vertex(g_cost, next, weight);
             }
         }
+
         Node::prune_vertices(temp_vertices);
         path
     }
@@ -302,9 +321,11 @@ impl Pathfinder {
         let mut waypoint_list = LinkedList::new();
         let mut cur_vertex = end_vertex;
         let mut index = END_VERTEX_INDEX;
+        println!("Generating waypoints");
         while index != START_VERTEX_INDEX {
             let loc = cur_vertex.borrow().location.to_location(&self.origin);
             let radius = cur_vertex.borrow().radius;
+
             waypoint_list.push_front(Waypoint::new(1, loc, radius));
             println!("{}", cur_vertex.borrow());
             let parent = match cur_vertex.borrow().parent {

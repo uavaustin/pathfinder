@@ -32,13 +32,13 @@ fn test6() {
     ]];
     let obstacles = vec![
         Obstacle::from_degrees(30.32497, -97.60275, 36f32, 200f32),
-        Obstacle::from_degrees(30.32308, -97.60104, 54f32, 200f32),
-        Obstacle::from_degrees(30.32286, -97.60205, 7f32, 200f32),
         Obstacle::from_degrees(30.32410, -97.60222, 19f32, 200f32),
+        Obstacle::from_degrees(30.32286, -97.60205, 7f32, 200f32),
+        Obstacle::from_degrees(30.32308, -97.60104, 54f32, 200f32),
     ];
 
     let mut pathfinder = Pathfinder::new();
-    pathfinder.init(5.0, flyzone, obstacles);
+    pathfinder.init(2.0, flyzone, obstacles);
     let plane = Plane::from_degrees(30.32222, -97.60060, 100.0).yaw(170f32);
     // let plane = Plane::from_degrees(30.32551, -97.60331, 100.0).yaw(170f32);
     // let plane = Plane::from_degrees(30.32298, -97.60310, 100.0).yaw(170f32);

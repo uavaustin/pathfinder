@@ -59,10 +59,10 @@ impl Node {
     }
 
     // Generate node from obstacle
-    pub fn from_obstacle(obs: &Obstacle, origin: &Location) -> Self {
+    pub fn from_obstacle(obs: &Obstacle, origin: &Location, buffer: f32) -> Self {
         Node::new(
             Point::from_location(&obs.location, origin),
-            obs.radius,
+            obs.radius + buffer,
             obs.height,
         )
     }

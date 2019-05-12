@@ -65,11 +65,21 @@ impl Vertex {
 
     pub fn get_neighbor_weight(&self) -> f32 {
         if let Some(ref neighbor) = self.next {
-            let angle = (self.angle - neighbor.borrow().angle).abs();
+            let mut angle = if self.angle >= 0f32 {
+                // Left case
+                neighbor.borrow().angle - self.angle
+            } else {
+                self.angle - neighbor.borrow().angle
+            };
+
+            if angle < 0f32 {
+                angle += 2f32*PI;
+            }
+            println!("neighbor angle diff {}", angle);
             let radius = self.radius;
             (angle * radius)
         } else {
-            0f32
+            panic!("broken chain");
         }
     }
 }

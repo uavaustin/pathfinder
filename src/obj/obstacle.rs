@@ -1,5 +1,7 @@
 use super::*;
 
+// #TODO: swap radius and height to be consistent with waypoint
+// #TODO: remove height because redundant? can directly use location z
 impl Obstacle {
     pub fn new(location: Location, radius: f32, height: f32) -> Self {
         Obstacle {
