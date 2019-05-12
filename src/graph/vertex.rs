@@ -100,10 +100,11 @@ impl PartialEq for Vertex {
 
 impl Ord for Vertex {
     fn cmp(&self, other: &Self) -> Ordering {
+        // Order flipped for max heap
         if self.f_cost < other.f_cost {
-            Ordering::Less
-        } else if self.f_cost > other.f_cost {
             Ordering::Greater
+        } else if self.f_cost > other.f_cost {
+            Ordering::Less
         } else {
             Ordering::Equal
         }
@@ -120,14 +121,16 @@ impl fmt::Display for Vertex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "(index={}, angle={}, connection={} next={})",
+            "(index={}, angle={}, connection={} next={} g_cost={} f_cost={})",
             self.index,
             self.angle,
             match self.connection {
                 Some(ref edge) => "Some",
                 None => "None"
             },
-            self.next.is_some()
+            self.next.is_some(),
+            self.g_cost,
+            self.f_cost,
         )
     }
 }

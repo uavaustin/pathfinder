@@ -248,6 +248,7 @@ impl Pathfinder {
 
         //A* algorithm - find shortest path from plane to destination
         while let Some(cur) = open_set.pop() {
+            assert!(cur.borrow().index != HEADER_VERTEX_INDEX);
             println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
                 path = Some(self.generate_waypoint(cur));
@@ -272,7 +273,7 @@ impl Pathfinder {
                         return;
                     }
                     let mut next_mut = next.borrow_mut();
-                    let new_f_cost = next_mut.g_cost + next_mut.location.distance(&end_point);
+                    let new_f_cost = new_g_cost + next_mut.location.distance(&end_point);
                     next_mut.g_cost = new_g_cost;
                     next_mut.f_cost = new_f_cost;
                     next_mut.parent = Some(cur.clone());
@@ -283,13 +284,13 @@ impl Pathfinder {
             let cur_vertex = cur.borrow();
             let g_cost = cur_vertex.g_cost;
             if let Some(ref connection) = cur_vertex.connection {
-                println!(
-                    "Adding connection {} to queue",
-                    connection.neighbor.borrow().index
-                );
+                // println!(
+                //     "Adding connection {} to queue",
+                //     connection.neighbor.borrow().index
+                // );
                 // Only add vertex if height meets threshold requirement
                 if min_height > connection.threshold {
-                    println!("Met threshold requirement of {}", connection.threshold);
+                    // println!("Met threshold requirement of {}", connection.threshold);
                     let mut next = connection.neighbor.clone();
                     let dist = connection.distance;
                     update_vertex(g_cost, next, dist);
@@ -298,7 +299,7 @@ impl Pathfinder {
 
             let mut weight = cur_vertex.get_neighbor_weight();
             if let Some(ref next_vertex) = cur_vertex.next {
-                println!("Adding neighbor {} to queue", next_vertex.borrow().index);
+                // println!("Adding neighbor {} to queue", next_vertex.borrow().index);
                 let mut next = next_vertex.clone();
                 // If next is header, skip to header neighbor
                 if next.borrow().index == HEADER_VERTEX_INDEX {
