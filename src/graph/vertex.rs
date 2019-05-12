@@ -8,15 +8,15 @@ use std::hash::Hasher;
 impl Vertex {
     pub fn new(
         num_vertex: &mut i32,
-        node: Rc<RefCell<Node>>,
+        node: &Node,
         angle: f32,
-        connection: Option<Connection>,
+        connection: Vec<Connection>,
     ) -> Vertex {
         Vertex::base_vertex(
             num_vertex,
-            node.borrow().radius,
+            node.radius,
             angle,
-            Point::from_reference(&node.borrow(), angle),
+            Point::from_reference(node, angle),
             connection,
             false,
         )
@@ -28,13 +28,13 @@ impl Vertex {
             node.radius,
             angle,
             Point::from_reference(node, angle),
-            None,
+            vec![],
             true,
         )
     }
 
     pub fn new_head(num_vertex: &mut i32, origin: Point) -> Vertex {
-        Vertex::base_vertex(num_vertex, 0f32, 0f32, origin, None, false)
+        Vertex::base_vertex(num_vertex, 0f32, 0f32, origin, vec![], false)
     }
 
     fn base_vertex(
@@ -42,7 +42,7 @@ impl Vertex {
         radius: f32,
         angle: f32,
         location: Point,
-        connection: Option<Connection>,
+        connection: Vec<Connection>,
         sentinel: bool,
     ) -> Vertex {
         if *num_vertex >= 0 {
@@ -65,19 +65,7 @@ impl Vertex {
 
     pub fn get_neighbor_weight(&self) -> f32 {
         if let Some(ref neighbor) = self.next {
-            let mut angle = if self.angle >= 0f32 {
-                // Left case
-                neighbor.borrow().angle - self.angle
-            } else {
-                self.angle - neighbor.borrow().angle
-            };
-
-            if angle < 0f32 {
-                angle += 2f32*PI;
-            }
-            println!("neighbor angle diff {}", angle);
-            let radius = self.radius;
-            (angle * radius)
+            return arc_length(self.angle, neighbor.borrow().angle, self.radius);
         } else {
             panic!("broken chain");
         }
@@ -124,10 +112,7 @@ impl fmt::Display for Vertex {
             "(index={}, angle={}, connection={} next={} g_cost={} f_cost={})",
             self.index,
             self.angle,
-            match self.connection {
-                Some(ref edge) => "Some",
-                None => "None"
-            },
+            self.connection.len(),
             self.next.is_some(),
             self.g_cost,
             self.f_cost,

@@ -26,6 +26,22 @@ pub fn reverse_polarity(alpha: f32) -> f32 {
     }
 }
 
+// Calculate the arc length from angle a to angle b on a circle of radius r
+pub fn arc_length(a: f32, b: f32, r: f32) -> f32 {
+    let mut angle = if a >= 0f32 {
+        // Left case
+        b - a
+    } else {
+        a - b
+    };
+
+    if angle < 0f32 {
+        angle += 2f32 * PI;
+    }
+
+    (angle * r)
+}
+
 // helper function for intersection calculation
 // returns the area between three points
 fn area(a: &Point, b: &Point, c: &Point) -> f32 {
@@ -211,7 +227,11 @@ pub fn perpendicular_intersect(
     let (x, y, distance, endpoint) =
         intersect_distance(a, b, &Point::from_location(&c.location, origin));
     if distance.sqrt() < c.radius as f32 {
-        println!("intersect with obstacle: dist {} r {}", distance.sqrt(), c.radius);
+        println!(
+            "intersect with obstacle: dist {} r {}",
+            distance.sqrt(),
+            c.radius
+        );
         // immediately check if the endpoint is the shortest distance; can't fly over in this case
         // EXCEPTION: endpoint is inside obstacle but still generates a perpendicular.
         // if endpoint {

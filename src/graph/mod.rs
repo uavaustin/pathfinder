@@ -31,7 +31,7 @@ pub struct Vertex {
     pub g_cost: f32,                         //
     pub f_cost: f32,                         //
     pub parent: Option<Rc<RefCell<Vertex>>>, // Parent of vertex
-    pub connection: Option<Connection>,      // Edge connecting to another node
+    pub connection: Vec<Connection>,      // Edge connecting to another node
     pub prev: Option<Rc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
     pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
     pub sentinel: bool,                      // Sentinel property marks end of path hugging
@@ -78,29 +78,11 @@ impl Pathfinder {
         j: usize,
         (alpha, beta, distance, threshold): (f32, f32, f32, f32),
     ) {
-        println!(
-            "\npath: alpha {} beta {} distance {}",
-            alpha * 180f32 / PI,
-            beta * 180f32 / PI,
-            distance
-        );
         // Insert edge from u -> v
-        let v = Rc::new(RefCell::new(Vertex::new(
-            &mut self.num_vertices,
-            self.nodes[j].clone(),
-            beta,
-            None,
-        )));
+        let v = self.nodes[j].borrow().get_vertex(&mut self.num_vertices, beta);
         let edge = Connection::new(v.clone(), distance, threshold);
-        let u = Rc::new(RefCell::new(Vertex::new(
-            &mut self.num_vertices,
-            self.nodes[i].clone(),
-            alpha,
-            Some(edge),
-        )));
-
-        self.nodes[i].borrow_mut().insert_vertex(u);
-        self.nodes[j].borrow_mut().insert_vertex(v);
+        let u = self.nodes[i].borrow().get_vertex(&mut self.num_vertices, alpha);
+        u.borrow_mut().connection.push(edge);
     }
 
     pub fn build_graph(&mut self) {
@@ -119,6 +101,7 @@ impl Pathfinder {
                     let (beta, alpha) = (reverse_polarity(path.0), reverse_polarity(path.1));
                     path.0 = alpha;
                     path.1 = beta;
+                    println!("<< Inserting reciprocal >>");
                     self.insert_edge(j, i, path);
                 }
 

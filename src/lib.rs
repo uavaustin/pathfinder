@@ -22,11 +22,17 @@ pub use obj::{Location, Obstacle, Plane, Waypoint};
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
 const RADIUS: f64 = 6371000.0;
-const MIN_BUFFER: f32 = 2f32;
+
+// Algorithm properties
+const MIN_BUFFER: f32 = 2f32; // minimum buffer for obstacles, in meters
+const VERTEX_MERGE_THRESHOLD: f32 = 5f32; // vertex within this threshold will be merged into one
+
+// Plane properties
 const TURNING_RADIUS: f32 = 5f32; // In meters
 const MAX_ANGLE: f32 = PI / 6f32;
 const MAX_ANGLE_ASCENT: f32 = PI / 3f32;
 const MAX_ANGLE_DESCENT: f32 = -PI / 3f32;
+
 const START_VERTEX_INDEX: i32 = -1;
 const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
@@ -181,9 +187,9 @@ impl Pathfinder {
         let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
         let start_vertex = Rc::new(RefCell::new(Vertex::new(
             &mut START_VERTEX_INDEX,
-            start_node.clone(),
+            &start_node.borrow(),
             0f32,
-            None,
+            vec![],
         )));
         let end_point = Point::from_location(&end, &self.origin);
         let min_height = if start.alt() > end.alt() {
@@ -206,7 +212,8 @@ impl Pathfinder {
                 }
 
                 println!("Inserting start vertex {}", self.num_vertices);
-                let mut vertex = Vertex::new(&mut self.num_vertices, temp_node.clone(), b, None);
+                let mut vertex =
+                    Vertex::new(&mut self.num_vertices, &temp_node.borrow(), b, vec![]);
                 vertex.parent = Some(start_vertex.clone());
                 vertex.g_cost = dist;
                 vertex.f_cost = dist + vertex.location.distance(&end_point);
@@ -223,16 +230,16 @@ impl Pathfinder {
                 println!("Inserting end vertex {}", self.num_vertices);
                 let end_vertex = Rc::new(RefCell::new(Vertex::new(
                     &mut END_VERTEX_INDEX,
-                    end_node.clone(),
+                    &end_node.borrow(),
                     b,
-                    None,
+                    vec![],
                 )));
                 let connection = Connection::new(end_vertex.clone(), dist, threshold);
                 let vertex = Rc::new(RefCell::new(Vertex::new(
                     &mut self.num_vertices,
-                    temp_node.clone(),
+                    &temp_node.borrow(),
                     a,
-                    Some(connection),
+                    vec![connection],
                 )));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 temp_vertices.push_back(vertex.clone());
@@ -283,7 +290,7 @@ impl Pathfinder {
 
             let cur_vertex = cur.borrow();
             let g_cost = cur_vertex.g_cost;
-            if let Some(ref connection) = cur_vertex.connection {
+            for connection in &cur_vertex.connection {
                 // println!(
                 //     "Adding connection {} to queue",
                 //     connection.neighbor.borrow().index
