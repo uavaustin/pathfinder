@@ -166,15 +166,15 @@ fn obstacles_pathing() {
 
     match pathfinder.valid_path(&a, &b) {
         PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
-        _ => panic!()
+        _ => panic!(),
     }
     match pathfinder.valid_path(&c, &d) {
         PathValidity::Flyover(threshold) => assert_eq!(threshold, 0f32),
-        _ => panic!()
+        _ => panic!(),
     }
     match pathfinder.valid_path(&c, &e) {
         PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
-        _ => panic!()
+        _ => panic!(),
     }
 }
 
@@ -431,7 +431,6 @@ fn same_radius_offset_test() {
 
     assert_vec4_eqp(&pathfinder.find_path(&a1, &b1).0, &expected);
 }
-
 
 #[test]
 fn overlap_test() {

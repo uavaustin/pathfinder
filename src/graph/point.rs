@@ -47,8 +47,8 @@ impl Point {
 mod test {
     extern crate rand;
 
-    use super::*;
     use self::rand::{thread_rng, Rng};
+    use super::*;
 
     #[test]
     fn conversion_test() {

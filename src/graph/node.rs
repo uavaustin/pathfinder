@@ -164,7 +164,11 @@ impl Node {
                     min_arc
                 );
 
-                return if arc_a < arc_b { temp_current } else { temp_next };
+                return if arc_a < arc_b {
+                    temp_current
+                } else {
+                    temp_next
+                };
             }
         }
 

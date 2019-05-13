@@ -31,7 +31,7 @@ fn test0() {
 
     let obstacles = vec![
         Obstacle::from_degrees(30.32228, -97.60198, 50f32, 200f32),
-        Obstacle::from_degrees(30.32332,-97.60183, 30f32, 200f32),
+        Obstacle::from_degrees(30.32332, -97.60183, 30f32, 200f32),
         // Obstacle::from_degrees(30.32393, -97.60172, 20f32, 200f32)
     ];
     let mut pathfinder = Pathfinder::<()>::new();
