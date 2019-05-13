@@ -10,7 +10,7 @@ impl<T> Pathfinder<T> {
         // convert flyzone to points
         let mut flyzone_points = Vec::new();
         for location in flyzone {
-            let point = Point::from_location(&location, &self.origin);
+            let point = Point::from((location, &self.origin));
             flyzone_points.push(point);
         }
         // determine flyzone directions
@@ -90,8 +90,8 @@ impl<T> Pathfinder<T> {
                 let mut v1 = flyzone[i];
                 let mut v2 = flyzone[(i + 1) % size];
                 let (x, y, dist_squared, end) = intersect_distance(
-                    &Point::from_location(&v1, &self.origin),
-                    &Point::from_location(&v2, &self.origin),
+                    &Point::from((&v1, &self.origin)),
+                    &Point::from((&v2, &self.origin)),
                     &center,
                 );
                 let dist = dist_squared.sqrt();
@@ -118,28 +118,10 @@ impl<T> Pathfinder<T> {
                     b,
                 )));
 
-                let a_lat = vertex_a
-                    .borrow()
-                    .location
-                    .to_location(&self.origin)
-                    .lat_degree();
-                let a_lon = vertex_a
-                    .borrow()
-                    .location
-                    .to_location(&self.origin)
-                    .lon_degree();
-                let b_lat = vertex_b
-                    .borrow()
-                    .location
-                    .to_location(&self.origin)
-                    .lat_degree();
-                let b_lon = vertex_b
-                    .borrow()
-                    .location
-                    .to_location(&self.origin)
-                    .lon_degree();
-                println!("flyzone/node vertices: {:?},{:?}", a_lat, a_lon);
-                println!("flyzone/node vertices: {:?},{:?}", b_lat, b_lon);
+                let a = Location::from((&vertex_a.borrow().location, &self.origin));
+                let b = Location::from((&vertex_b.borrow().location, &self.origin));
+                println!("flyzone/node vertices: {:?},{:?}", a.lat(), a.lon());
+                println!("flyzone/node vertices: {:?},{:?}", b.lat(), b.lon());
                 node.insert_vertex(vertex_a);
                 node.insert_vertex(vertex_b);
             }

@@ -2,6 +2,15 @@ use super::*;
 
 use std::fmt;
 
+#[derive(Debug)]
+pub struct Node {
+    pub origin: Point,
+    pub radius: f32,
+    pub height: f32,                     // make private later
+    pub left_ring: Rc<RefCell<Vertex>>,  // make private later
+    pub right_ring: Rc<RefCell<Vertex>>, // make private later
+}
+
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "loc={:?}, r={} \nleft = [", self.origin, self.radius)
@@ -36,6 +45,46 @@ impl fmt::Display for Node {
     }
 }
 
+impl From<(&Obstacle, &Location, f32)> for Node {
+    // Generate node from obstacle
+    fn from((obs, origin, buffer): (&Obstacle, &Location, f32)) -> Self {
+        Self::new(
+            Point::from((&obs.location, origin)),
+            obs.radius + buffer,
+            obs.height,
+        )
+    }
+}
+
+impl From<(&Location, &Location)> for Node {
+    // Generate node from point, used for inserting virtual obstacles for flyzones
+    fn from((p, origin): (&Location, &Location)) -> Self {
+        Self::new(Point::from((p, origin)), TURNING_RADIUS, 0f32)
+    }
+}
+
+impl From<(&Plane, &Location)> for Node {
+    // Generate node from plane
+    fn from((plane, origin): (&Plane, &Location)) -> Self {
+        Self::new(
+            Point::from((&plane.location, origin)),
+            TURNING_RADIUS,
+            plane.location.alt(),
+        )
+    }
+}
+
+impl<T> From<(&Waypoint<T>, &Location)> for Node {
+    // Generate node from waypoint
+    fn from((waypoint, origin): (&Waypoint<T>, &Location)) -> Self {
+        Self::new(
+            Point::from((&waypoint.location, origin)),
+            waypoint.radius,
+            0f32,
+        )
+    }
+}
+
 impl Node {
     pub fn new(origin: Point, radius: f32, height: f32) -> Self {
         let left_head = Rc::new(RefCell::new(Vertex::new_head(
@@ -50,54 +99,13 @@ impl Node {
         )));
         right_head.borrow_mut().next = Some(right_head.clone());
         right_head.borrow_mut().prev = Some(right_head.clone());
-        Node {
+        Self {
             origin: origin,
             radius: radius,
             height: height,
             left_ring: left_head,
             right_ring: right_head,
         }
-    }
-
-    // Generate node from obstacle
-    pub fn from_obstacle(obs: &Obstacle, origin: &Location, buffer: f32) -> Self {
-        Node::new(
-            Point::from_location(&obs.location, origin),
-            obs.radius + buffer,
-            obs.height,
-        )
-    }
-
-    // Generate node from point, used for inserting virtual obstacles for flyzones
-    pub fn from_location(p: &Location, origin: &Location) -> Self {
-        Node::new(Point::from_location(p, origin), TURNING_RADIUS, 0f32)
-    }
-
-    // Generate node from plane
-    pub fn from_plane(plane: &Plane, origin: &Location) -> Self {
-        Node::new(
-            Point::from_location(&plane.location, origin),
-            TURNING_RADIUS,
-            plane.location.alt(),
-        )
-    }
-
-    // Generate node from waypoint
-    pub fn from_waypoint<T>(waypoint: &Waypoint<T>, origin: &Location) -> Self {
-        Node::new(
-            Point::from_location(&waypoint.location, origin),
-            waypoint.radius,
-            0f32,
-        )
-    }
-
-    // Converts a vertex on a node to coordinate
-    pub fn to_point(&self, angle: f32) -> Point {
-        Point::new(
-            self.origin.x + (self.radius * angle.cos()),
-            self.origin.y + (self.radius * angle.sin()),
-            self.height,
-        )
     }
 
     // Traverse ring to find current pointer and next pointer for angle

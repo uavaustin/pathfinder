@@ -1,22 +1,23 @@
+// lib.rs
+// contains main functionality of the library
 #![allow(dead_code)]
 #![allow(unused_variables)]
-
 extern crate ordered_float;
 
+mod graph;
+mod queue;
+
+pub mod obj;
+
+use graph::util::{intersect, output_graph};
+use graph::{Connection, Node, Point, Vertex};
+use queue::Queue;
 use std::cell::RefCell;
-use std::collections::BinaryHeap;
-use std::collections::HashSet;
-use std::collections::LinkedList;
+use std::collections::{BinaryHeap, HashSet, LinkedList};
 use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
-mod graph;
-pub mod obj;
-mod queue;
-
-use graph::util::{intersect, output_graph};
-use graph::{Connection, Node, Point, Vertex};
 pub use obj::{Location, Obstacle, Plane, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
@@ -52,12 +53,6 @@ pub struct Pathfinder<T> {
     origin: Location, // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
     num_vertices: i32,
-}
-
-// Simple wrapper around heap and set for efficient data retrival
-struct Queue {
-    heap: BinaryHeap<Rc<RefCell<Vertex>>>, // Efficiently get min
-    set: HashSet<i32>,                     // Efficiently check of existence
 }
 
 impl Pathfinder<()> {
@@ -125,7 +120,7 @@ impl<T> Pathfinder<T> {
         let mut vertices = Vec::new();
         for loc in 0..flyzone.len() {
             let i = flyzone[loc];
-            let point = Point::from_location(&i, &self.origin);
+            let point = Point::from((&i, &self.origin));
             vertices.push(point);
         }
         let n = vertices.len();
@@ -206,7 +201,7 @@ impl<T> Pathfinder<T> {
             let (temp_paths, _) = self.find_path(&start_node, &temp_node.borrow());
             println!("[start {}]: path count -> {}", i, temp_paths.len());
 
-            for (a, b, dist, threshold) in temp_paths {
+            for (_, b, dist, threshold) in temp_paths {
                 if min_height < threshold {
                     continue;
                 }
@@ -256,10 +251,10 @@ impl<T> Pathfinder<T> {
         let mut open_set = Queue::new(); // candidate vertices
         let mut closed_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
 
-        let start_node = Rc::new(RefCell::new(Node::from_location(&start, &self.origin)));
-        let end_node = Rc::new(RefCell::new(Node::from_location(&end, &self.origin)));
+        let start_node = Rc::new(RefCell::new(Node::from((&start, &self.origin))));
+        let end_node = Rc::new(RefCell::new(Node::from((&end, &self.origin))));
 
-        let end_point = Point::from_location(&end, &self.origin);
+        let end_point = Point::from((&end, &self.origin));
         let min_height = if start.alt() > end.alt() {
             end.alt()
         } else {
@@ -278,7 +273,7 @@ impl<T> Pathfinder<T> {
         output_graph(&self);
         println!("temporary vertices");
         for vert in &temp_vertices {
-            let v_loc = vert.borrow().location.to_location(&self.origin);
+            let v_loc: Location = (&vert.borrow().location, &self.origin).into();
             println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
         }
 
@@ -362,10 +357,10 @@ impl<T> Pathfinder<T> {
         let mut index = END_VERTEX_INDEX;
         println!("Generating waypoints");
         while index != START_VERTEX_INDEX {
-            let loc = cur_vertex.borrow().location.to_location(&self.origin);
+            let loc = Location::from((&cur_vertex.borrow().location, &self.origin));
             let radius = cur_vertex.borrow().radius;
 
-            waypoint_list.push_front(Waypoint::new(1, loc, radius));
+            waypoint_list.push_front(Waypoint::new(0, loc, radius));
             println!("{}", cur_vertex.borrow());
             let parent = match cur_vertex.borrow().parent {
                 Some(ref cur_parent) => cur_parent.clone(),
@@ -435,10 +430,10 @@ mod tests {
     #[should_panic]
     fn fz_fz_intersection_test() {
         let origin = Location::from_degrees(0f64, 0f64, 0f32);
-        let a = Point::new(0f32, 0f32, 10f32).to_location(&origin);
-        let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
-        let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
-        let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+        let a = (&Point::new(0f32, 0f32, 10f32), &origin).into();
+        let b = (&Point::new(20f32, 0f32, 10f32), &origin).into();
+        let c = (&Point::new(20f32, 20f32, 10f32), &origin).into();
+        let d = (&Point::new(0f32, 20f32, 10f32), &origin).into();
         let test_flyzone = vec![vec![a, b, d, c]];
         let mut pathfinder = Pathfinder::<()>::create(1f32, test_flyzone, Vec::new());
         assert!(pathfinder.invalid_flyzone(0));

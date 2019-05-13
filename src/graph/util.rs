@@ -167,7 +167,7 @@ fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
         let ref mut vertex = current.clone();
         if vertex.borrow().index != HEADER_VERTEX_INDEX {
             count += 1;
-            let v_loc = vertex.borrow().location.to_location(origin);
+            let v_loc = Location::from((&vertex.borrow().location, origin));
             println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
         } else {
             break;
@@ -188,13 +188,13 @@ pub fn output_graph<T>(finder: &Pathfinder<T>) {
     println!("vertex count: {}\n", finder.num_vertices);
     println!("---- Node List ----");
     for node in &finder.nodes {
-        let loc = node.borrow().origin.to_location(&finder.origin);
+        // let loc = Location::from((&node.borrow().origin, &finder.origin));
         //println!("{}, {}", loc.lat_degree(), loc.lon_degree());
     }
     //println!("\n---- Left Vertex List ----");
 
     for node in &finder.nodes {
-        let loc = node.borrow().origin.to_location(&finder.origin);
+        let loc = Location::from((&node.borrow().origin, &finder.origin));
         // println!("Node origin {:?}", node.borrow().origin);
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().left_ring.clone());
@@ -204,7 +204,7 @@ pub fn output_graph<T>(finder: &Pathfinder<T>) {
     //println!("\n---- Right Vertex List ----");
 
     for node in &finder.nodes {
-        let loc = node.borrow().origin.to_location(&finder.origin);
+        let loc = Location::from((&node.borrow().origin, &finder.origin));
         // let loc = node.borrow().origin;
         // println!("Node origin {:?}", node.borrow().origin);
         if node.borrow().height > 0f32 {
@@ -224,8 +224,8 @@ pub fn perpendicular_intersect(
 ) -> (Option<Point>, Option<Point>) {
     // intersect distance gives x and y of intersect point, then distance squared
     // calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
-    let (x, y, distance, endpoint) =
-        intersect_distance(a, b, &Point::from_location(&c.location, origin));
+    // #TODO: endpoint not used, why is it here?
+    let (x, y, distance, endpoint) = intersect_distance(a, b, &Point::from((&c.location, origin)));
     if distance.sqrt() < c.radius as f32 {
         println!(
             "intersect with obstacle: dist {} r {}",
@@ -261,7 +261,7 @@ pub fn circular_intersect(
 ) -> (Option<Point>, Option<Point>) {
     //y = mx + b for point a and b
 
-    let mut c = Point::from_location(&obstacle.location, origin);
+    let mut c = Point::from((&obstacle.location, origin));
     c.z = obstacle.height;
     let dx = b.x - a.x;
     let dy = b.y - a.y;

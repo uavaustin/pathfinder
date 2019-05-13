@@ -1,60 +1,23 @@
 // Visibility related code for modularity
 use super::*;
 
+mod flyzones;
 #[cfg(test)]
 mod test;
 
-mod connection;
-mod flyzones;
-mod node;
-mod point;
-mod vertex;
-
+pub mod connection;
+pub mod node;
+pub mod point;
 pub mod util;
+pub mod vertex;
 
-pub use graph::util::*;
+pub use self::connection::Connection;
+pub use self::node::Node;
+pub use self::point::Point;
+pub use self::util::*;
+pub use self::vertex::Vertex;
+
 use obj::{Location, Obstacle};
-
-#[derive(Copy, Clone, Debug)]
-pub struct Point {
-    pub x: f32, // horizontal distance from origin in meters
-    pub y: f32, // vertical distance from origin in meters
-    pub z: f32,
-}
-
-#[derive(Debug)]
-pub struct Vertex {
-    pub index: i32,                          // Index to identify vertex
-    pub radius: f32,                         // Radius of the node vertex is attached to
-    pub location: Point,                     // Location of the vertex
-    pub angle: f32,                          // Angle with respect to the node
-    pub g_cost: f32,                         //
-    pub f_cost: f32,                         //
-    pub parent: Option<Rc<RefCell<Vertex>>>, // Parent of vertex
-    pub connection: Vec<Connection>,         // Edge connecting to another node
-    pub prev: Option<Rc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
-    pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
-    pub sentinel: bool,                      // Sentinel property marks end of path hugging
-}
-
-// Represent a connection between two nodes
-// Contains the coordinate of tangent line and distance
-#[derive(Debug)]
-pub struct Connection {
-    pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
-    pub distance: f32,
-    // starting and ending vertices must be above threshold to take the connection
-    pub threshold: f32,
-}
-
-#[derive(Debug)]
-pub struct Node {
-    pub origin: Point,
-    pub radius: f32,
-    pub height: f32,                     // make private later
-    pub left_ring: Rc<RefCell<Vertex>>,  // make private later
-    pub right_ring: Rc<RefCell<Vertex>>, // make private later
-}
 
 pub enum PathValidity {
     Valid,
@@ -143,7 +106,7 @@ impl<T> Pathfinder<T> {
         self.nodes.clear();
         self.find_origin();
         for i in 0..self.obstacles.len() {
-            let mut node = Node::from_obstacle(&self.obstacles[i], &self.origin, self.buffer);
+            let mut node = (&self.obstacles[i], &self.origin, self.buffer).into();
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
         for i in 0..self.flyzones.len() {
@@ -222,9 +185,9 @@ impl<T> Pathfinder<T> {
 
         println!(
             "theta: {}, theta1: {}, theta2: {}",
-            theta * 180f32 / PI,
-            theta1 * 180f32 / PI,
-            theta2 * 180f32 / PI
+            theta.to_degrees(),
+            theta1.to_degrees(),
+            theta2.to_degrees()
         );
 
         // gamma1 and gamma2 are the angle between reference axis and the tangents
@@ -239,8 +202,8 @@ impl<T> Pathfinder<T> {
 
         println!(
             "gamma1: {}, gamma2: {}",
-            gamma1 * 180f32 / PI,
-            gamma2 * 180f32 / PI
+            gamma1.to_degrees(),
+            gamma2.to_degrees()
         );
 
         // Outer tangent always exists
@@ -291,9 +254,9 @@ impl<T> Pathfinder<T> {
         let mut connections = Vec::new();
         let mut point_connections = Vec::new();
         for (i, j) in candidates {
-            let p1 = a.to_point(i);
-            let p2 = b.to_point(j);
-            println!("angles {} -> {}", i * 180f32 / PI, j * 180f32 / PI);
+            let p1 = Point::from((a, i));
+            let p2 = Point::from((b, j));
+            println!("angles {} -> {}", i.to_degrees(), j.to_degrees());
             println!("validating path {:?} -> {:?}", p1, p2);
 
             match self.valid_path(&p1, &p2) {
@@ -318,7 +281,7 @@ impl<T> Pathfinder<T> {
 
     // check if a path is valid (not blocked by flightzone or obstacles)
     fn valid_path(&self, a: &Point, b: &Point) -> PathValidity {
-        let theta_o = (b.z - a.z).atan2(a.distance(b));
+        // let theta_o = (b.z - a.z).atan2(a.distance(b));
         // //check if angle of waypoints is valid
         // if theta_o > MAX_ANGLE_ASCENT {
         //     return PathValidity::Invalid;
@@ -330,11 +293,11 @@ impl<T> Pathfinder<T> {
         // some messy code to link flyzone points, can definitely be better
         for flyzone in &self.flyzones {
             let mut tempzone = flyzone.clone();
-            let first = Point::from_location(&tempzone.remove(0), &self.origin);
+            let first = Point::from((&tempzone.remove(0), &self.origin));
             let mut temp = first;
             for location in tempzone {
                 //println!("origin: {:?}", &self.origin);
-                let point = Point::from_location(&location, &self.origin);
+                let point = Point::from((&location, &self.origin));
                 //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &point);
                 if intersect(a, b, &temp, &point) {
                     println!("false due to flyzone");
@@ -354,7 +317,7 @@ impl<T> Pathfinder<T> {
         for obstacle in &self.obstacles {
             // catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
             // check if there are two points of intersect, for flyover cases
-            if let (Some(p1), Some(p2)) = perpendicular_intersect(&self.origin, a, b, obstacle) {
+            if let (Some(_p1), Some(_p2)) = perpendicular_intersect(&self.origin, a, b, obstacle) {
                 println!(
                     "found intersection at height {} with obstacle {:?}",
                     obstacle.height, obstacle

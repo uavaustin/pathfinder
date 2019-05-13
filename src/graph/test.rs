@@ -80,7 +80,7 @@ fn dummy_pathfinder() -> Pathfinder<()> {
 fn points_to_flyzone(points: Vec<Point>) -> Vec<Location> {
     let mut flyzone = Vec::new();
     for point in points {
-        flyzone.push(point.to_location(&dummy_origin()));
+        flyzone.push(Location::from((&point, &dummy_origin())));
     }
     flyzone
 }
@@ -266,12 +266,7 @@ fn intersection_distance() {
 
     //intercepts at (10,0), (20,0)
     assert_eq!(
-        intersect_distance(
-            &ax,
-            &ay,
-            &Point::from_location(&ob.location, &dummy_origin())
-        )
-        .2,
+        intersect_distance(&ax, &ay, &Point::from((&ob.location, &dummy_origin()))).2,
         0f32
     );
     let result = perpendicular_intersect(&pathfinder.origin, &ax, &ay, &ob);
@@ -563,10 +558,10 @@ fn different_radius_no_overlap_one_flyover_test() {
 #[test]
 fn virtualize_flyzone_square() {
     let origin = Location::from_degrees(0f64, 0f64, 0f32);
-    let a = Point::new(0f32, 0f32, 10f32).to_location(&origin);
-    let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
-    let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
-    let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+    let a = Location::from((&Point::new(0f32, 0f32, 10f32), &origin));
+    let b = Location::from((&Point::new(20f32, 0f32, 10f32), &origin));
+    let c = Location::from((&Point::new(20f32, 20f32, 10f32), &origin));
+    let d = Location::from((&Point::new(0f32, 20f32, 10f32), &origin));
     let test_flyzone = vec![vec![d, c, b, a]];
     let mut pathfinder = Pathfinder::<()>::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(5f32, 5f32, 0f32);
@@ -574,7 +569,6 @@ fn virtualize_flyzone_square() {
     let node_c = Point::new(15f32, 15f32, 0f32);
     let node_d = Point::new(5f32, 15f32, 0f32);
     let expected = vec![node_d, node_c, node_b, node_a];
-    let test_flyzone = vec![vec![d, c, b, a]];
     for i in 0..4 {
         assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
     }
@@ -588,18 +582,18 @@ fn virtualize_flyzone_square() {
 #[test]
 fn virtualize_flyzone_plus() {
     let origin = Location::from_degrees(0f64, 0f64, 0f32);
-    let a = Point::new(20f32, 0f32, 10f32).to_location(&origin);
-    let b = Point::new(40f32, 0f32, 10f32).to_location(&origin);
-    let c = Point::new(40f32, 20f32, 10f32).to_location(&origin);
-    let d = Point::new(60f32, 20f32, 10f32).to_location(&origin);
-    let e = Point::new(60f32, 40f32, 10f32).to_location(&origin);
-    let f = Point::new(40f32, 40f32, 10f32).to_location(&origin);
-    let g = Point::new(40f32, 60f32, 10f32).to_location(&origin);
-    let h = Point::new(20f32, 60f32, 10f32).to_location(&origin);
-    let i = Point::new(20f32, 40f32, 10f32).to_location(&origin);
-    let j = Point::new(0f32, 40f32, 10f32).to_location(&origin);
-    let k = Point::new(0f32, 20f32, 10f32).to_location(&origin);
-    let l = Point::new(20f32, 20f32, 10f32).to_location(&origin);
+    let a = Location::from((&Point::new(20f32, 0f32, 10f32), &origin));
+    let b = Location::from((&Point::new(40f32, 0f32, 10f32), &origin));
+    let c = Location::from((&Point::new(40f32, 20f32, 10f32), &origin));
+    let d = Location::from((&Point::new(60f32, 20f32, 10f32), &origin));
+    let e = Location::from((&Point::new(60f32, 40f32, 10f32), &origin));
+    let f = Location::from((&Point::new(40f32, 40f32, 10f32), &origin));
+    let g = Location::from((&Point::new(40f32, 60f32, 10f32), &origin));
+    let h = Location::from((&Point::new(20f32, 60f32, 10f32), &origin));
+    let i = Location::from((&Point::new(20f32, 40f32, 10f32), &origin));
+    let j = Location::from((&Point::new(0f32, 40f32, 10f32), &origin));
+    let k = Location::from((&Point::new(0f32, 20f32, 10f32), &origin));
+    let l = Location::from((&Point::new(20f32, 20f32, 10f32), &origin));
     let test_flyzone = vec![vec![l, k, j, i, h, g, f, e, d, c, b, a]];
     let mut pathfinder = Pathfinder::<()>::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(25f32, 5f32, 0f32);
@@ -647,11 +641,11 @@ fn virtualize_flyzone_plus() {
 #[test]
 fn virtualize_flyzone_linear() {
     let origin = Location::from_degrees(0f64, 0f64, 0f32);
-    let a = Point::new(0f32, 0f32, 10f32).to_location(&origin);
-    let b = Point::new(20f32, 0f32, 10f32).to_location(&origin);
-    let c = Point::new(20f32, 10f32, 10f32).to_location(&origin);
-    let d = Point::new(20f32, 20f32, 10f32).to_location(&origin);
-    let e = Point::new(0f32, 20f32, 10f32).to_location(&origin);
+    let a = Location::from((&Point::new(0f32, 0f32, 10f32), &origin));
+    let b = Location::from((&Point::new(20f32, 0f32, 10f32), &origin));
+    let c = Location::from((&Point::new(20f32, 10f32, 10f32), &origin));
+    let d = Location::from((&Point::new(20f32, 20f32, 10f32), &origin));
+    let e = Location::from((&Point::new(0f32, 20f32, 10f32), &origin));
     let test_flyzone = vec![vec![e, d, c, b, a]];
     let mut pathfinder = Pathfinder::<()>::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(5f32, 5f32, 0f32);
@@ -672,13 +666,13 @@ fn virtualize_flyzone_linear() {
 #[test]
 fn virtualize_flyzone_small_angle() {
     let origin = Location::from_degrees(0f64, 0f64, 0f32);
-    let a = Point::new(10f32, 0f32, 10f32).to_location(&origin);
-    let b = Point::new(30f32, 0f32, 10f32).to_location(&origin);
-    let c = Point::new(30f32, 20f32, 10f32).to_location(&origin);
-    let d = Point::new(10f32, 20f32, 10f32).to_location(&origin);
-    let e = Point::new(10f32, 11f32, 10f32).to_location(&origin);
-    let f = Point::new(0f32, 10f32, 10f32).to_location(&origin);
-    let g = Point::new(10f32, 9f32, 10f32).to_location(&origin);
+    let a = Location::from((&Point::new(10f32, 0f32, 10f32), &origin));
+    let b = Location::from((&Point::new(30f32, 0f32, 10f32), &origin));
+    let c = Location::from((&Point::new(30f32, 20f32, 10f32), &origin));
+    let d = Location::from((&Point::new(10f32, 20f32, 10f32), &origin));
+    let e = Location::from((&Point::new(10f32, 11f32, 10f32), &origin));
+    let f = Location::from((&Point::new(0f32, 10f32, 10f32), &origin));
+    let g = Location::from((&Point::new(10f32, 9f32, 10f32), &origin));
     let test_flyzone = vec![vec![g, f, e, d, c, b, a]];
     let mut pathfinder = Pathfinder::<()>::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(15f32, 5f32, 0f32);
