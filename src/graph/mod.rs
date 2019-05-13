@@ -88,6 +88,9 @@ impl Pathfinder {
     pub fn build_graph(&mut self) {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
+            let node = self.nodes[i].clone();
+            self.insert_flyzone_sentinel(&mut node.borrow_mut());
+
             for j in i + 1..self.nodes.len() {
                 let (paths, obs_sentinels) =
                     self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
@@ -101,12 +104,12 @@ impl Pathfinder {
                     let (beta, alpha) = (reverse_polarity(path.0), reverse_polarity(path.1));
                     path.0 = alpha;
                     path.1 = beta;
-                    println!("<< Inserting reciprocal >>");
                     self.insert_edge(j, i, path);
                 }
 
                 // Inserting sentinels
                 if obs_sentinels.is_some() {
+                    println!("inserting sentinels");
                     for (alpha_s, beta_s) in obs_sentinels.unwrap() {
                         let mut a = Vertex::new_sentinel(
                             &mut self.num_vertices,
@@ -137,7 +140,6 @@ impl Pathfinder {
         self.find_origin();
         for i in 0..self.obstacles.len() {
             let mut node = Node::from_obstacle(&self.obstacles[i], &self.origin, self.buffer);
-            self.insert_flyzone_sentinel(&mut node);
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
         for i in 0..self.flyzones.len() {
@@ -264,6 +266,7 @@ impl Pathfinder {
                 ),
             ]);
         } else {
+            println!("obstacle sentinels detected");
             //determine angle locations of sentinels
             let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2)) / (2f32 * r1 * dist)).acos();
             let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2)) / (2f32 * r2 * dist)).acos();
@@ -305,6 +308,7 @@ impl Pathfinder {
                 }
             }
         }
+
         (connections, sentinels)
     }
 

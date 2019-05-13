@@ -21,7 +21,7 @@ impl Pathfinder {
         } else {
             (-1, size)
         };
-        
+
         // edge conditions for flyzone
         while (iter <= size) && (iter > -1) {
             let (prev, next) = if iter == 0 {

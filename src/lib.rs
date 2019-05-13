@@ -294,12 +294,14 @@ impl Pathfinder {
                 let new_g_cost = cur_g_cost + dist;
                 // println!("add vertex to queue {}", next.borrow());
                 {
+                    if next.borrow().sentinel {
+                        println!("SENTINEL ENCOUNTERED");
+                    }
                     if closed_set.contains(&next.borrow().index)    //vertex is already explored
                         || next.borrow().sentinel                   //vertex is a sentinel
                         || (open_set.contains(&next) && new_g_cost >= next.borrow().g_cost)
                     {
                         //vertex has been visited and the current cost is better
-                        // println!("Vertex addition skipped");
                         return;
                     }
                     let mut next_mut = next.borrow_mut();
