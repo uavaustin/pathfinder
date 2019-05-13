@@ -30,8 +30,8 @@ impl<T> Waypoint<T> {
         Waypoint::new(self.index, location, self.radius)
     }
 
-    pub fn add_data<U>(orig: Waypoint<U>, data: T) -> Self {
-        Self::new_with_data(orig.index, orig.location, orig.radius, data)
+    pub fn add_data<U>(self, data: U) -> Waypoint<U> {
+        Waypoint::<U>::new_with_data(self.index, self.location, self.radius, data)
     }
 
     pub fn set_data(&mut self, data: T) -> &mut Self {
