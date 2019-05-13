@@ -38,7 +38,7 @@ const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
 
 #[allow(non_snake_case)]
-pub struct Pathfinder {
+pub struct Pathfinder<T> {
     // exposed API
     buffer: f32,                // In meters
     max_process_time: Duration, // In seconds
@@ -47,8 +47,8 @@ pub struct Pathfinder {
     // private
     initialized: bool,
     start_time: SystemTime,
-    current_wp: Waypoint,
-    wp_list: LinkedList<Waypoint>,
+    current_wp: Waypoint<T>,
+    wp_list: LinkedList<Waypoint<T>>,
     origin: Location, // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
     num_vertices: i32,
@@ -60,8 +60,14 @@ struct Queue {
     set: HashSet<i32>,                     // Efficiently check of existence
 }
 
-impl Pathfinder {
-    pub fn new() -> Pathfinder {
+impl Pathfinder<()> {
+    pub fn new_without_data() -> Self {
+        Pathfinder::<()>::new()
+    }
+}
+
+impl<T> Pathfinder<T> {
+    pub fn new() -> Pathfinder<T> {
         Self {
             // exposed API
             buffer: MIN_BUFFER,
@@ -145,8 +151,8 @@ impl Pathfinder {
     pub fn get_adjust_path(
         &mut self,
         plane: Plane,
-        mut wp_list: LinkedList<Waypoint>,
-    ) -> &LinkedList<Waypoint> {
+        mut wp_list: LinkedList<Waypoint<T>>,
+    ) -> &LinkedList<Waypoint<T>> {
         assert!(self.initialized);
         self.start_time = SystemTime::now();
         self.wp_list = LinkedList::new();
@@ -245,7 +251,7 @@ impl Pathfinder {
 
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
-    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint>> {
+    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint<T>>> {
         let mut path = None;
         let mut open_set = Queue::new(); // candidate vertices
         let mut closed_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
@@ -350,7 +356,7 @@ impl Pathfinder {
         path
     }
 
-    fn generate_waypoint(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint> {
+    fn generate_waypoint(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint<T>> {
         let mut waypoint_list = LinkedList::new();
         let mut cur_vertex = end_vertex;
         let mut index = END_VERTEX_INDEX;
@@ -416,13 +422,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn invalid_flyzones_test() {
-        Pathfinder::new().init(1f32, vec![], Vec::new())
+        Pathfinder::<()>::new().init(1f32, vec![], Vec::new())
     }
 
     #[test]
     #[should_panic]
     fn invalid_flyzone_test() {
-        Pathfinder::new().init(1f32, vec![vec![]], Vec::new())
+        Pathfinder::<()>::new().init(1f32, vec![vec![]], Vec::new())
     }
 
     #[test]
@@ -434,7 +440,7 @@ mod tests {
         let c = Point::new(20f32, 20f32, 10f32).to_location(&origin);
         let d = Point::new(0f32, 20f32, 10f32).to_location(&origin);
         let test_flyzone = vec![vec![a, b, d, c]];
-        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+        let mut pathfinder = Pathfinder::<()>::create(1f32, test_flyzone, Vec::new());
         assert!(pathfinder.invalid_flyzone(0));
     }
 }

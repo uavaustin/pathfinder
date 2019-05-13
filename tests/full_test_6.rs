@@ -37,7 +37,7 @@ fn test6() {
         Obstacle::from_degrees(30.32308, -97.60104, 54f32, 200f32),
     ];
 
-    let mut pathfinder = Pathfinder::new();
+    let mut pathfinder = Pathfinder::<()>::new();
     pathfinder.init(2.0, flyzone, obstacles);
     let plane = Plane::from_degrees(30.32222, -97.60060, 100.0).yaw(170f32);
     // let plane = Plane::from_degrees(30.32551, -97.60331, 100.0).yaw(170f32);

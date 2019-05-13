@@ -71,7 +71,7 @@ impl From<PathValidity> for bool {
     }
 }
 
-impl Pathfinder {
+impl<T> Pathfinder<T> {
     fn insert_edge(
         &mut self,
         i: usize,

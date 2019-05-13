@@ -29,7 +29,7 @@ fn test1() {
     ]);
 
     let flyzone = vec![flyzone];
-    let mut pathfinder = Pathfinder::new();
+    let mut pathfinder = Pathfinder::<()>::new();
     pathfinder.init(5.0, flyzone, obstacles);
     let plane = Plane::from_degrees(30.32491, -97.60159, 10.0);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());

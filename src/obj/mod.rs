@@ -33,8 +33,9 @@ pub struct Plane {
 }
 
 #[derive(Clone, Debug)]
-pub struct Waypoint {
+pub struct Waypoint<T> {
     pub index: u32,
     pub location: Location,
     pub radius: f32, // In meters
+    pub data: Option<T>,
 }

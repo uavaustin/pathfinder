@@ -3,7 +3,7 @@
 
 use super::*;
 
-impl Pathfinder {
+impl<T> Pathfinder<T> {
     // Convert flyzone into virtual nodes
     pub fn virtualize_flyzone(&mut self, index: usize) {
         let flyzone = &self.flyzones[index];

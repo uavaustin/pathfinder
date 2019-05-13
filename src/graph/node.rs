@@ -83,7 +83,7 @@ impl Node {
     }
 
     // Generate node from waypoint
-    pub fn from_waypoint(waypoint: &Waypoint, origin: &Location) -> Self {
+    pub fn from_waypoint<T>(waypoint: &Waypoint<T>, origin: &Location) -> Self {
         Node::new(
             Point::from_location(&waypoint.location, origin),
             waypoint.radius,

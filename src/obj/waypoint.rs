@@ -1,11 +1,19 @@
 use super::*;
 
-impl Waypoint {
+impl<T> Waypoint<T> {
     pub fn new(index: u32, location: Location, radius: f32) -> Self {
         Waypoint {
             index: index,
             location: location,
             radius: radius,
+            data: None,
+        }
+    }
+
+    pub fn new_with_data(index: u32, location: Location, radius: f32, data: T) -> Self {
+        Waypoint {
+            data: Some(data),
+            ..Self::new(index, location, radius)
         }
     }
 
@@ -20,5 +28,20 @@ impl Waypoint {
     pub fn extend(&self, mut location: Location, alt: f32) -> Self {
         location.alt = alt.into();
         Waypoint::new(self.index, location, self.radius)
+    }
+
+    pub fn add_data<U>(orig: Waypoint<U>, data: T) -> Self {
+        Self::new_with_data(orig.index, orig.location, orig.radius, data)
+    }
+
+    pub fn set_data(&mut self, data: T) -> &mut Self {
+        self.data = Some(data);
+        self
+    }
+}
+
+impl<T: Copy> Waypoint<T> {
+    pub fn get_data(&self) -> Option<T> {
+        self.data
     }
 }
