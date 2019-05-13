@@ -1,4 +1,5 @@
 use ordered_float::OrderedFloat;
+use super::*;
 
 mod location;
 mod obstacle;

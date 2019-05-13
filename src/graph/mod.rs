@@ -139,7 +139,7 @@ impl Pathfinder {
         self.nodes.clear();
         self.find_origin();
         for i in 0..self.obstacles.len() {
-            let mut node = Node::from_obstacle(&self.obstacles[i], &self.origin, self.buffer);
+            let mut node = (&self.obstacles[i], &self.origin, self.buffer).into();
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
         for i in 0..self.flyzones.len() {
@@ -287,8 +287,8 @@ impl Pathfinder {
         let mut connections = Vec::new();
         let mut point_connections = Vec::new();
         for (i, j) in candidates {
-            let p1 = a.to_point(i);
-            let p2 = b.to_point(j);
+            let p1 = Point::from((a, i));
+            let p2 = Point::from((b, j));
             println!("angles {} -> {}", i * 180f32 / PI, j * 180f32 / PI);
             println!("validating path {:?} -> {:?}", p1, p2);
 
@@ -326,11 +326,11 @@ impl Pathfinder {
         // some messy code to link flyzone points, can definitely be better
         for flyzone in &self.flyzones {
             let mut tempzone = flyzone.clone();
-            let first = Point::from_location(&tempzone.remove(0), &self.origin);
+            let first = Point::from((&tempzone.remove(0), &self.origin));
             let mut temp = first;
             for location in tempzone {
                 //println!("origin: {:?}", &self.origin);
-                let point = Point::from_location(&location, &self.origin);
+                let point = Point::from((&location, &self.origin));
                 //println!("test intersect for {:?} {:?} {:?} {:?}", a, b, &temp, &point);
                 if intersect(a, b, &temp, &point) {
                     println!("false due to flyzone");

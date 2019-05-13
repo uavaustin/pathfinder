@@ -19,6 +19,15 @@ pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoi
         plane.location.lon_degree(),
         // plane.location.alt()
     );
+
+    while let Some(node) = iter.next() {
+        eprintln!(
+            "{:.5}, {:.5}",
+            node.location.lat_degree(),
+            node.location.lon_degree(),
+        );
+    }
+    /*
     for wp in waypoints {
         while let Some(node) = iter.next() {
             // if node.index != wp.index {
@@ -40,6 +49,7 @@ pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoi
             // wp.index
         );
     }
+    */
 
     println!();
 }

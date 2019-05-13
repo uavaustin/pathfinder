@@ -1,13 +1,9 @@
 use super::*;
 
-impl Point {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Point { x: x, y: y, z: z }
-    }
-
-    // Creates a point from a location and reference point
-    pub fn from_location(location: &Location, origin: &Location) -> Self {
-        Point::new(
+impl From<(&Location, &Location)> for Point {
+    // Creates a point from a location and reference origin
+    fn from((location, origin): (&Location, &Location)) -> Self {
+        Self::new(
             (2f64
                 * RADIUS
                 * (location.lat().cos() * ((location.lon() - origin.lon()) / 2f64).sin()).asin())
@@ -16,21 +12,22 @@ impl Point {
             location.alt(),
         )
     }
+}
 
-    // #TODO: overlap with to_point, consider removing one
-    pub fn from_reference(node: &Node, angle: f32) -> Self {
+impl From<(&Node, f32)> for Point {
+    // Create point from node and vertex angle
+    fn from((node, angle): (&Node, f32)) -> Self {
         let origin = node.origin;
         let radius = node.radius;
         let x = origin.x + radius * angle.cos();
         let y = origin.y + radius * angle.sin();
-        Point::new(x, y, origin.z)
+        Self::new(x, y, origin.z)
     }
+}
 
-    // Convert point with respect to origin to location
-    pub fn to_location(&self, origin: &Location) -> Location {
-        let lat = self.y as f64 / RADIUS + origin.lat();
-        let lon = ((self.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
-        Location::from_radians(lat, lon, self.z)
+impl Point {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self { x: x, y: y, z: z }
     }
 
     pub fn distance(&self, other: &Point) -> f32 {
@@ -99,8 +96,8 @@ mod test {
                 rng.gen_range(-180f64, 180f64),
                 0f32,
             );
-            let point = Point::from_location(&location, &pathfinder.origin);
-            let location1 = point.to_location(&pathfinder.origin);
+            let point = Point::from((&location, &pathfinder.origin));
+            let location1 = Location::from((&point, &pathfinder.origin));
             print!(
                 "{:.5}, {:.5} => ",
                 location.lat_degree(),

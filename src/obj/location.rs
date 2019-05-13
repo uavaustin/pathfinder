@@ -9,6 +9,15 @@ impl fmt::Display for Location {
     }
 }
 
+impl From<(&Point, &Location)> for Location {
+    // Convert point with respect to origin to location
+    fn from((point, origin): (&Point, &Location)) -> Self {
+        let lat = point.y as f64 / RADIUS + origin.lat();
+        let lon = ((point.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
+        Self::from_radians(lat, lon, point.z)
+    }
+}
+
 impl Location {
     // Create location from coordinates in degrees
     pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
@@ -29,7 +38,7 @@ impl Location {
     }
     // Create location using x-y distance from origin
     pub fn from_meters(x: f32, y: f32, alt: f32, origin: &Location) -> Self {
-        Point::new(x, y, alt).to_location(origin)
+        (&Point::new(x, y, alt), origin).into()
     }
     pub fn lat(&self) -> f64 {
         self.lat.into()
