@@ -1,5 +1,18 @@
 use super::*;
 
+// #TODO: standarize location name
+// #TODO: fully implement builder pattern for greater flexibility
+#[derive(Clone, Copy, Debug)]
+pub struct Plane {
+    pub location: Location,
+    pub yaw: f32,         // In degrees, -1 if not provided
+    pub pitch: f32,       // In degrees, -1 if not provided
+    pub roll: f32,        // In degrees, -1 if not provided
+    pub airspeed: f32,    // In meters per second, -1 if not provided
+    pub groundspeed: f32, // In meters per second, -1 if not provided
+    pub wind_dir: f32,    // In degrees, -1 if not provided
+}
+
 impl Plane {
     pub fn new(location: Location) -> Self {
         Plane {

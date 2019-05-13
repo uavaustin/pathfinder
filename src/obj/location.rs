@@ -3,6 +3,13 @@ use super::*;
 use graph::Point;
 use std::fmt;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Location {
+    lat: OrderedFloat<f64>, //In radians
+    lon: OrderedFloat<f64>, //In radians
+    pub alt: OrderedFloat<f32>, //In meters
+}
+
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({:.5}, {:.5})", self.lat_degree(), self.lon_degree())

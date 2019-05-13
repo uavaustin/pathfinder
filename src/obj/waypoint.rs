@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(Clone, Debug)]
+pub struct Waypoint {
+    pub index: u32,
+    pub location: Location,
+    pub radius: f32, // In meters
+}
+
 impl Waypoint {
     pub fn new(index: u32, location: Location, radius: f32) -> Self {
         Waypoint {

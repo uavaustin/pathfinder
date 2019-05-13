@@ -2,6 +2,15 @@ use super::*;
 
 use std::fmt;
 
+#[derive(Debug)]
+pub struct Node {
+    pub origin: Point,
+    pub radius: f32,
+    pub height: f32,                     // make private later
+    pub left_ring: Rc<RefCell<Vertex>>,  // make private later
+    pub right_ring: Rc<RefCell<Vertex>>, // make private later
+}
+
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "loc={:?}, r={} \nleft = [", self.origin, self.radius)

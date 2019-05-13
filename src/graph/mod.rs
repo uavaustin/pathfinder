@@ -1,60 +1,23 @@
 // Visibility related code for modularity
 use super::*;
 
+mod flyzones;
 #[cfg(test)]
 mod test;
 
-mod connection;
-mod flyzones;
-mod node;
-mod point;
-mod vertex;
-
+pub mod connection;
+pub mod node;
+pub mod point;
 pub mod util;
+pub mod vertex;
 
-pub use graph::util::*;
+pub use self::connection::Connection;
+pub use self::node::Node;
+pub use self::point::Point;
+pub use self::util::*;
+pub use self::vertex::Vertex;
+
 use obj::{Location, Obstacle};
-
-#[derive(Copy, Clone, Debug)]
-pub struct Point {
-    pub x: f32, // horizontal distance from origin in meters
-    pub y: f32, // vertical distance from origin in meters
-    pub z: f32,
-}
-
-#[derive(Debug)]
-pub struct Vertex {
-    pub index: i32,                          // Index to identify vertex
-    pub radius: f32,                         // Radius of the node vertex is attached to
-    pub location: Point,                     // Location of the vertex
-    pub angle: f32,                          // Angle with respect to the node
-    pub g_cost: f32,                         //
-    pub f_cost: f32,                         //
-    pub parent: Option<Rc<RefCell<Vertex>>>, // Parent of vertex
-    pub connection: Vec<Connection>,      // Edge connecting to another node
-    pub prev: Option<Rc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
-    pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
-    pub sentinel: bool,                      // Sentinel property marks end of path hugging
-}
-
-// Represent a connection between two nodes
-// Contains the coordinate of tangent line and distance
-#[derive(Debug)]
-pub struct Connection {
-    pub neighbor: Rc<RefCell<Vertex>>, // Connected node through a tangent
-    pub distance: f32,
-    // starting and ending vertices must be above threshold to take the connection
-    pub threshold: f32,
-}
-
-#[derive(Debug)]
-pub struct Node {
-    pub origin: Point,
-    pub radius: f32,
-    pub height: f32,                     // make private later
-    pub left_ring: Rc<RefCell<Vertex>>,  // make private later
-    pub right_ring: Rc<RefCell<Vertex>>, // make private later
-}
 
 pub enum PathValidity {
     Valid,
@@ -79,9 +42,13 @@ impl Pathfinder {
         (alpha, beta, distance, threshold): (f32, f32, f32, f32),
     ) {
         // Insert edge from u -> v
-        let v = self.nodes[j].borrow().get_vertex(&mut self.num_vertices, beta);
+        let v = self.nodes[j]
+            .borrow()
+            .get_vertex(&mut self.num_vertices, beta);
         let edge = Connection::new(v.clone(), distance, threshold);
-        let u = self.nodes[i].borrow().get_vertex(&mut self.num_vertices, alpha);
+        let u = self.nodes[i]
+            .borrow()
+            .get_vertex(&mut self.num_vertices, alpha);
         u.borrow_mut().connection.push(edge);
     }
 
@@ -143,7 +110,7 @@ impl Pathfinder {
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
         for i in 0..self.flyzones.len() {
-             self.virtualize_flyzone(i);
+            self.virtualize_flyzone(i);
         }
     }
 

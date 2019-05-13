@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(Copy, Clone, Debug)]
+pub struct Point {
+    pub x: f32, // horizontal distance from origin in meters
+    pub y: f32, // vertical distance from origin in meters
+    pub z: f32,
+}
+
 impl From<(&Location, &Location)> for Point {
     // Creates a point from a location and reference origin
     fn from((location, origin): (&Location, &Location)) -> Self {

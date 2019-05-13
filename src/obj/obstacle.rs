@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(Debug, Clone)]
+pub struct Obstacle {
+    pub location: Location,
+    pub radius: f32, // In meters
+    pub height: f32, // In meters
+}
+
 // #TODO: swap radius and height to be consistent with waypoint
 // #TODO: remove height because redundant? can directly use location z
 impl Obstacle {

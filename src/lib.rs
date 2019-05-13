@@ -4,20 +4,20 @@
 extern crate ordered_float;
 
 use std::cell::RefCell;
-use std::collections::BinaryHeap;
-use std::collections::HashSet;
-use std::collections::LinkedList;
+use std::collections::{BinaryHeap, HashSet, LinkedList};
 use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
 mod graph;
-pub mod obj;
 mod queue;
+
+pub mod obj;
 
 use graph::util::{intersect, output_graph};
 use graph::{Connection, Node, Point, Vertex};
 pub use obj::{Location, Obstacle, Plane, Waypoint};
+use queue::Queue;
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
@@ -52,12 +52,6 @@ pub struct Pathfinder {
     origin: Location, // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
     num_vertices: i32,
-}
-
-// Simple wrapper around heap and set for efficient data retrival
-struct Queue {
-    heap: BinaryHeap<Rc<RefCell<Vertex>>>, // Efficiently get min
-    set: HashSet<i32>,                     // Efficiently check of existence
 }
 
 impl Pathfinder {
