@@ -12,7 +12,7 @@ pub struct Connection {
 
 impl Connection {
     pub fn new(neighbor: Rc<RefCell<Vertex>>, distance: f32, threshold: f32) -> Self {
-        Connection {
+        Self {
             neighbor: neighbor,
             distance: distance,
             threshold: threshold,

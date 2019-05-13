@@ -185,9 +185,9 @@ impl Pathfinder {
 
         println!(
             "theta: {}, theta1: {}, theta2: {}",
-            theta * 180f32 / PI,
-            theta1 * 180f32 / PI,
-            theta2 * 180f32 / PI
+            theta.to_degrees(),
+            theta1.to_degrees(),
+            theta2.to_degrees()
         );
 
         // gamma1 and gamma2 are the angle between reference axis and the tangents
@@ -202,8 +202,8 @@ impl Pathfinder {
 
         println!(
             "gamma1: {}, gamma2: {}",
-            gamma1 * 180f32 / PI,
-            gamma2 * 180f32 / PI
+            gamma1.to_degrees(),
+            gamma2.to_degrees()
         );
 
         // Outer tangent always exists
@@ -256,7 +256,7 @@ impl Pathfinder {
         for (i, j) in candidates {
             let p1 = Point::from((a, i));
             let p2 = Point::from((b, j));
-            println!("angles {} -> {}", i * 180f32 / PI, j * 180f32 / PI);
+            println!("angles {} -> {}", i.to_degrees(), j.to_degrees());
             println!("validating path {:?} -> {:?}", p1, p2);
 
             match self.valid_path(&p1, &p2) {
@@ -281,7 +281,7 @@ impl Pathfinder {
 
     // check if a path is valid (not blocked by flightzone or obstacles)
     fn valid_path(&self, a: &Point, b: &Point) -> PathValidity {
-        let theta_o = (b.z - a.z).atan2(a.distance(b));
+        // let theta_o = (b.z - a.z).atan2(a.distance(b));
         // //check if angle of waypoints is valid
         // if theta_o > MAX_ANGLE_ASCENT {
         //     return PathValidity::Invalid;
@@ -317,7 +317,7 @@ impl Pathfinder {
         for obstacle in &self.obstacles {
             // catch the simple cases for now: if a or b are inside the radius of obstacle, invalid
             // check if there are two points of intersect, for flyover cases
-            if let (Some(p1), Some(p2)) = perpendicular_intersect(&self.origin, a, b, obstacle) {
+            if let (Some(_p1), Some(_p2)) = perpendicular_intersect(&self.origin, a, b, obstacle) {
                 println!(
                     "found intersection at height {} with obstacle {:?}",
                     obstacle.height, obstacle

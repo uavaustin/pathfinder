@@ -14,7 +14,7 @@ pub struct Vertex {
     pub g_cost: f32,                         //
     pub f_cost: f32,                         //
     pub parent: Option<Rc<RefCell<Vertex>>>, // Parent of vertex
-    pub connection: Vec<Connection>,      // Edge connecting to another node
+    pub connection: Vec<Connection>,         // Edge connecting to another node
     pub prev: Option<Rc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
     pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
     pub sentinel: bool,                      // Sentinel property marks end of path hugging
@@ -106,7 +106,8 @@ impl Vertex {
         if *num_vertex >= 0 {
             *num_vertex += 1;
         }
-        Vertex {
+
+        Self {
             index: *num_vertex,
             radius: radius,
             angle: angle,

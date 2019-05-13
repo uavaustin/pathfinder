@@ -99,7 +99,7 @@ impl Node {
         )));
         right_head.borrow_mut().next = Some(right_head.clone());
         right_head.borrow_mut().prev = Some(right_head.clone());
-        Node {
+        Self {
             origin: origin,
             radius: radius,
             height: height,
@@ -172,7 +172,11 @@ impl Node {
                     min_arc
                 );
 
-                return if arc_a < arc_b { temp_current } else { temp_next };
+                return if arc_a < arc_b {
+                    temp_current
+                } else {
+                    temp_next
+                };
             }
         }
 

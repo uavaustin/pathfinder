@@ -1,13 +1,8 @@
+// lib.rs
+// contains main functionality of the library
 #![allow(dead_code)]
 #![allow(unused_variables)]
-
 extern crate ordered_float;
-
-use std::cell::RefCell;
-use std::collections::{BinaryHeap, HashSet, LinkedList};
-use std::f32::consts::PI;
-use std::rc::Rc;
-use std::time::{Duration, SystemTime};
 
 mod graph;
 mod queue;
@@ -16,8 +11,14 @@ pub mod obj;
 
 use graph::util::{intersect, output_graph};
 use graph::{Connection, Node, Point, Vertex};
-pub use obj::{Location, Obstacle, Plane, Waypoint};
 use queue::Queue;
+use std::cell::RefCell;
+use std::collections::{BinaryHeap, HashSet, LinkedList};
+use std::f32::consts::PI;
+use std::rc::Rc;
+use std::time::{Duration, SystemTime};
+
+pub use obj::{Location, Obstacle, Plane, Waypoint};
 
 const EQUATORIAL_RADIUS: f64 = 63781370.0;
 const POLAR_RADIUS: f64 = 6356752.0;
@@ -37,7 +38,7 @@ const START_VERTEX_INDEX: i32 = -1;
 const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
 
-#[allow(non_snake_case)]
+// #[allow(non_snake_case)]
 pub struct Pathfinder {
     // exposed API
     buffer: f32,                // In meters
@@ -194,7 +195,7 @@ impl Pathfinder {
             let (temp_paths, _) = self.find_path(&start_node, &temp_node.borrow());
             println!("[start {}]: path count -> {}", i, temp_paths.len());
 
-            for (a, b, dist, threshold) in temp_paths {
+            for (_, b, dist, threshold) in temp_paths {
                 if min_height < threshold {
                     continue;
                 }

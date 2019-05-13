@@ -5,8 +5,8 @@ use std::fmt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Location {
-    lat: OrderedFloat<f64>, //In radians
-    lon: OrderedFloat<f64>, //In radians
+    lat: OrderedFloat<f64>,     //In radians
+    lon: OrderedFloat<f64>,     //In radians
     pub alt: OrderedFloat<f32>, //In meters
 }
 
@@ -28,8 +28,7 @@ impl From<(&Point, &Location)> for Location {
 impl Location {
     // Create location from coordinates in degrees
     pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
-        const FACTOR: f64 = ::std::f64::consts::PI / 180f64;
-        Location {
+        Self {
             lat: lat.to_radians().into(),
             lon: lon.to_radians().into(),
             alt: alt.into(),
@@ -37,7 +36,7 @@ impl Location {
     }
     // Create location from coordinates in radians
     pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Self {
-        Location {
+        Self {
             lat: lat.into(),
             lon: lon.into(),
             alt: alt.into(),

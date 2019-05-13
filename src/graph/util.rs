@@ -188,7 +188,7 @@ pub fn output_graph(finder: &Pathfinder) {
     println!("vertex count: {}\n", finder.num_vertices);
     println!("---- Node List ----");
     for node in &finder.nodes {
-        let loc = Location::from((&node.borrow().origin, &finder.origin));
+        // let loc = Location::from((&node.borrow().origin, &finder.origin));
         //println!("{}, {}", loc.lat_degree(), loc.lon_degree());
     }
     //println!("\n---- Left Vertex List ----");
@@ -224,8 +224,8 @@ pub fn perpendicular_intersect(
 ) -> (Option<Point>, Option<Point>) {
     // intersect distance gives x and y of intersect point, then distance squared
     // calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
-    let (x, y, distance, endpoint) =
-        intersect_distance(a, b, &Point::from((&c.location, origin)));
+    // #TODO: endpoint not used, why is it here?
+    let (x, y, distance, endpoint) = intersect_distance(a, b, &Point::from((&c.location, origin)));
     if distance.sqrt() < c.radius as f32 {
         println!(
             "intersect with obstacle: dist {} r {}",

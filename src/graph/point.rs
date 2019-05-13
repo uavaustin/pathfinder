@@ -51,8 +51,8 @@ impl Point {
 mod test {
     extern crate rand;
 
-    use super::*;
     use self::rand::{thread_rng, Rng};
+    use super::*;
 
     #[test]
     fn conversion_test() {
@@ -76,13 +76,13 @@ mod test {
             Location::from_degrees(30.32247, -97.60325, 0f32),
             Location::from_degrees(30.32473, -97.60410, 0f32),
         ];
-        for location in test_locations {
-            //      let node1 = Location.to_node(&pathfinder);
-            //     let Location1 = node1.to_Location(&pathfinder);
-            //      // print!("{:.5}, {:.5} => ", Location.lat_degree(), Location.lon_degree());
-            //      println!("{:.5}, {:.5}", Location1.lat_degree(), Location1.lon_degree());
-            //      assert!(Location.lat_degree() - Location1.lat_degree() < 0.001);
-            //      assert!(Location.lon_degree() - Location1.lon_degree() < 0.001);
+        for loc in test_locations {
+            let node1 = Node::from((&loc, &pathfinder.origin));
+            let new_loc = Location::from((&node1.origin, &pathfinder.origin));
+            // print!("{:.5}, {:.5} => ", loc.lat_degree(), loc.lon_degree());
+            println!("{:.5}, {:.5}", new_loc.lat_degree(), new_loc.lon_degree());
+            assert!((loc.lat_degree() - new_loc.lat_degree()).abs() < 0.001);
+            assert!((loc.lon_degree() - new_loc.lon_degree()).abs() < 0.001);
         }
     }
 

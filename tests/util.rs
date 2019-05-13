@@ -11,7 +11,11 @@ pub fn vec_to_list(waypoints: Vec<Waypoint>) -> LinkedList<Waypoint> {
     list
 }
 
-pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoint>, plane: Plane) {
+pub fn output_result(
+    _waypoints: LinkedList<Waypoint>,
+    result: &LinkedList<Waypoint>,
+    plane: Plane,
+) {
     let mut iter = result.iter();
     eprintln!(
         "{:.5}, {:.5}",

@@ -166,15 +166,15 @@ fn obstacles_pathing() {
 
     match pathfinder.valid_path(&a, &b) {
         PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
-        _ => panic!()
+        _ => panic!(),
     }
     match pathfinder.valid_path(&c, &d) {
         PathValidity::Flyover(threshold) => assert_eq!(threshold, 0f32),
-        _ => panic!()
+        _ => panic!(),
     }
     match pathfinder.valid_path(&c, &e) {
         PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
-        _ => panic!()
+        _ => panic!(),
     }
 }
 
@@ -266,12 +266,7 @@ fn intersection_distance() {
 
     //intercepts at (10,0), (20,0)
     assert_eq!(
-        intersect_distance(
-            &ax,
-            &ay,
-            &Point::from((&ob.location, &dummy_origin()))
-        )
-        .2,
+        intersect_distance(&ax, &ay, &Point::from((&ob.location, &dummy_origin()))).2,
         0f32
     );
     let result = perpendicular_intersect(&pathfinder.origin, &ax, &ay, &ob);
@@ -574,7 +569,6 @@ fn virtualize_flyzone_square() {
     let node_c = Point::new(15f32, 15f32, 0f32);
     let node_d = Point::new(5f32, 15f32, 0f32);
     let expected = vec![node_d, node_c, node_b, node_a];
-    let test_flyzone = vec![vec![d, c, b, a]];
     for i in 0..4 {
         assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
     }
