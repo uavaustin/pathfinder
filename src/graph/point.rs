@@ -99,8 +99,8 @@ mod test {
         let mut rng = thread_rng();
         for _ in 1..100 {
             let location = Location::from_degrees(
-                rng.gen_range(-90f64, 90f64),
-                rng.gen_range(-180f64, 180f64),
+                rng.gen_range(-10f64, 10f64),
+                rng.gen_range(-10f64, 10f64),
                 0f32,
             );
             let point = Point::from((&location, &pathfinder.origin));
@@ -115,8 +115,8 @@ mod test {
                 location1.lat_degree(),
                 location1.lon_degree()
             );
-            assert!(location.lat_degree() - location1.lat_degree() < 0.1);
-            assert!(location.lon_degree() - location1.lon_degree() < 0.1);
+            assert!((location.lat_degree() - location1.lat_degree()).abs() < 0.01);
+            assert!((location.lon_degree() - location1.lon_degree()).abs() < 0.01);
         }
     }
 }

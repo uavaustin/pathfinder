@@ -147,18 +147,16 @@ impl Pathfinder {
         assert!(self.initialized);
         self.start_time = SystemTime::now();
         let mut new_wp_list = LinkedList::new();
-        let mut current_loc: Location;
-        let mut next_loc: Location;
-
-        let mut current_wp = Waypoint::new(plane.location, 0f32);
+        let mut current_wp: Waypoint<T>;
+        let mut current_loc = plane.location;
 
         loop {
-            current_loc = current_wp.location;
             match wp_list.pop_front() {
                 Some(wp) => current_wp = wp,
                 None => break,
             }
-            next_loc = current_wp.location;
+
+            let next_loc = current_wp.location.clone();
 
             if let Some(mut path) = self.adjust_path::<T>(current_loc, next_loc) {
                 println!("appending");
@@ -167,11 +165,14 @@ impl Pathfinder {
                 println!("no path");
                 break;
             }
+
+            current_loc = current_wp.location;
+            new_wp_list.push_back(current_wp);
             // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
             // self.wp_list.push_back(Waypoint::from_degrees(0, 30.69, -97.69, 100f32, 10f32));
         }
 
-        wp_list
+        new_wp_list
     }
 
     // Helper function to add temp vertices connecting start and end
@@ -355,20 +356,24 @@ impl Pathfinder {
     fn generate_waypoint<T>(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint<T>> {
         let mut waypoint_list = LinkedList::new();
         let mut cur_vertex = end_vertex;
-        let mut index = END_VERTEX_INDEX;
         println!("Generating waypoints");
-        while index != START_VERTEX_INDEX {
-            let loc = Location::from((&cur_vertex.borrow().location, &self.origin));
-            let radius = cur_vertex.borrow().radius;
-
-            waypoint_list.push_front(Waypoint::new(loc, radius));
-            println!("{}", cur_vertex.borrow());
+        loop {
+            // Skip appending end vertex to waypoint_list
             let parent = match cur_vertex.borrow().parent {
                 Some(ref cur_parent) => cur_parent.clone(),
                 None => panic!("Missing a parent without reaching start point"),
             };
+
+            // Skip appending start vertex to waypoint list
+            if parent.borrow().index == START_VERTEX_INDEX {
+                break;
+            }
+
             cur_vertex = parent;
-            index = cur_vertex.borrow().index;
+            println!("{}", cur_vertex.borrow());
+            let loc = Location::from((&cur_vertex.borrow().location, &self.origin));
+            let radius = cur_vertex.borrow().radius;
+            waypoint_list.push_front(Waypoint::new(loc, radius));
         }
         waypoint_list
     }
