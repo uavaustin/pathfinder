@@ -1,7 +1,6 @@
 extern crate pathfinder;
 
-use pathfinder::obj::*;
-use pathfinder::Pathfinder;
+use pathfinder::*;
 
 mod util;
 use util::*;
@@ -27,8 +26,7 @@ fn test4() {
         38.14376, -76.42321, 76.1, 10f32,
     )]);
 
-    let mut pathfinder = Pathfinder::new();
-    pathfinder.init(5.0, flyzone, obstacles);
+    let mut pathfinder = Pathfinder::new(Tanstar::new(), TConfig::default(), flyzone, obstacles);
     let plane = Plane::from_degrees(38.15059, -76.43147, 10.0);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());
     output_result(waypoints, result, plane);

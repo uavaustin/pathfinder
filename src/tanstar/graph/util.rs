@@ -1,6 +1,22 @@
-// Utility functions to help with graph calculations
+// util.rs
+// Contains general utility functions to help with graph calculations
 
 use super::*;
+
+impl Tanstar {
+    // Helper function to create and init tanstar object
+    pub fn create(
+        buffer_size: f32,
+        flyzones: Vec<Vec<Location>>,
+        obstacles: Vec<Obstacle>,
+    ) -> Self {
+        let mut pathfinder = Self::new();
+        let mut config = TConfig::default();
+        config.buffer_size = buffer_size;
+        pathfinder.init(config, flyzones, obstacles);
+        pathfinder
+    }
+}
 
 // helper function to remap angle between range
 // range can be either -2PI to 0 or 0 to 2PI
@@ -134,27 +150,6 @@ pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bo
     // returns distance
     (x, y, (x - c.x).powi(2) + (y - c.y).powi(2), endpoint)
 }
-// determine if set of order points is clockwise, c-clockwise, or straight
-// input vector of points, output (direction, straight)
-pub fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
-    let mut sum_whole = 0f32;
-    for i in 0..points.len() {
-        let first = points[i];
-        let second = if i + 1 == points.len() {
-            points[0]
-        } else {
-            points[i + 1]
-        };
-        sum_whole += (second.x - first.x) * (second.y + first.y);
-    }
-    if sum_whole > 0f32 {
-        (true, false) // clockwise
-    } else if sum_whole < 0f32 {
-        (false, false) // counter-clockwise
-    } else {
-        (false, true) // straight-line
-    }
-}
 
 fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
     let temp = match current.borrow().next {
@@ -181,20 +176,20 @@ fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
 }
 
 // Debug method to output vertices
-pub fn output_graph(finder: &Pathfinder) {
+pub fn output_graph(finder: &Tanstar) {
     println!("\n------------------------------");
     println!("pathfinder graph");
     println!("node count: {}", finder.nodes.len());
     println!("vertex count: {}\n", finder.num_vertices);
     println!("---- Node List ----");
-    for node in &finder.nodes {
-        // let loc = Location::from((&node.borrow().origin, &finder.origin));
-        //println!("{}, {}", loc.lat_degree(), loc.lon_degree());
-    }
+    // for node in &finder.nodes {
+    //     let loc = Location::from((&node.borrow().origin, &finder.origin));
+    //     println!("{}, {}", loc.lat_degree(), loc.lon_degree());
+    // }
     //println!("\n---- Left Vertex List ----");
 
     for node in &finder.nodes {
-        let loc = Location::from((&node.borrow().origin, &finder.origin));
+        // let loc = Location::from((&node.borrow().origin, &finder.origin));
         // println!("Node origin {:?}", node.borrow().origin);
         if node.borrow().height > 0f32 {
             output_ring(&finder.origin, node.borrow().left_ring.clone());
@@ -204,7 +199,7 @@ pub fn output_graph(finder: &Pathfinder) {
     //println!("\n---- Right Vertex List ----");
 
     for node in &finder.nodes {
-        let loc = Location::from((&node.borrow().origin, &finder.origin));
+        // let loc = Location::from((&node.borrow().origin, &finder.origin));
         // let loc = node.borrow().origin;
         // println!("Node origin {:?}", node.borrow().origin);
         if node.borrow().height > 0f32 {
@@ -225,7 +220,7 @@ pub fn perpendicular_intersect(
     // intersect distance gives x and y of intersect point, then distance squared
     // calculates the shortest distance between the segment and obstacle. If less than radius, it intersects.
     // #TODO: endpoint not used, why is it here?
-    let (x, y, distance, endpoint) = intersect_distance(a, b, &Point::from((&c.location, origin)));
+    let (x, y, distance, _endpoint) = intersect_distance(a, b, &Point::from((&c.location, origin)));
     if distance.sqrt() < c.radius as f32 {
         println!(
             "intersect with obstacle: dist {} r {}",
@@ -253,6 +248,8 @@ pub fn perpendicular_intersect(
 }
 
 // Return intersection point(s) of line given by Point A and B and circle at point C with radius r
+// #TODO: benchmark versus perpendicular_intersect
+#[allow(dead_code)]
 pub fn circular_intersect(
     origin: &Location,
     a: &Point,
@@ -430,20 +427,5 @@ mod test {
         let d = Point::new(30f32, 15f32, 10f32);
         assert_eq!(intersect(&a, &b, &c, &d), false);
         assert_eq!(intersect(&a, &c, &b, &d), true);
-    }
-
-    #[test]
-    fn vertex_direction_test() {
-        let a = Point::new(0f32, 0f32, 10f32);
-        let b = Point::new(0f32, 10f32, 10f32);
-        let c = Point::new(10f32, 10f32, 10f32);
-        let d = Point::new(10f32, 0f32, 10f32);
-        let e = Point::new(0f32, 20f32, 10f32);
-        let clockwise_flyzone = vec![a, b, c, d];
-        let anticlockwise_flyzone = vec![d, c, b, a];
-        let line_flyzone = vec![a, b, e];
-        assert_eq!(vertex_direction(&clockwise_flyzone), (true, false));
-        assert_eq!(vertex_direction(&anticlockwise_flyzone), (false, false));
-        assert_eq!(vertex_direction(&line_flyzone), (false, true));
     }
 }

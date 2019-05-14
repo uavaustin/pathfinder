@@ -1,6 +1,6 @@
-use super::*;
+extern crate ordered_float;
 
-use graph::Point;
+use self::ordered_float::*;
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -13,15 +13,6 @@ pub struct Location {
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({:.5}, {:.5})", self.lat_degree(), self.lon_degree())
-    }
-}
-
-impl From<(&Point, &Location)> for Location {
-    // Convert point with respect to origin to location
-    fn from((point, origin): (&Point, &Location)) -> Self {
-        let lat = point.y as f64 / RADIUS + origin.lat();
-        let lon = ((point.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
-        Self::from_radians(lat, lon, point.z)
     }
 }
 
@@ -42,10 +33,7 @@ impl Location {
             alt: alt.into(),
         }
     }
-    // Create location using x-y distance from origin
-    pub fn from_meters(x: f32, y: f32, alt: f32, origin: &Location) -> Self {
-        (&Point::new(x, y, alt), origin).into()
-    }
+
     pub fn lat(&self) -> f64 {
         self.lat.into()
     }

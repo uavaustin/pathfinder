@@ -7,6 +7,15 @@ pub struct Point {
     pub z: f32,
 }
 
+impl From<(&Point, &Location)> for Location {
+    // Convert point with respect to origin to location
+    fn from((point, origin): (&Point, &Location)) -> Self {
+        let lat = point.y as f64 / RADIUS + origin.lat();
+        let lon = ((point.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
+        Self::from_radians(lat, lon, point.z)
+    }
+}
+
 impl From<(&Location, &Location)> for Point {
     // Creates a point from a location and reference origin
     fn from((location, origin): (&Location, &Location)) -> Self {
@@ -29,6 +38,13 @@ impl From<(&Node, f32)> for Point {
         let x = origin.x + radius * angle.cos();
         let y = origin.y + radius * angle.sin();
         Self::new(x, y, origin.z)
+    }
+}
+
+impl Location {
+    // Create location using x-y distance from origin
+    pub fn from_meters(x: f32, y: f32, alt: f32, origin: &Location) -> Self {
+        (&Point::new(x, y, alt), origin).into()
     }
 }
 
@@ -62,8 +78,7 @@ mod test {
             Location::from_degrees(0.0, 0.0, 0f32),
             Location::from_degrees(0.3, 0.0, 0f32),
         ]];
-        let mut pathfinder = Pathfinder::new();
-        pathfinder.init(1.0, flight_zone, Vec::new());
+        let pathfinder = Tanstar::create(5f32, flight_zone, Vec::new());
         let test_locations = vec![
             Location::from_degrees(30.32247, -97.6009, 0f32),
             Location::from_degrees(30.32307, -97.6005, 0f32),
@@ -88,14 +103,13 @@ mod test {
 
     #[test]
     fn random_test() {
-        let mut pathfinder = Pathfinder::new();
         let flight_zone = vec![vec![
             Location::from_degrees(0.3, 0.6, 0f32),
             Location::from_degrees(0.0, 0.6, 0f32),
             Location::from_degrees(0.0, 0.0, 0f32),
             Location::from_degrees(0.3, 0.0, 0f32),
         ]];
-        pathfinder.init(1.0, flight_zone, Vec::new());
+        let pathfinder = Tanstar::create(5f32, flight_zone, Vec::new());
         let mut rng = thread_rng();
         for _ in 1..100 {
             let location = Location::from_degrees(
@@ -115,8 +129,8 @@ mod test {
                 location1.lat_degree(),
                 location1.lon_degree()
             );
-            assert!((location.lat_degree() - location1.lat_degree()).abs() < 0.01);
-            assert!((location.lon_degree() - location1.lon_degree()).abs() < 0.01);
+            assert!((location.lat_degree() - location1.lat_degree()).abs() < 0.0001);
+            assert!((location.lon_degree() - location1.lon_degree()).abs() < 0.0001);
         }
     }
 }

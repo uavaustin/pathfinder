@@ -1,6 +1,6 @@
-use super::*;
+use super::Location;
 
-// #TODO: standarize location name
+// #TODO: standardize location name
 // #TODO: fully implement builder pattern for greater flexibility
 #[derive(Clone, Copy, Debug)]
 pub struct Plane {

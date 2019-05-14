@@ -34,7 +34,7 @@ impl From<PathValidity> for bool {
     }
 }
 
-impl Pathfinder {
+impl Tanstar {
     fn insert_edge(
         &mut self,
         i: usize,
@@ -104,7 +104,7 @@ impl Pathfinder {
 
     fn populate_nodes(&mut self) {
         self.nodes.clear();
-        self.find_origin();
+        self.origin = Self::find_origin(&self.flyzones);
         for i in 0..self.obstacles.len() {
             let mut node = (&self.obstacles[i], &self.origin, self.buffer).into();
             self.nodes.push(Rc::new(RefCell::new(node)));
@@ -112,46 +112,6 @@ impl Pathfinder {
         for i in 0..self.flyzones.len() {
             self.virtualize_flyzone(i);
         }
-    }
-
-    fn find_origin(&mut self) {
-        const MAX_RADIAN: f64 = 2f64 * ::std::f64::consts::PI;
-        let mut min_lat = MAX_RADIAN;
-        let mut min_lon = MAX_RADIAN;
-        let mut max_lon = 0f64;
-        let mut lon = min_lon;
-
-        assert!(self.flyzones.len() > 0, "Require at least one flyzone");
-        for i in 0..self.flyzones.len() {
-            let flyzone_points = &self.flyzones[i];
-            assert!(
-                flyzone_points.len() > 2,
-                "Require at least 3 points to construct fly zone."
-            );
-
-            for point in flyzone_points {
-                if point.lat() < min_lat {
-                    min_lat = point.lat();
-                }
-                if point.lon() < min_lon {
-                    min_lon = point.lon();
-                }
-                if point.lon() > max_lon {
-                    max_lon = point.lon();
-                }
-            }
-            lon = min_lon;
-            if max_lon - min_lon > MAX_RADIAN {
-                lon = max_lon;
-            }
-        }
-
-        self.origin = Location::from_radians(min_lat, lon, 0f32);
-        println!(
-            "Found origin: {}, {}",
-            self.origin.lat_degree(),
-            self.origin.lon_degree()
-        );
     }
 
     // Generate all valid possible path (tangent lines) between two nodes, and return the
