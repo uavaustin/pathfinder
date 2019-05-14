@@ -1,5 +1,11 @@
 use super::*;
 
+// Simple wrapper around heap and set for efficient data retrival
+pub struct Queue {
+    heap: BinaryHeap<Rc<RefCell<Vertex>>>, // Efficiently get min
+    set: HashSet<i32>,                     // Efficiently check of existence
+}
+
 impl Queue {
     pub fn new() -> Self {
         Queue {

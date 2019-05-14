@@ -3,7 +3,7 @@ use std::collections::LinkedList;
 
 use pathfinder::obj::*;
 
-pub fn vec_to_list(waypoints: Vec<Waypoint>) -> LinkedList<Waypoint> {
+pub fn vec_to_list<T>(waypoints: Vec<Waypoint<T>>) -> LinkedList<Waypoint<T>> {
     let mut list = LinkedList::new();
     for wp in waypoints {
         list.push_back(wp);
@@ -11,7 +11,11 @@ pub fn vec_to_list(waypoints: Vec<Waypoint>) -> LinkedList<Waypoint> {
     list
 }
 
-pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoint>, plane: Plane) {
+pub fn output_result<T>(
+    _waypoints: LinkedList<Waypoint<T>>,
+    result: LinkedList<Waypoint<T>>,
+    plane: Plane,
+) {
     let mut iter = result.iter();
     eprintln!(
         "{:.5}, {:.5}",
@@ -19,11 +23,20 @@ pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoi
         plane.location.lon_degree(),
         // plane.location.alt()
     );
+
+    while let Some(node) = iter.next() {
+        eprintln!(
+            "{:.5}, {:.5}",
+            node.location.lat_degree(),
+            node.location.lon_degree(),
+        );
+    }
+    /*
     for wp in waypoints {
         while let Some(node) = iter.next() {
-            if node.index != wp.index {
-                break;
-            }
+            // if node.index != wp.index {
+            //     break;
+            // }
             eprintln!(
                 "{:.5}, {:.5}",
                 node.location.lat_degree(),
@@ -40,6 +53,7 @@ pub fn output_result(waypoints: LinkedList<Waypoint>, result: &LinkedList<Waypoi
             // wp.index
         );
     }
+    */
 
     println!();
 }

@@ -1,13 +1,16 @@
 use super::*;
 
-impl Point {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Point { x: x, y: y, z: z }
-    }
+#[derive(Copy, Clone, Debug)]
+pub struct Point {
+    pub x: f32, // horizontal distance from origin in meters
+    pub y: f32, // vertical distance from origin in meters
+    pub z: f32,
+}
 
-    // Creates a point from a location and reference point
-    pub fn from_location(location: &Location, origin: &Location) -> Self {
-        Point::new(
+impl From<(&Location, &Location)> for Point {
+    // Creates a point from a location and reference origin
+    fn from((location, origin): (&Location, &Location)) -> Self {
+        Self::new(
             (2f64
                 * RADIUS
                 * (location.lat().cos() * ((location.lon() - origin.lon()) / 2f64).sin()).asin())
@@ -16,25 +19,22 @@ impl Point {
             location.alt(),
         )
     }
+}
 
-    // #TODO: overlap with to_point, consider removing one
-    pub fn from_reference(node: &Node, angle: f32) -> Self {
+impl From<(&Node, f32)> for Point {
+    // Create point from node and vertex angle
+    fn from((node, angle): (&Node, f32)) -> Self {
         let origin = node.origin;
         let radius = node.radius;
         let x = origin.x + radius * angle.cos();
         let y = origin.y + radius * angle.sin();
-        println!(
-            "origin ({}, {}), point ({}, {}) r {} a {}",
-            origin.x, origin.y, x, y, radius, angle
-        );
-        Point::new(x, y, origin.z)
+        Self::new(x, y, origin.z)
     }
+}
 
-    // Convert point with respect to origin to location
-    pub fn to_location(&self, origin: &Location) -> Location {
-        let lat = self.y as f64 / RADIUS + origin.lat();
-        let lon = ((self.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
-        Location::from_radians(lat, lon, self.z)
+impl Point {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self { x: x, y: y, z: z }
     }
 
     pub fn distance(&self, other: &Point) -> f32 {
@@ -51,8 +51,8 @@ impl Point {
 mod test {
     extern crate rand;
 
-    use super::*;
     use self::rand::{thread_rng, Rng};
+    use super::*;
 
     #[test]
     fn conversion_test() {
@@ -76,13 +76,13 @@ mod test {
             Location::from_degrees(30.32247, -97.60325, 0f32),
             Location::from_degrees(30.32473, -97.60410, 0f32),
         ];
-        for location in test_locations {
-            //      let node1 = Location.to_node(&pathfinder);
-            //     let Location1 = node1.to_Location(&pathfinder);
-            //      // print!("{:.5}, {:.5} => ", Location.lat_degree(), Location.lon_degree());
-            //      println!("{:.5}, {:.5}", Location1.lat_degree(), Location1.lon_degree());
-            //      assert!(Location.lat_degree() - Location1.lat_degree() < 0.001);
-            //      assert!(Location.lon_degree() - Location1.lon_degree() < 0.001);
+        for loc in test_locations {
+            let node1 = Node::from((&loc, &pathfinder.origin));
+            let new_loc = Location::from((&node1.origin, &pathfinder.origin));
+            // print!("{:.5}, {:.5} => ", loc.lat_degree(), loc.lon_degree());
+            println!("{:.5}, {:.5}", new_loc.lat_degree(), new_loc.lon_degree());
+            assert!((loc.lat_degree() - new_loc.lat_degree()).abs() < 0.001);
+            assert!((loc.lon_degree() - new_loc.lon_degree()).abs() < 0.001);
         }
     }
 
@@ -99,12 +99,12 @@ mod test {
         let mut rng = thread_rng();
         for _ in 1..100 {
             let location = Location::from_degrees(
-                rng.gen_range(-90f64, 90f64),
-                rng.gen_range(-180f64, 180f64),
+                rng.gen_range(-10f64, 10f64),
+                rng.gen_range(-10f64, 10f64),
                 0f32,
             );
-            let point = Point::from_location(&location, &pathfinder.origin);
-            let location1 = point.to_location(&pathfinder.origin);
+            let point = Point::from((&location, &pathfinder.origin));
+            let location1 = Location::from((&point, &pathfinder.origin));
             print!(
                 "{:.5}, {:.5} => ",
                 location.lat_degree(),
@@ -115,8 +115,8 @@ mod test {
                 location1.lat_degree(),
                 location1.lon_degree()
             );
-            assert!(location.lat_degree() - location1.lat_degree() < 0.1);
-            assert!(location.lon_degree() - location1.lon_degree() < 0.1);
+            assert!((location.lat_degree() - location1.lat_degree()).abs() < 0.01);
+            assert!((location.lon_degree() - location1.lon_degree()).abs() < 0.01);
         }
     }
 }

@@ -20,8 +20,8 @@ fn test2() {
         50f32,
         50f32,
     )];
-    let waypoints = vec_to_list(vec![Waypoint::from_degrees(
-        0, 30.287401, -97.726685, 100f32, 10f32,
+    let waypoints = vec_to_list::<()>(vec![Waypoint::from_degrees(
+        30.287401, -97.726685, 100f32, 10f32,
     )]);
 
     let mut pathfinder = Pathfinder::new();
