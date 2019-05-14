@@ -12,9 +12,9 @@ https://mapmakerapp.com/?map=5cb91d93da97348654172382e5ba
 
 #[test]
 fn test7() {
-    let waypoints = vec_to_list(vec![
-        Waypoint::from_degrees(0, 30.322280883789063, -97.60298156738281, 100f32, 10f32),
-        Waypoint::from_degrees(1, 30.322280883789063, -97.60098266601564, 150f32, 10f32),
+    let waypoints = vec_to_list::<()>(vec![
+        Waypoint::from_degrees(30.322280883789063, -97.60298156738281, 100f32, 10f32),
+        Waypoint::from_degrees(30.322280883789063, -97.60098266601564, 150f32, 10f32),
     ]);
 
     let flyzone = vec![vec![
@@ -33,7 +33,7 @@ fn test7() {
 
     let obstacles = vec![Obstacle::from_degrees(30.32566, -97.60155, 24f32, 200f32)];
 
-    let mut pathfinder = Pathfinder::<()>::new();
+    let mut pathfinder = Pathfinder::new();
     pathfinder.init(5.0, flyzone, obstacles);
     let plane = Plane::from_degrees(30.32298, -97.60310, 100.0).yaw(170f32);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());

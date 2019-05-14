@@ -20,11 +20,11 @@ fn test2() {
         50f32,
         50f32,
     )];
-    let waypoints = vec_to_list(vec![Waypoint::from_degrees(
-        0, 30.287401, -97.726685, 100f32, 10f32,
+    let waypoints = vec_to_list::<()>(vec![Waypoint::from_degrees(
+        30.287401, -97.726685, 100f32, 10f32,
     )]);
 
-    let mut pathfinder = Pathfinder::<()>::new();
+    let mut pathfinder = Pathfinder::new();
     pathfinder.init(5.0, flyzone, obstacles);
     let plane = Plane::from_degrees(30.288105, -97.73533, 10.0);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());

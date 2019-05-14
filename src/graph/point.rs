@@ -62,7 +62,7 @@ mod test {
             Location::from_degrees(0.0, 0.0, 0f32),
             Location::from_degrees(0.3, 0.0, 0f32),
         ]];
-        let mut pathfinder = Pathfinder::<()>::new();
+        let mut pathfinder = Pathfinder::new();
         pathfinder.init(1.0, flight_zone, Vec::new());
         let test_locations = vec![
             Location::from_degrees(30.32247, -97.6009, 0f32),
@@ -88,7 +88,7 @@ mod test {
 
     #[test]
     fn random_test() {
-        let mut pathfinder = Pathfinder::<()>::new();
+        let mut pathfinder = Pathfinder::new();
         let flight_zone = vec![vec![
             Location::from_degrees(0.3, 0.6, 0f32),
             Location::from_degrees(0.0, 0.6, 0f32),

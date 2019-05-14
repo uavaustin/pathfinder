@@ -21,13 +21,13 @@ fn test3() {
         150f32,
         250f32,
     )];
-    let waypoints = vec_to_list(vec![
-        Waypoint::from_degrees(0, 30.28718185424805, -97.72671508789063, 76.1, 10f32),
-        Waypoint::from_degrees(1, 30.283584594726563, -97.731201171875, 76.1, 10f32),
-        Waypoint::from_degrees(2, 30.289718627929688, -97.73104858398439, 76.1, 10f32),
+    let waypoints = vec_to_list::<()>(vec![
+        Waypoint::from_degrees(30.28718185424805, -97.72671508789063, 76.1, 10f32),
+        Waypoint::from_degrees(30.283584594726563, -97.731201171875, 76.1, 10f32),
+        Waypoint::from_degrees(30.289718627929688, -97.73104858398439, 76.1, 10f32),
     ]);
 
-    let mut pathfinder = Pathfinder::<()>::new();
+    let mut pathfinder = Pathfinder::new();
     let plane = Plane::from_degrees(30.2881757, -97.7354343, 10.0);
     pathfinder.init(5.0, flyzone, obstacles);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());
@@ -56,15 +56,15 @@ fn test3_with_data() {
         250f32,
     )];
     let waypoints: LinkedList<Waypoint<Data<String, u8, [u8; 6]>>> = vec_to_list(vec![
-        Waypoint::<()>::from_degrees(0, 30.28718185424805, -97.72671508789063, 76.1, 10f32)
+        Waypoint::<()>::from_degrees(30.28718185424805, -97.72671508789063, 76.1, 10f32)
             .add_data(Data::Uno(String::from("watch your toes!"))),
-        Waypoint::<()>::from_degrees(1, 30.283584594726563, -97.731201171875, 76.1, 10f32)
+        Waypoint::<()>::from_degrees(30.283584594726563, -97.731201171875, 76.1, 10f32)
             .add_data(Data::Dos(42)),
-        Waypoint::<()>::from_degrees(2, 30.289718627929688, -97.73104858398439, 76.1, 10f32)
+        Waypoint::<()>::from_degrees(30.289718627929688, -97.73104858398439, 76.1, 10f32)
             .add_data(Data::Tres([4, 8, 15, 16, 23, 42])),
     ]);
 
-    let mut pathfinder = Pathfinder::<_>::new();
+    let mut pathfinder = Pathfinder::new();
     let plane = Plane::from_degrees(30.2881757, -97.7354343, 10.0);
     pathfinder.init(5.0, flyzone, obstacles);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());

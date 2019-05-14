@@ -181,7 +181,7 @@ fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
 }
 
 // Debug method to output vertices
-pub fn output_graph<T>(finder: &Pathfinder<T>) {
+pub fn output_graph(finder: &Pathfinder) {
     println!("\n------------------------------");
     println!("pathfinder graph");
     println!("node count: {}", finder.nodes.len());

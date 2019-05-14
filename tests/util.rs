@@ -13,7 +13,7 @@ pub fn vec_to_list<T>(waypoints: Vec<Waypoint<T>>) -> LinkedList<Waypoint<T>> {
 
 pub fn output_result<T>(
     _waypoints: LinkedList<Waypoint<T>>,
-    result: &LinkedList<Waypoint<T>>,
+    result: LinkedList<Waypoint<T>>,
     plane: Plane,
 ) {
     let mut iter = result.iter();

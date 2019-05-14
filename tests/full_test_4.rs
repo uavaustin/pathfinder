@@ -23,11 +23,11 @@ fn test4() {
         Location::from_degrees(38.14613, -76.42665, 0f32),
     ]];
     let obstacles = vec![Obstacle::from_degrees(38.14376, -76.42816, 50f32, 250f32)];
-    let waypoints = vec_to_list(vec![Waypoint::from_degrees(
-        0, 38.14376, -76.42321, 76.1, 10f32,
+    let waypoints = vec_to_list::<()>(vec![Waypoint::from_degrees(
+        38.14376, -76.42321, 76.1, 10f32,
     )]);
 
-    let mut pathfinder = Pathfinder::<()>::new();
+    let mut pathfinder = Pathfinder::new();
     pathfinder.init(5.0, flyzone, obstacles);
     let plane = Plane::from_degrees(38.15059, -76.43147, 10.0);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());

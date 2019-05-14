@@ -39,7 +39,7 @@ const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
 
 #[allow(non_snake_case)]
-pub struct Pathfinder<T> {
+pub struct Pathfinder {
     // exposed API
     buffer: f32,                // In meters
     max_process_time: Duration, // In seconds
@@ -48,21 +48,19 @@ pub struct Pathfinder<T> {
     // private
     initialized: bool,
     start_time: SystemTime,
-    current_wp: Waypoint<T>,
-    wp_list: LinkedList<Waypoint<T>>,
     origin: Location, // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
     num_vertices: i32,
 }
 
-impl Pathfinder<()> {
+impl Pathfinder {
     pub fn new_without_data() -> Self {
-        Pathfinder::<()>::new()
+        Pathfinder::new()
     }
 }
 
-impl<T> Pathfinder<T> {
-    pub fn new() -> Pathfinder<T> {
+impl Pathfinder {
+    pub fn new() -> Pathfinder {
         Self {
             // exposed API
             buffer: MIN_BUFFER,
@@ -72,8 +70,6 @@ impl<T> Pathfinder<T> {
             // private
             initialized: false,
             start_time: SystemTime::now(),
-            current_wp: Waypoint::from_degrees(0u32, 0f64, 0f64, 0f32, 1f32),
-            wp_list: LinkedList::new(),
             origin: Location::from_degrees(0f64, 0f64, 0f32),
             nodes: Vec::new(),
             num_vertices: 0i32,
@@ -143,30 +139,30 @@ impl<T> Pathfinder<T> {
         return false;
     }
 
-    pub fn get_adjust_path(
+    pub fn get_adjust_path<T>(
         &mut self,
         plane: Plane,
         mut wp_list: LinkedList<Waypoint<T>>,
-    ) -> &LinkedList<Waypoint<T>> {
+    ) -> LinkedList<Waypoint<T>> {
         assert!(self.initialized);
         self.start_time = SystemTime::now();
-        self.wp_list = LinkedList::new();
+        let mut new_wp_list = LinkedList::new();
         let mut current_loc: Location;
         let mut next_loc: Location;
 
-        self.current_wp.location = plane.location;
+        let mut current_wp = Waypoint::new(plane.location, 0f32);
 
         loop {
-            current_loc = self.current_wp.location;
+            current_loc = current_wp.location;
             match wp_list.pop_front() {
-                Some(wp) => self.current_wp = wp,
+                Some(wp) => current_wp = wp,
                 None => break,
             }
-            next_loc = self.current_wp.location;
+            next_loc = current_wp.location;
 
-            if let Some(mut wp_list) = self.adjust_path(current_loc, next_loc) {
+            if let Some(mut path) = self.adjust_path::<T>(current_loc, next_loc) {
                 println!("appending");
-                self.wp_list.append(&mut wp_list);
+                new_wp_list.append(&mut path);
             } else {
                 println!("no path");
                 break;
@@ -174,7 +170,8 @@ impl<T> Pathfinder<T> {
             // self.wp_list.push_back(self.current_wp.clone()); // Push original waypoint
             // self.wp_list.push_back(Waypoint::from_degrees(0, 30.69, -97.69, 100f32, 10f32));
         }
-        &self.wp_list
+
+        wp_list
     }
 
     // Helper function to add temp vertices connecting start and end
@@ -246,7 +243,11 @@ impl<T> Pathfinder<T> {
 
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
-    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint<T>>> {
+    fn adjust_path<T>(
+        &mut self,
+        start: Location,
+        end: Location,
+    ) -> Option<LinkedList<Waypoint<T>>> {
         let mut path = None;
         let mut open_set = Queue::new(); // candidate vertices
         let mut closed_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
@@ -282,7 +283,7 @@ impl<T> Pathfinder<T> {
             assert!(cur.borrow().index != HEADER_VERTEX_INDEX);
             println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
-                path = Some(self.generate_waypoint(cur));
+                path = Some(self.generate_waypoint::<T>(cur));
                 break;
             }
             closed_set.insert(cur.borrow().index);
@@ -351,7 +352,7 @@ impl<T> Pathfinder<T> {
         path
     }
 
-    fn generate_waypoint(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint<T>> {
+    fn generate_waypoint<T>(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint<T>> {
         let mut waypoint_list = LinkedList::new();
         let mut cur_vertex = end_vertex;
         let mut index = END_VERTEX_INDEX;
@@ -360,7 +361,7 @@ impl<T> Pathfinder<T> {
             let loc = Location::from((&cur_vertex.borrow().location, &self.origin));
             let radius = cur_vertex.borrow().radius;
 
-            waypoint_list.push_front(Waypoint::new(0, loc, radius));
+            waypoint_list.push_front(Waypoint::new(loc, radius));
             println!("{}", cur_vertex.borrow());
             let parent = match cur_vertex.borrow().parent {
                 Some(ref cur_parent) => cur_parent.clone(),
@@ -417,13 +418,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn invalid_flyzones_test() {
-        Pathfinder::<()>::new().init(1f32, vec![], Vec::new())
+        Pathfinder::new().init(1f32, vec![], Vec::new())
     }
 
     #[test]
     #[should_panic]
     fn invalid_flyzone_test() {
-        Pathfinder::<()>::new().init(1f32, vec![vec![]], Vec::new())
+        Pathfinder::new().init(1f32, vec![vec![]], Vec::new())
     }
 
     #[test]
@@ -435,7 +436,7 @@ mod tests {
         let c = (&Point::new(20f32, 20f32, 10f32), &origin).into();
         let d = (&Point::new(0f32, 20f32, 10f32), &origin).into();
         let test_flyzone = vec![vec![a, b, d, c]];
-        let mut pathfinder = Pathfinder::<()>::create(1f32, test_flyzone, Vec::new());
+        let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
         assert!(pathfinder.invalid_flyzone(0));
     }
 }
