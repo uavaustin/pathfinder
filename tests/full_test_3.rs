@@ -1,7 +1,6 @@
 extern crate pathfinder;
 
-use pathfinder::obj::*;
-use pathfinder::Pathfinder;
+use pathfinder::*;
 use std::collections::LinkedList;
 
 mod util;
@@ -27,9 +26,8 @@ fn test3() {
         Waypoint::from_degrees(30.289718627929688, -97.73104858398439, 76.1, 10f32),
     ]);
 
-    let mut pathfinder = Pathfinder::new();
     let plane = Plane::from_degrees(30.2881757, -97.7354343, 10.0);
-    pathfinder.init(5.0, flyzone, obstacles);
+    let mut pathfinder = Pathfinder::new(Tanstar::new(), TConfig::default(), flyzone, obstacles);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());
     output_result(waypoints, result, plane);
 }
@@ -64,9 +62,8 @@ fn test3_with_data() {
             .add_data(Data::Tres([4, 8, 15, 16, 23, 42])),
     ]);
 
-    let mut pathfinder = Pathfinder::new();
+    let mut pathfinder = Pathfinder::new(Tanstar::new(), TConfig::default(), flyzone, obstacles);
     let plane = Plane::from_degrees(30.2881757, -97.7354343, 10.0);
-    pathfinder.init(5.0, flyzone, obstacles);
     let result = pathfinder.get_adjust_path(plane.clone(), waypoints.clone());
     output_result(waypoints, result, plane);
 }

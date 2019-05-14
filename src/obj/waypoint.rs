@@ -1,4 +1,4 @@
-use super::*;
+use super::Location;
 
 #[derive(Clone, Debug)]
 pub struct Waypoint<T> {

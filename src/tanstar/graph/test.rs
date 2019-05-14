@@ -73,8 +73,8 @@ fn dummy_flyzones() -> Vec<Vec<Location>> {
     vec![points_to_flyzone(vec![a, b, c, d])]
 }
 
-fn dummy_pathfinder() -> Pathfinder {
-    Pathfinder::create(1f32, dummy_flyzones(), Vec::new())
+fn dummy_pathfinder() -> Tanstar {
+    Tanstar::create(1f32, dummy_flyzones(), Vec::new())
 }
 
 fn points_to_flyzone(points: Vec<Point>) -> Vec<Location> {
@@ -92,7 +92,7 @@ fn flyzone_pathing() {
     let c = Point::new(0f32, 40f32, 10f32);
     let d = Point::new(0f32, 0f32, 10f32);
     let flyzones = vec![points_to_flyzone(vec![a, b, c, d])];
-    let pathfinder = Pathfinder::create(1f32, flyzones, Vec::new());
+    let pathfinder = Tanstar::create(1f32, flyzones, Vec::new());
 
     let e = Point::new(20f32, 20f32, 10f32);
     let f = Point::new(30f32, 30f32, 10f32);
@@ -130,8 +130,7 @@ fn flyzones_pathing() {
 
     let flyzones = vec![flyzone1, flyzone2];
 
-    let mut pathfinder = Pathfinder::new();
-    pathfinder.init(1f32, flyzones, Vec::new());
+    let pathfinder = Tanstar::create(1f32, flyzones, Vec::new());
 
     //test breaks with multiple flyzones; must declare every flyzone from meters at (0,0)
     /*let i = Point::new(15f32, 15f32, 10f32);
@@ -160,9 +159,10 @@ fn obstacles_pathing() {
     let ob = obstacle_from_meters(20f32, 20f32, 20f32, 20f32);
     let obstacles = vec![ob];
 
-    let mut pathfinder = Pathfinder::new();
-    pathfinder.init(1f32, dummy_flyzones(), obstacles);
-    pathfinder.set_buffer(0f32);
+    let mut pathfinder = Tanstar::create(1f32, dummy_flyzones(), obstacles);
+    let mut config = TConfig::default();
+    config.buffer_size = 0f32;
+    pathfinder.set_config(config);
 
     match pathfinder.valid_path(&a, &b) {
         PathValidity::Flyover(threshold) => assert_eq!(threshold, 20f32),
@@ -262,7 +262,7 @@ fn intersection_distance() {
     let by = Point::new(20f32, 0f32, 0f32);
 
     let ob = obstacle_from_meters(15f32, 0f32, 5f32, 20f32);
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
 
     //intercepts at (10,0), (20,0)
     assert_eq!(
@@ -356,7 +356,7 @@ fn obstacle_flyover() {
     let g = Point::new(10f32, 30f32, 40f32);
     let ob = obstacle_from_meters(10f32, 25f32, 5f32, 20f32);
     let obstacles = vec![ob];
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), obstacles);
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), obstacles);
     assert_eq!(bool::from(pathfinder.valid_path(&a, &b)), false);
     assert_eq!(bool::from(pathfinder.valid_path(&a, &d)), false);
     assert_eq!(bool::from(pathfinder.valid_path(&e, &b)), false);
@@ -371,6 +371,7 @@ fn obstacle_flyover() {
 */
 
 #[test]
+// #TODO: verify node location
 fn generate_graph_test() {
     let a = Point::new(40f32, 0f32, 0f32);
     let b = Point::new(40f32, 40f32, 0f32);
@@ -381,14 +382,13 @@ fn generate_graph_test() {
         obstacle_from_meters(10f32, 20f32, 10f32, 10f32),
         obstacle_from_meters(30f32, 20f32, 10f32, 10f32),
     ];
-    let mut pathfinder = Pathfinder::new();
-    pathfinder.init(5f32, flyzones, obstacles);
+    let pathfinder = Tanstar::create(5f32, flyzones, obstacles);
 }
 
 #[test]
 // https://www.geogebra.org/graphing/hbtydqcz
 fn same_radius_test() {
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
 
     let n1 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 1_f32, 0_f32);
     let n2 = Node::new(Point::new(20_f32, 30_f32, 0_f32), 1_f32, 0_f32);
@@ -406,7 +406,7 @@ fn same_radius_test() {
 #[test]
 // https://www.geogebra.org/graphing/nkjxtwrx
 fn same_radius_offset_test() {
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n1 = Node::new(Point::new(20_f32, 20_f32, 0_f32), 5_f32, 0_f32);
     let n2 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 5_f32, 0_f32);
     let a1 = Rc::new(n1);
@@ -429,7 +429,7 @@ fn same_radius_offset_test() {
 
 #[test]
 fn overlap_test() {
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n3 = Node::new(Point::new(15_f32, 10_f32, 0_f32), 5_f32, 0_f32);
     let n4 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 4_f32, 0_f32);
     let c = Rc::new(n3);
@@ -443,7 +443,7 @@ fn overlap_test() {
 
 #[test]
 fn sentinel_test() {
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n3 = Node::new(Point::new(15_f32, 10_f32, 0_f32), 5_f32, 0_f32);
     let n4 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 5_f32, 0_f32);
     let c = Rc::new(n3);
@@ -460,7 +460,7 @@ fn sentinel_test() {
 
 #[test]
 fn different_radius_no_overlap_test() {
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), Vec::new());
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n5 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 2_f32, 0_f32);
     let n6 = Node::new(Point::new(12_f32, 10_f32, 0_f32), 1_f32, 0_f32);
     let e = Rc::new(n5);
@@ -480,7 +480,7 @@ fn different_radius_no_overlap_test() {
 //https://www.geogebra.org/graphing/ufegkqcv
 fn different_radius_no_overlap_all_flyover_test() {
     let obs = obstacle_from_meters(16f32, 10f32, 1.8f32, 20f32);
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), vec![obs]);
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), vec![obs]);
     let n5 = Node::new(Point::new(20_f32, 10_f32, 30_f32), 2_f32, 0_f32);
     let n6 = Node::new(Point::new(12_f32, 10_f32, 30_f32), 1_f32, 0_f32);
     let e = Rc::new(n5);
@@ -520,7 +520,7 @@ fn different_radius_no_overlap_all_flyover_test() {
 //https://www.geogebra.org/graphing/twuxqprk
 fn different_radius_no_overlap_one_flyover_test() {
     let obs = obstacle_from_meters(16f32, 12f32, 1f32, 20f32);
-    let pathfinder = Pathfinder::create(1f32, dummy_flyzones(), vec![obs]);
+    let pathfinder = Tanstar::create(1f32, dummy_flyzones(), vec![obs]);
     let n5 = Node::new(Point::new(20_f32, 10_f32, 30_f32), 2_f32, 0_f32);
     let n6 = Node::new(Point::new(12_f32, 10_f32, 30_f32), 1_f32, 0_f32);
     let e = Rc::new(n5);
@@ -563,7 +563,7 @@ fn virtualize_flyzone_square() {
     let c = Location::from((&Point::new(20f32, 20f32, 10f32), &origin));
     let d = Location::from((&Point::new(0f32, 20f32, 10f32), &origin));
     let test_flyzone = vec![vec![d, c, b, a]];
-    let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+    let mut pathfinder = Tanstar::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(5f32, 5f32, 0f32);
     let node_b = Point::new(15f32, 5f32, 0f32);
     let node_c = Point::new(15f32, 15f32, 0f32);
@@ -595,7 +595,7 @@ fn virtualize_flyzone_plus() {
     let k = Location::from((&Point::new(0f32, 20f32, 10f32), &origin));
     let l = Location::from((&Point::new(20f32, 20f32, 10f32), &origin));
     let test_flyzone = vec![vec![l, k, j, i, h, g, f, e, d, c, b, a]];
-    let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+    let mut pathfinder = Tanstar::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(25f32, 5f32, 0f32);
     let node_b = Point::new(35f32, 5f32, 0f32);
     let node_c = Point::new(
@@ -647,7 +647,7 @@ fn virtualize_flyzone_linear() {
     let d = Location::from((&Point::new(20f32, 20f32, 10f32), &origin));
     let e = Location::from((&Point::new(0f32, 20f32, 10f32), &origin));
     let test_flyzone = vec![vec![e, d, c, b, a]];
-    let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+    let mut pathfinder = Tanstar::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(5f32, 5f32, 0f32);
     let node_b = Point::new(15f32, 5f32, 0f32);
     let node_c = Point::new(15f32, 15f32, 0f32);
@@ -674,7 +674,7 @@ fn virtualize_flyzone_small_angle() {
     let f = Location::from((&Point::new(0f32, 10f32, 10f32), &origin));
     let g = Location::from((&Point::new(10f32, 9f32, 10f32), &origin));
     let test_flyzone = vec![vec![g, f, e, d, c, b, a]];
-    let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+    let mut pathfinder = Tanstar::create(1f32, test_flyzone, Vec::new());
     let node_a = Point::new(15f32, 5f32, 0f32);
     let node_b = Point::new(25f32, 5f32, 0f32);
     let node_c = Point::new(25f32, 15f32, 0f32);
@@ -698,7 +698,7 @@ fn sentinel_vertex_test() {
     let b = Point::new(0f32, 5f32, 0f32).to_location(&origin);
     let a = Point::new(5f32, 0f32, 0f32).to_location(&origin);
     let test_flyzone = vec![vec![a, b, c]];
-    let mut pathfinder = Pathfinder::create(1f32, test_flyzone, Vec::new());
+    let mut pathfinder = Tanstar::create(1f32, test_flyzone, Vec::new());
     let origin = Point::new(4f32, 1f32, 0f32);
     let node = Node::new(origin, 1f32, 2f32);
 

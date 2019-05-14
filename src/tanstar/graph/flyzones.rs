@@ -3,7 +3,70 @@
 
 use super::*;
 
-impl Pathfinder {
+// determine if set of order points is clockwise, c-clockwise, or straight
+// input vector of points, output (direction, straight)
+fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
+    let mut sum_whole = 0f32;
+    for i in 0..points.len() {
+        let first = points[i];
+        let second = if i + 1 == points.len() {
+            points[0]
+        } else {
+            points[i + 1]
+        };
+        sum_whole += (second.x - first.x) * (second.y + first.y);
+    }
+    if sum_whole > 0f32 {
+        (true, false) // clockwise
+    } else if sum_whole < 0f32 {
+        (false, false) // counter-clockwise
+    } else {
+        (false, true) // straight-line
+    }
+}
+
+impl Tanstar {
+    // Find origin (lower left corner) of a flyzone
+    pub fn find_origin(flyzones: &Vec<Vec<Location>>) -> Location {
+        const MAX_RADIAN: f64 = 2f64 * ::std::f64::consts::PI;
+        let mut min_lat = MAX_RADIAN;
+        let mut min_lon = MAX_RADIAN;
+        let mut max_lon = 0f64;
+        let mut lon = min_lon;
+
+        assert!(flyzones.len() > 0, "Require at least one flyzone");
+        for i in 0..flyzones.len() {
+            let flyzone_points = &flyzones[i];
+            assert!(
+                flyzone_points.len() > 2,
+                "Require at least 3 points to construct fly zone."
+            );
+
+            for point in flyzone_points {
+                if point.lat() < min_lat {
+                    min_lat = point.lat();
+                }
+                if point.lon() < min_lon {
+                    min_lon = point.lon();
+                }
+                if point.lon() > max_lon {
+                    max_lon = point.lon();
+                }
+            }
+            lon = min_lon;
+            if max_lon - min_lon > MAX_RADIAN {
+                lon = max_lon;
+            }
+        }
+
+        println!(
+            "Found origin: {}, {}",
+            min_lat.to_degrees(),
+            lon.to_degrees()
+        );
+        Location::from_radians(min_lat, lon, 0f32)
+    }
+
     // Convert flyzone into virtual nodes
     pub fn virtualize_flyzone(&mut self, index: usize) {
         let flyzone = &self.flyzones[index];
@@ -55,9 +118,9 @@ impl Pathfinder {
                 let d = if (iter_clockwise == false && direction == 1)
                     || (iter_clockwise == true && direction == -1)
                 {
-                    TURNING_RADIUS
+                    self.turning_radius
                 } else {
-                    TURNING_RADIUS / ((theta / 2f32).sin())
+                    self.turning_radius / ((theta / 2f32).sin())
                 };
 
                 if d > mag_a || d > mag_b {
@@ -71,7 +134,7 @@ impl Pathfinder {
                         0f32,
                     );
                     //println!("center: {:?}", center);
-                    let virt_ob = Node::new(center, TURNING_RADIUS, 0f32);
+                    let virt_ob = Node::new(center, self.turning_radius, 0f32);
                     self.nodes.push(Rc::new(RefCell::new(virt_ob)));
                 }
             }
@@ -126,5 +189,25 @@ impl Pathfinder {
                 node.insert_vertex(vertex_b);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn vertex_direction_test() {
+        let a = Point::new(0f32, 0f32, 10f32);
+        let b = Point::new(0f32, 10f32, 10f32);
+        let c = Point::new(10f32, 10f32, 10f32);
+        let d = Point::new(10f32, 0f32, 10f32);
+        let e = Point::new(0f32, 20f32, 10f32);
+        let clockwise_flyzone = vec![a, b, c, d];
+        let anticlockwise_flyzone = vec![d, c, b, a];
+        let line_flyzone = vec![a, b, e];
+        assert_eq!(vertex_direction(&clockwise_flyzone), (true, false));
+        assert_eq!(vertex_direction(&anticlockwise_flyzone), (false, false));
+        assert_eq!(vertex_direction(&line_flyzone), (false, true));
     }
 }

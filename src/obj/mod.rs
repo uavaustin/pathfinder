@@ -1,6 +1,3 @@
-use super::*;
-use ordered_float::OrderedFloat;
-
 mod location;
 mod obstacle;
 mod plane;
