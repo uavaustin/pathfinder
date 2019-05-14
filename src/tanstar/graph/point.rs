@@ -92,7 +92,7 @@ mod test {
             Location::from_degrees(30.32473, -97.60410, 0f32),
         ];
         for loc in test_locations {
-            let node1 = Node::from((&loc, &pathfinder.origin));
+            let node1 = Node::from((&loc, &pathfinder.origin, 5f32));
             let new_loc = Location::from((&node1.origin, &pathfinder.origin));
             // print!("{:.5}, {:.5} => ", loc.lat_degree(), loc.lon_degree());
             println!("{:.5}, {:.5}", new_loc.lat_degree(), new_loc.lon_degree());

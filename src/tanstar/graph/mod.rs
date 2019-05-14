@@ -42,13 +42,17 @@ impl Tanstar {
         (alpha, beta, distance, threshold): (f32, f32, f32, f32),
     ) {
         // Insert edge from u -> v
-        let v = self.nodes[j]
-            .borrow()
-            .get_vertex(&mut self.num_vertices, beta);
+        let v = self.nodes[j].borrow().get_vertex(
+            &mut self.num_vertices,
+            beta,
+            self.vertex_merge_threshold,
+        );
         let edge = Connection::new(v.clone(), distance, threshold);
-        let u = self.nodes[i]
-            .borrow()
-            .get_vertex(&mut self.num_vertices, alpha);
+        let u = self.nodes[i].borrow().get_vertex(
+            &mut self.num_vertices,
+            alpha,
+            self.vertex_merge_threshold,
+        );
         u.borrow_mut().connection.push(edge);
     }
 

@@ -56,19 +56,19 @@ impl From<(&Obstacle, &Location, f32)> for Node {
     }
 }
 
-impl From<(&Location, &Location)> for Node {
+impl From<(&Location, &Location, f32)> for Node {
     // Generate node from point, used for inserting virtual obstacles for flyzones
-    fn from((p, origin): (&Location, &Location)) -> Self {
-        Self::new(Point::from((p, origin)), TURNING_RADIUS, 0f32)
+    fn from((p, origin, turning_radius): (&Location, &Location, f32)) -> Self {
+        Self::new(Point::from((p, origin)), turning_radius, 0f32)
     }
 }
 
-impl From<(&Plane, &Location)> for Node {
+impl From<(&Plane, &Location, f32)> for Node {
     // Generate node from plane
-    fn from((plane, origin): (&Plane, &Location)) -> Self {
+    fn from((plane, origin, turning_radius): (&Plane, &Location, f32)) -> Self {
         Self::new(
             Point::from((&plane.location, origin)),
-            TURNING_RADIUS,
+            turning_radius,
             plane.location.alt(),
         )
     }
@@ -138,7 +138,12 @@ impl Node {
 
     // Find a vertex within threshold to the angle and return it
     // if not found, create new one
-    pub fn get_vertex(&self, num_vertices: &mut i32, angle: f32) -> Rc<RefCell<Vertex>> {
+    pub fn get_vertex(
+        &self,
+        num_vertices: &mut i32,
+        angle: f32,
+        threshold: f32,
+    ) -> Rc<RefCell<Vertex>> {
         println!("Looking for vertex with angle {}", angle);
         let (current, next) = self.traverse_rings(angle);
 
@@ -164,7 +169,7 @@ impl Node {
             let arc_a = arc_length(temp_current.borrow().angle, angle, self.radius);
             let arc_b = arc_length(angle, temp_next.borrow().angle, self.radius);
             let min_arc = if arc_a < arc_b { arc_a } else { arc_b };
-            if min_arc < VERTEX_MERGE_THRESHOLD {
+            if min_arc < threshold {
                 println!(
                     "found existing vertex {} and {} with dist {}",
                     current.borrow(),
