@@ -3,7 +3,7 @@ use std::collections::LinkedList;
 
 use pathfinder::obj::*;
 
-pub fn vec_to_list(waypoints: Vec<Waypoint>) -> LinkedList<Waypoint> {
+pub fn vec_to_list<T>(waypoints: Vec<Waypoint<T>>) -> LinkedList<Waypoint<T>> {
     let mut list = LinkedList::new();
     for wp in waypoints {
         list.push_back(wp);
@@ -11,9 +11,9 @@ pub fn vec_to_list(waypoints: Vec<Waypoint>) -> LinkedList<Waypoint> {
     list
 }
 
-pub fn output_result(
-    _waypoints: LinkedList<Waypoint>,
-    result: &LinkedList<Waypoint>,
+pub fn output_result<T>(
+    _waypoints: LinkedList<Waypoint<T>>,
+    result: LinkedList<Waypoint<T>>,
     plane: Plane,
 ) {
     let mut iter = result.iter();

@@ -12,9 +12,9 @@ https://mapmakerapp.com/?map=5cb91d93da97348654172382e5ba
 
 #[test]
 fn test7() {
-    let waypoints = vec_to_list(vec![
-        Waypoint::from_degrees(0, 30.322280883789063, -97.60298156738281, 100f32, 10f32),
-        Waypoint::from_degrees(1, 30.322280883789063, -97.60098266601564, 150f32, 10f32),
+    let waypoints = vec_to_list::<()>(vec![
+        Waypoint::from_degrees(30.322280883789063, -97.60298156738281, 100f32, 10f32),
+        Waypoint::from_degrees(30.322280883789063, -97.60098266601564, 150f32, 10f32),
     ]);
 
     let flyzone = vec![vec![

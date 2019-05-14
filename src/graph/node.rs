@@ -74,9 +74,9 @@ impl From<(&Plane, &Location)> for Node {
     }
 }
 
-impl From<(&Waypoint, &Location)> for Node {
+impl<T> From<(&Waypoint<T>, &Location)> for Node {
     // Generate node from waypoint
-    fn from((waypoint, origin): (&Waypoint, &Location)) -> Self {
+    fn from((waypoint, origin): (&Waypoint<T>, &Location)) -> Self {
         Self::new(
             Point::from((&waypoint.location, origin)),
             waypoint.radius,
