@@ -16,7 +16,7 @@ pub trait Algorithm {
         -> Option<LinkedList<Waypoint<T>>>;
 
     // Getters
-    fn get_config(&self) -> Self::Config;
+    fn get_config(&self) -> &Self::Config;
     fn get_flyzone(&mut self) -> &Vec<Vec<Location>>;
     fn get_obstacles(&self) -> &Vec<Obstacle>;
 

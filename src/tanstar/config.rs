@@ -6,6 +6,7 @@ pub const DEFAULT_PROCESS_TIME: u64 = 10u64;
 pub const DEFAULT_TURNING_RADIUS: f32 = 5f32;
 pub const DEFAULT_V_MERGE_THRESHOLD: f32 = 5f32;
 
+#[derive(Clone)]
 pub struct TConfig {
     // buffer around obstacles, in meters
     pub buffer_size: f32,

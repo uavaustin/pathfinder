@@ -45,13 +45,13 @@ impl Tanstar {
         let v = self.nodes[j].borrow().get_vertex(
             &mut self.num_vertices,
             beta,
-            self.vertex_merge_threshold,
+            self.config.vertex_merge_threshold,
         );
         let edge = Connection::new(v.clone(), distance, threshold);
         let u = self.nodes[i].borrow().get_vertex(
             &mut self.num_vertices,
             alpha,
-            self.vertex_merge_threshold,
+            self.config.vertex_merge_threshold,
         );
         u.borrow_mut().connection.push(edge);
     }
@@ -110,7 +110,7 @@ impl Tanstar {
         self.nodes.clear();
         self.origin = Self::find_origin(&self.flyzones);
         for i in 0..self.obstacles.len() {
-            let mut node = (&self.obstacles[i], &self.origin, self.buffer).into();
+            let mut node = (&self.obstacles[i], &self.origin, self.config.buffer_size).into();
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
         for i in 0..self.flyzones.len() {

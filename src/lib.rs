@@ -75,7 +75,7 @@ impl<A: Algorithm> Pathfinder<A> {
         self.algo.set_obstacles(obstacles);
     }
 
-    pub fn get_config(&self) -> A::Config {
+    pub fn get_config(&self) -> &A::Config {
         self.algo.get_config()
     }
 

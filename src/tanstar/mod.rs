@@ -34,11 +34,7 @@ const HEADER_VERTEX_INDEX: i32 = -3;
 #[allow(non_snake_case)]
 pub struct Tanstar {
     // Configuration options
-    buffer: f32,                 // In meters
-    max_process_time: Duration,  // In seconds
-    turning_radius: f32,         // In meters
-    vertex_merge_threshold: f32, // In meters
-
+    config: TConfig,
     flyzones: Vec<Vec<Location>>,
     obstacles: Vec<Obstacle>,
     // private
@@ -53,11 +49,7 @@ impl Tanstar {
     pub fn new() -> Self {
         Self {
             // exposed API
-            buffer: DEFAULT_BUFFER_SIZE,
-            max_process_time: Duration::from_secs(DEFAULT_PROCESS_TIME),
-            turning_radius: DEFAULT_TURNING_RADIUS,
-            vertex_merge_threshold: DEFAULT_V_MERGE_THRESHOLD,
-
+            config: TConfig::default(),
             flyzones: Vec::new(),
             obstacles: Vec::new(),
             // private
@@ -118,8 +110,7 @@ impl Algorithm for Tanstar {
         }
         assert!(Self::invalid_flyzone(&flyzones, &Self::find_origin(&flyzones)) == false);
 
-        self.buffer = config.buffer_size;
-        self.max_process_time = config.max_process_time;
+        self.config = config;
         self.flyzones = flyzones;
         self.obstacles = obstacles;
         self.build_graph();
@@ -140,12 +131,12 @@ impl Algorithm for Tanstar {
         let start_node = Rc::new(RefCell::new(Node::from((
             &start,
             &self.origin,
-            self.turning_radius,
+            self.config.turning_radius,
         ))));
         let end_node = Rc::new(RefCell::new(Node::from((
             &end,
             &self.origin,
-            self.turning_radius,
+            self.config.turning_radius,
         ))));
 
         let end_point = Point::from((&end, &self.origin));
@@ -219,13 +210,8 @@ impl Algorithm for Tanstar {
         path
     }
 
-    fn get_config(&self) -> Self::Config {
-        Self::Config::new(
-            self.buffer,
-            self.max_process_time,
-            self.turning_radius,
-            self.vertex_merge_threshold,
-        )
+    fn get_config(&self) -> &Self::Config {
+        &self.config
     }
 
     fn get_flyzone(&mut self) -> &Vec<Vec<Location>> {
@@ -237,10 +223,7 @@ impl Algorithm for Tanstar {
     }
 
     fn set_config(&mut self, config: Self::Config) {
-        self.buffer = config.buffer_size;
-        self.max_process_time = config.max_process_time;
-        self.turning_radius = config.turning_radius;
-        self.vertex_merge_threshold = config.vertex_merge_threshold;
+        self.config = config;
         self.build_graph();
     }
 

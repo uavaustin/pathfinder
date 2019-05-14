@@ -118,9 +118,9 @@ impl Tanstar {
                 let d = if (iter_clockwise == false && direction == 1)
                     || (iter_clockwise == true && direction == -1)
                 {
-                    self.turning_radius
+                    self.config.turning_radius
                 } else {
-                    self.turning_radius / ((theta / 2f32).sin())
+                    self.config.turning_radius / ((theta / 2f32).sin())
                 };
 
                 if d > mag_a || d > mag_b {
@@ -134,7 +134,7 @@ impl Tanstar {
                         0f32,
                     );
                     //println!("center: {:?}", center);
-                    let virt_ob = Node::new(center, self.turning_radius, 0f32);
+                    let virt_ob = Node::new(center, self.config.turning_radius, 0f32);
                     self.nodes.push(Rc::new(RefCell::new(virt_ob)));
                 }
             }
