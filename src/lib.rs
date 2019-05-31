@@ -6,13 +6,68 @@
 pub mod obj;
 pub mod tanstar;
 
-mod algorithm;
+pub mod algorithm;
 
-pub use obj::*;
+pub use obj::{Location, Obstacle, Plane, Waypoint};
 pub use tanstar::{TConfig, Tanstar};
 
 use algorithm::Algorithm;
 use std::collections::LinkedList;
+
+#[macro_use]
+extern crate cfg_if;
+
+/// Marker Trait used for 'sealed' Traits (this cannot be implemented outside
+/// of this trait and thus any Trait that uses Sealed as a supertrait is
+/// sealed - all it's implementations are within this crate).
+mod private { pub trait Sealed { } }
+
+cfg_if! {
+    if #[cfg(feature = "restrict-algorithm-types")] {
+        #[macro_use]
+        extern crate lazy_static;
+        use std::any::TypeId;
+        use std::collections::HashMap;
+
+        // macro_rules! blessed_algorithms {
+        //     () => {};
+        // }
+
+        lazy_static! {
+            pub static ref ALGORITHMS: HashMap<&'static str, TypeId> = {
+                let mut m = HashMap::new();
+                m.insert("tanstar", TypeId::of::<Tanstar>());
+                m
+            };
+        }
+
+        pub trait TypeContainer {
+            type Type: Algorithm;
+        }
+
+        pub struct TS; impl TypeContainer for TS { type Type = Tanstar; }
+
+        pub enum Algos {
+            TanStar(TS),
+        }
+
+        pub fn string_to_type(s: String) -> Algos {
+            match s.as_str() {
+                "tanstar" => Algos::TanStar(TS),
+                _ => Algos::TanStar(TS),
+            }
+        }
+
+
+        pub fn string_to_ctor(s: String) -> impl Algorithm {
+            match s.as_str() {
+                "tanstar" => Tanstar::new(),
+                _ => Tanstar::new(),
+            }
+        }
+    } else {
+    }
+}
 
 pub struct Pathfinder<A: Algorithm> {
     algo: A,
