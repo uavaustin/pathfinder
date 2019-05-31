@@ -8,10 +8,11 @@ pub mod tanstar;
 
 pub mod algorithm;
 
+use private::Sealed;
 pub use obj::{Location, Obstacle, Plane, Waypoint};
 pub use tanstar::{TConfig, Tanstar};
+pub use algorithm::{Algorithm, AlgorithmTy, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath, AlgorithmAdjustPathQualified};
 
-use algorithm::Algorithm;
 use std::collections::LinkedList;
 
 #[macro_use]
@@ -66,6 +67,13 @@ cfg_if! {
             }
         }
     } else {
+        // If we don't care about having an authoritative list of Algorithm
+        // implementations, blanket impl Sealed for all the implementors that
+        // match the criteria. In other words, allow all implementors of the
+        // Algorithm traits, internal and external, to implement Algorithm.
+        impl<A: AlgorithmFields + AlgorithmConstructor + AlgorithmAdjustPath> Sealed for A { }
+        // impl<C: Default, A: AlgorithmFields<C> + AlgorithmConstructor<C> + AlgorithmAdjustPath<C>> Sealed for A { }
+
     }
 }
 
@@ -73,10 +81,10 @@ pub struct Pathfinder<A: Algorithm> {
     algo: A,
 }
 
-impl<A: Algorithm> Pathfinder<A> {
+impl<C: Default, A: AlgorithmTy<C> + Algorithm<Config = C>> Pathfinder<A> {
     pub fn new(
         mut algo: A,
-        config: A::Config,
+        config: <A as Algorithm>::Config,
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
     ) -> Self {
@@ -118,7 +126,7 @@ impl<A: Algorithm> Pathfinder<A> {
         new_wp_list
     }
 
-    pub fn set_config(&mut self, config: A::Config) {
+    pub fn set_config(&mut self, config: <A as AlgorithmFields>::Config) {
         self.algo.set_config(config);
     }
 
@@ -130,7 +138,7 @@ impl<A: Algorithm> Pathfinder<A> {
         self.algo.set_obstacles(obstacles);
     }
 
-    pub fn get_config(&self) -> &A::Config {
+    pub fn get_config(&self) -> &<A as AlgorithmFields>::Config {
         self.algo.get_config()
     }
 

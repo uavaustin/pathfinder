@@ -1,7 +1,7 @@
 // mod.rs
 // contains main functionality of the library
 use super::obj::*;
-use super::Algorithm;
+use super::{AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath};
 
 pub mod config;
 
@@ -46,21 +46,6 @@ pub struct Tanstar {
 }
 
 impl Tanstar {
-    pub fn new() -> Self {
-        Self {
-            // exposed API
-            config: TConfig::default(),
-            flyzones: Vec::new(),
-            obstacles: Vec::new(),
-            // private
-            initialized: false,
-            start_time: SystemTime::now(),
-            origin: Location::from_degrees(0f64, 0f64, 0f32),
-            nodes: Vec::new(),
-            num_vertices: 0i32,
-        }
-    }
-
     // determine if flyzone intersects itself (correct order)
     // inputs (flyzones, origin), outputs true if invalid
     fn invalid_flyzone(flyzones: &Vec<Vec<Location>>, origin: &Location) -> bool {
@@ -94,7 +79,27 @@ impl Tanstar {
     }
 }
 
-impl Algorithm for Tanstar {
+impl AlgorithmConstructor for Tanstar {
+    type Config = TConfig;
+
+    fn new() -> Self {
+        Self {
+            // exposed API
+            config: TConfig::default(),
+            flyzones: Vec::new(),
+            obstacles: Vec::new(),
+            // private
+            initialized: false,
+            start_time: SystemTime::now(),
+            origin: Location::from_degrees(0f64, 0f64, 0f32),
+            nodes: Vec::new(),
+            num_vertices: 0i32,
+        }
+    }
+}
+
+
+impl AlgorithmFields for Tanstar {
     type Config = TConfig;
 
     fn init(
@@ -116,6 +121,37 @@ impl Algorithm for Tanstar {
         self.build_graph();
         self.initialized = true;
     }
+
+    fn get_config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn get_flyzone(&self) -> &Vec<Vec<Location>> {
+        &self.flyzones
+    }
+
+    fn get_obstacles(&self) -> &Vec<Obstacle> {
+        &self.obstacles
+    }
+
+    fn set_config(&mut self, config: Self::Config) {
+        self.config = config;
+        self.build_graph();
+    }
+
+    fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>) {
+        self.flyzones = flyzone;
+        self.build_graph();
+    }
+
+    fn set_obstacles(&mut self, obstacles: Vec<Obstacle>) {
+        self.obstacles = obstacles;
+        self.build_graph();
+    }
+}
+
+impl AlgorithmAdjustPath for Tanstar {
+    type Config = TConfig;
 
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
@@ -208,33 +244,6 @@ impl Algorithm for Tanstar {
 
         Node::prune_vertices(temp_vertices);
         path
-    }
-
-    fn get_config(&self) -> &Self::Config {
-        &self.config
-    }
-
-    fn get_flyzone(&mut self) -> &Vec<Vec<Location>> {
-        &self.flyzones
-    }
-
-    fn get_obstacles(&self) -> &Vec<Obstacle> {
-        &self.obstacles
-    }
-
-    fn set_config(&mut self, config: Self::Config) {
-        self.config = config;
-        self.build_graph();
-    }
-
-    fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>) {
-        self.flyzones = flyzone;
-        self.build_graph();
-    }
-
-    fn set_obstacles(&mut self, obstacles: Vec<Obstacle>) {
-        self.obstacles = obstacles;
-        self.build_graph();
     }
 }
 
