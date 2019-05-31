@@ -45,7 +45,7 @@
 //!    can implement it)
 //!
 //! The following, unfortunately, does not work (infinitely recurses):
-//! ```compile_fail
+//! ```ignore
 //! pub trait Algorithm
 //! where
 //!     Self: AlgorithmConstructor<Config = <Self as Algorithm>::Config>,
@@ -54,7 +54,7 @@
 //! ```
 //!
 //! We can ensure that all impls that come from our blanket impl meet the first requirement:
-//! ```
+//! ```ignore
 //! impl<A, C: Default> Algorithm for A
 //! where
 //!     A: AlgorithmConstructor<Config = C>,
@@ -69,7 +69,7 @@
 //! impls of a trait to just blanket impls or anything like that).
 //!
 //! Defaults on Trait type parameters may save us:
-//! ```
+//! ```ignore
 //! pub trait Algorithm<C: Default = <Self as AlgorithmFields>::Config>
 //! where
 //!     Self: AlgorithmConstructor<Config = C>,
@@ -94,7 +94,7 @@
 //! ```
 //!
 //! Another option is to ditch the type parameter on Algorithm and use transitivity:
-//! ```
+//! ```ignore
 //! pub trait Algorithm
 //! where
 //!     Self: AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
@@ -110,7 +110,7 @@
 //! cleaner.
 //!
 //! The 2nd requirement is easy enough to satisfy:
-//! ```
+//! ```ignore
 //! pub(crate) trait Sealed { }
 //!
 //! // Blessed Algorithms:
@@ -120,7 +120,8 @@
 //! pub trait Algorithm<C: Default = <Self as AlgorithmFields>::Config>
 //! where
 //!     Self: private::Sealed
-//!     <snipped>
+//!     // <snipped>
+//! { /* <snipped> */ }
 //! ```
 //! This is nearly verbatim the pattern described [here](https://rust-lang-nursery.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed).
 //! It requires us to explicitly 'bless' Algorithms within this crate, which
@@ -131,73 +132,30 @@
 //! require the blessing when the "restrict-algorithm-types" feature is
 //! enabled. When it isn't, foreign Algorithm implementations are possible.
 
-use super::*;
 
-// pub trait AlgorithmConstructor<C: Default> {
-//     fn new() -> Self;
-// }
+use std::collections::LinkedList;
+use super::{Location, Obstacle, Waypoint};
+use super::private::Sealed;
 
-// pub trait AlgorithmAdjustPath<C: Default> {
-//     fn adjust_path<T>(&mut self, start: Location, end: Location)
-//         -> Option<LinkedList<Waypoint<T>>>;
-// }
-
-// pub trait AlgorithmAdjustPathQualified<C: Default, T> {
-//     fn adjust_path(&mut self, start: Location, end: Location)
-//         -> Option<LinkedList<Waypoint<T>>>;
-// }
-
-// impl<C: Default, A: AlgorithmAdjustPath<C>, T> AlgorithmAdjustPathQualified<C, T> for A {
-//     fn adjust_path(&mut self, start: Location, end: Location)
-//         -> Option<LinkedList<Waypoint<T>>>
-//         {
-//             <A as AlgorithmAdjustPath>::adjust_path::<T>(self, start, end)
-//         }
-// }
-
-// pub trait AlgorithmFields<C: Default> {
-//     fn init(
-//         &mut self,
-//         config: C,
-//         flyzones: Vec<Vec<Location>>,
-//         obstacles: Vec<Obstacle>,
-//     );
-
-//     // Getters
-//     fn get_config(&self) -> &C;
-//     fn get_flyzone(&self) -> &Vec<Vec<Location>>;
-//     fn get_obstacles(&self) -> &Vec<Obstacle>;
-
-//     // Setters
-//     fn set_config(&mut self, config: C);
-//     fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>);
-//     fn set_obstacles(&mut self, obstacles: Vec<Obstacle>);
-// }
-
-
-pub trait AlgorithmConstructor {
+pub trait AlgorithmConfig {
     type Config: Default;
+}
 
+pub trait AlgorithmConstructor: AlgorithmConfig {
     fn new() -> Self;
 }
 
-pub trait AlgorithmAdjustPath {
-    type Config: Default;
-
+pub trait AlgorithmAdjustPath: AlgorithmConfig {
     fn adjust_path<T>(&mut self, start: Location, end: Location)
         -> Option<LinkedList<Waypoint<T>>>;
 }
 
-pub trait AlgorithmAdjustPathQualified<T> {
-    type Config: Default;
-
+pub trait AlgorithmAdjustPathQualified<T>: AlgorithmConfig + AlgorithmAdjustPath {
     fn adjust_path(&mut self, start: Location, end: Location)
         -> Option<LinkedList<Waypoint<T>>>;
 }
 
 impl<A: AlgorithmAdjustPath, T> AlgorithmAdjustPathQualified<T> for A {
-    type Config = A::Config;
-
     fn adjust_path(&mut self, start: Location, end: Location)
         -> Option<LinkedList<Waypoint<T>>>
         {
@@ -205,155 +163,40 @@ impl<A: AlgorithmAdjustPath, T> AlgorithmAdjustPathQualified<T> for A {
         }
 }
 
-pub trait AlgorithmFields {
-    type Config: Default;
-
+pub trait AlgorithmFields: AlgorithmConfig {
     fn init(
         &mut self,
-        config: <Self as AlgorithmFields>::Config,
+        config: <Self as AlgorithmConfig>::Config,
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
     );
 
     // Getters
-    fn get_config(&self) -> &<Self as AlgorithmFields>::Config;
+    fn get_config(&self) -> &<Self as AlgorithmConfig>::Config;
     fn get_flyzone(&self) -> &Vec<Vec<Location>>;
     fn get_obstacles(&self) -> &Vec<Obstacle>;
 
     // Setters
-    fn set_config(&mut self, config: <Self as AlgorithmFields>::Config);
+    fn set_config(&mut self, config: <Self as AlgorithmConfig>::Config);
     fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>);
     fn set_obstacles(&mut self, obstacles: Vec<Obstacle>);
 }
 
-
-// trait AlgorithmConfig<C: Default = <Self as AlgorithmConstructor>::Config>
-// where
-//     Self: AlgorithmConstructor<Config = C>,
-//     Self: AlgorithmAdjustPath<Config = C>,
-//     Self: AlgorithmFields<Config = C> {}
-
-// impl<A, C: Default> AlgorithmConfig<C> for A
-// where
-//     A: AlgorithmConstructor<Config = C>,
-//     A: AlgorithmAdjustPath<Config = C>,
-//     A: AlgorithmFields<Config = C> {}
-
-
-// pub trait Algorithm<C: Default = <Self as AlgorithmConstructor>::Config>
-// where
-//     Self: AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
-//     Self: AlgorithmAdjustPath<Config = C>,
-//     Self: AlgorithmConstructor<Config = C>,
-//     Self: AlgorithmFields<Config = C>,
-//     Self: Sealed,
-// {
-//     type Config: Default;
-//     // Unfortunately Associated Type Defaults are unstable (#29661) so we
-//     // can't do:
-//     // `type Config: Default = C;`
-//     // Where clauses on Associated Types are also unstable (#44265 - GATs) so
-//     // we also can't do this (this is what we really want):
-//     // `type Config: Default where Self: AlgorithmFields<Config = <Self as Algorithm>::Config>;`
-//     //
-//     // This means that we can't ensure that the associated Config type matches
-//     // the Config type of the three other Algorithm traits. This isn't great
-//     // but it's still livable since:
-//     //   - really no one should implement Algorithm (blanket impl)
-//     //   - you'll still get type errors if you rely on Algorithm::Config and there's a mismatch
-//     //   - Algorithm::Config is mostly there for compatibility reasons
-// }
-
 pub trait Algorithm
 where
-    Self: AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
-    // A == B == C -> (A == B, B == C)
-    Self: AlgorithmAdjustPath<Config = <Self as AlgorithmConstructor>::Config>,
-    Self: AlgorithmConstructor<Config = <Self as AlgorithmFields>::Config>,
+    Self: AlgorithmConfig + AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
     Self: Sealed,
-    // Self: AlgorithmConstructor<Config = <Self as Algorithm>::Config>,
-    // Self: AlgorithmAdjustPath<Config = <Self as Algorithm>::Config>,
-    // Self: AlgorithmFields<Config = <Self as Algorithm>::Config>
-// where
-    // Self: AlgorithmConfig<<Self as Algorithm>::Config>,
-    {
+{
     type Config: Default;
-    // type Config: Default where Self: AlgorithmFields<Config = <Self as Algorithm>::Config>;
 }
 
-impl<A, C: Default> Algorithm for A
+impl<A> Algorithm for A
 where
-    A: AlgorithmConstructor<Config = C>,
-    A: AlgorithmAdjustPath<Config = C>,
-    A: AlgorithmFields<Config = C>,
+    A: AlgorithmConfig,
+    A: AlgorithmAdjustPath,
+    A: AlgorithmConstructor,
+    A: AlgorithmFields,
     A: Sealed,
 {
-    type Config = C;
+    type Config = <A as AlgorithmConfig>::Config;
 }
-
-pub trait AlgorithmTy<C: Default>: Algorithm<Config = C> + AlgorithmFields<Config = C> + AlgorithmAdjustPath<Config = C> {
-    type Config: Default;
-}
-
-impl<A, C: Default> AlgorithmTy<C> for A
-where
-    A: AlgorithmConstructor + AlgorithmAdjustPath + AlgorithmFields + Algorithm,
-    A: AlgorithmConstructor<Config = C>,
-    A: AlgorithmAdjustPath<Config = C>,
-    A: AlgorithmFields<Config = C>,
-    A: Algorithm<Config = C>,
-{
-    type Config = C;
-}
-
-// pub trait Algorithm
-// where
-//     // Self: AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
-//     // A == B == C -> (A == B, B == C)
-//     // Self: AlgorithmAdjustPath<Config = <Self as AlgorithmConstructor>::Config>,
-//     // Self: AlgorithmConstructor<Config = <Self as AlgorithmFields>::Config>,
-//     Self: AlgorithmConstructor<<Self as Algorithm>::Config>,
-//     Self: AlgorithmAdjustPath<<Self as Algorithm>::Config>,
-//     Self: AlgorithmFields<<Self as Algorithm>::Config>
-// // where
-//     // Self: AlgorithmConfig<<Self as Algorithm>::Config>,
-//     {
-//     type Config: Default;
-//     // type Config: Default where Self: AlgorithmFields<Config = <Self as Algorithm>::Config>;
-// }
-
-// impl<A, C: Default> Algorithm for A
-// where
-//     A: AlgorithmConstructor<C>,
-//     A: AlgorithmAdjustPath<C>,
-//     A: AlgorithmFields<C>,
-//     A: Sealed,
-// {
-//     type Config = C;
-// }
-
-
-// pub trait AlgorithmP {
-//     type Config: Default;
-
-//     fn new() -> Self;
-
-//     fn init(
-//         &mut self,
-//         config: Self::Config,
-//         flyzones: Vec<Vec<Location>>,
-//         obstacles: Vec<Obstacle>,
-//     );
-//     fn adjust_path<T>(&mut self, start: Location, end: Location)
-//         -> Option<LinkedList<Waypoint<T>>>;
-
-//     // Getters
-//     fn get_config(&self) -> &Self::Config;
-//     fn get_flyzone(&self) -> &Vec<Vec<Location>>;
-//     fn get_obstacles(&self) -> &Vec<Obstacle>;
-
-//     // Setters
-//     fn set_config(&mut self, config: Self::Config);
-//     fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>);
-//     fn set_obstacles(&mut self, obstacles: Vec<Obstacle>);
-// }
