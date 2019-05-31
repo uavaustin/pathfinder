@@ -11,7 +11,7 @@ pub mod algorithm;
 use private::Sealed;
 pub use obj::{Location, Obstacle, Plane, Waypoint};
 pub use tanstar::{TConfig, Tanstar};
-pub use algorithm::{Algorithm, AlgorithmTy, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath, AlgorithmAdjustPathQualified};
+pub use algorithm::{Algorithm, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath, AlgorithmAdjustPathQualified};
 
 use std::collections::LinkedList;
 
@@ -71,8 +71,8 @@ cfg_if! {
         // implementations, blanket impl Sealed for all the implementors that
         // match the criteria. In other words, allow all implementors of the
         // Algorithm traits, internal and external, to implement Algorithm.
+        // impl<A: AlgorithmConfig + AlgorithmFields + AlgorithmConstructor + AlgorithmAdjustPath> Sealed for A { }
         impl<A: AlgorithmFields + AlgorithmConstructor + AlgorithmAdjustPath> Sealed for A { }
-        // impl<C: Default, A: AlgorithmFields<C> + AlgorithmConstructor<C> + AlgorithmAdjustPath<C>> Sealed for A { }
 
     }
 }
@@ -81,10 +81,15 @@ pub struct Pathfinder<A: Algorithm> {
     algo: A,
 }
 
-impl<C: Default, A: AlgorithmTy<C> + Algorithm<Config = C>> Pathfinder<A> {
+impl<C: Default, A: Algorithm<C>> Pathfinder<A>
+where
+    A: AlgorithmConstructor<Config = C>,
+    A: AlgorithmFields<Config = C>,
+    A: AlgorithmAdjustPath<Config = C>,
+{
     pub fn new(
         mut algo: A,
-        config: <A as Algorithm>::Config,
+        config: C,
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
     ) -> Self {
@@ -126,7 +131,7 @@ impl<C: Default, A: AlgorithmTy<C> + Algorithm<Config = C>> Pathfinder<A> {
         new_wp_list
     }
 
-    pub fn set_config(&mut self, config: <A as AlgorithmFields>::Config) {
+    pub fn set_config(&mut self, config: C) {
         self.algo.set_config(config);
     }
 
@@ -138,7 +143,7 @@ impl<C: Default, A: AlgorithmTy<C> + Algorithm<Config = C>> Pathfinder<A> {
         self.algo.set_obstacles(obstacles);
     }
 
-    pub fn get_config(&self) -> &<A as AlgorithmFields>::Config {
+    pub fn get_config(&self) -> &C {
         self.algo.get_config()
     }
 

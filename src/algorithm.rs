@@ -3,19 +3,21 @@
 
 //! The Algorithm traits have become a little weird and deserve explanation.
 //!
-//! At this point we have five Algorithm traits:
+//! At this point we have six Algorithm traits:
 //!   - Algorithm
+//!   - AlgorithmConfig
 //!   - AlgorithmConstructor
 //!   - AlgorithmAdjustPath
 //!   - AlgorithmAdjustPathQualified
 //!   - AlgorithmFields
 //!
-//! If you're looking to create an Algorithm, implement Algorithm{Constructor,
-//! AdjustPath, Fields} and add your Algorithm to the list in lib.rs and you
-//! should be good to go. You'll get an Algorithm implementation for free and
-//! you'll never have to worry about the stuff below.
+//! If you're looking to create an Algorithm, implement Algorithm{Config,
+//! Constructor, AdjustPath, Fields} and add your Algorithm to the list in
+//! lib.rs and you should be good to go. You'll get an Algorithm implementation
+//! for free and you'll never have to worry about the stuff below.
 //!
-//! _Why_ we have all these traits is a little more complicated, but it's almost entirely because of Trait Objects and the Object Safety rules.
+//! _Why_ we have all these traits is a little more complicated, but it's almost
+//! entirely because of Trait Objects and the Object Safety rules.
 //!
 //! Trait Objects come into play because there are situations in which it's
 //! desirable to be able to pick a particular Algorithm implementation _at
@@ -32,8 +34,8 @@
 //! then did some stuff to make sure that writing Algorithms and using them
 //! isn't too cumbersome.
 //!
-//! We also did some stuff to provide guarantees the list of Algorithms this
-//! crate knows about (and provides when the "restricted-algorithm-types"
+//! We also did some stuff to provide guarantees that the list of Algorithms
+//! this crate knows about (and exposes - when the "restricted-algorithm-types"
 //! feature is enabled) is an accurate list.
 //!
 //! Details are below.
@@ -53,7 +55,8 @@
 //!     Self: AlgorithmFields<Config = <Self as Algorithm>::Config> {}
 //! ```
 //!
-//! We can ensure that all impls that come from our blanket impl meet the first requirement:
+//! We can ensure that all impls that come from our blanket impl meet the first
+//! requirement:
 //! ```ignore
 //! impl<A, C: Default> Algorithm for A
 //! where
@@ -72,9 +75,9 @@
 //! ```ignore
 //! pub trait Algorithm<C: Default = <Self as AlgorithmFields>::Config>
 //! where
+//!     Self: AlgorithmConstructor + AlgorithmAdjustPath + AlgorithmFields,
 //!     Self: AlgorithmConstructor<Config = C>,
 //!     Self: AlgorithmAdjustPath<Config = C>,
-//!     Self: AlgorithmFields<Config = C>,
 //! {
 //!     type Config: Default;
 //!     // Unfortunately Associated Type Defaults are unstable (#29661) so we
@@ -92,6 +95,8 @@
 //!     //   - Algorithm::Config is mostly there for compatibility reasons
 //! }
 //! ```
+//!
+//! Alas is does not. Using `<Self as AlgorithmFields>::Config` as the Default
 //!
 //! Another option is to ditch the type parameter on Algorithm and use transitivity:
 //! ```ignore
@@ -137,25 +142,61 @@ use std::collections::LinkedList;
 use super::{Location, Obstacle, Waypoint};
 use super::private::Sealed;
 
-pub trait AlgorithmConfig {
+pub trait Algorithm<C: Default = <Self as AlgorithmFields>::Config>
+where
+    Self: AlgorithmConstructor + AlgorithmAdjustPath + AlgorithmFields,
+    Self: AlgorithmConstructor<Config = C>,
+    Self: AlgorithmAdjustPath<Config = C>,
+    Self: Sealed,
+{
     type Config: Default;
+    // Unfortunately Associated Type Defaults are unstable (#29661) so we
+    // can't do:
+    // `type Config: Default = C;`
+    // Where clauses on Associated Types are also unstable (#44265 - GATs) so
+    // we also can't do this (this is what we really want):
+    // `type Conf: Default where Self: AlgorithmFields<Config = <Self as Algorithm>::Config>;`
+    //
+    // This means that we can't ensure that the associated Config type matches
+    // the Config type of the three other Algorithm traits. This isn't great
+    // but it's still livable since:
+    //   - really no one should implement Algorithm (blanket impl)
+    //   - you'll still get type errors if you rely on Algorithm::Config and there's a mismatch
+    //   - Algorithm::Config is mostly there for compatibility reasons
 }
 
-pub trait AlgorithmConstructor: AlgorithmConfig {
+impl<C: Default, A> Algorithm for A
+where
+    Self: AlgorithmConstructor<Config = C>,
+    Self: AlgorithmAdjustPath<Config = C>,
+    Self: AlgorithmFields<Config = C>
+    {
+        type Config = C;
+    }
+
+pub trait AlgorithmConstructor {
+    type Config: Default;
+
     fn new() -> Self;
 }
 
-pub trait AlgorithmAdjustPath: AlgorithmConfig {
+pub trait AlgorithmAdjustPath {
+    type Config: Default;
+
     fn adjust_path<T>(&mut self, start: Location, end: Location)
         -> Option<LinkedList<Waypoint<T>>>;
 }
 
-pub trait AlgorithmAdjustPathQualified<T>: AlgorithmConfig + AlgorithmAdjustPath {
+pub trait AlgorithmAdjustPathQualified<T> {
+    type Config: Default;
+
     fn adjust_path(&mut self, start: Location, end: Location)
         -> Option<LinkedList<Waypoint<T>>>;
 }
 
 impl<A: AlgorithmAdjustPath, T> AlgorithmAdjustPathQualified<T> for A {
+    type Config = A::Config;
+
     fn adjust_path(&mut self, start: Location, end: Location)
         -> Option<LinkedList<Waypoint<T>>>
         {
@@ -163,40 +204,104 @@ impl<A: AlgorithmAdjustPath, T> AlgorithmAdjustPathQualified<T> for A {
         }
 }
 
-pub trait AlgorithmFields: AlgorithmConfig {
+pub trait AlgorithmFields {
+    type Config: Default;
+
     fn init(
         &mut self,
-        config: <Self as AlgorithmConfig>::Config,
+        config: Self::Config,
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
     );
 
     // Getters
-    fn get_config(&self) -> &<Self as AlgorithmConfig>::Config;
+    fn get_config(&self) -> &Self::Config;
     fn get_flyzone(&self) -> &Vec<Vec<Location>>;
     fn get_obstacles(&self) -> &Vec<Obstacle>;
 
     // Setters
-    fn set_config(&mut self, config: <Self as AlgorithmConfig>::Config);
+    fn set_config(&mut self, config: Self::Config);
     fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>);
     fn set_obstacles(&mut self, obstacles: Vec<Obstacle>);
 }
 
-pub trait Algorithm
-where
-    Self: AlgorithmConfig + AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
-    Self: Sealed,
-{
-    type Config: Default;
-}
 
-impl<A> Algorithm for A
-where
-    A: AlgorithmConfig,
-    A: AlgorithmAdjustPath,
-    A: AlgorithmConstructor,
-    A: AlgorithmFields,
-    A: Sealed,
-{
-    type Config = <A as AlgorithmConfig>::Config;
-}
+// pub trait Algorithm<C: Default = <Self as AlgorithmConfig>::Config>
+// where
+//     Self: AlgorithmConfig + AlgorithmConstructor + AlgorithmAdjustPath + AlgorithmFields,
+//     {
+//         type Config: Default;
+//     }
+
+// impl<C: Default, A> Algorithm<C> for A
+// where
+//     A: AlgorithmConfig<Config = C>,
+//     A: AlgorithmConfig + AlgorithmConstructor + AlgorithmAdjustPath + AlgorithmFields,
+//     {
+//         type Config = C;
+//     }
+
+
+// pub trait AlgorithmConfig {
+//     type Config: Default;
+// }
+
+// pub trait AlgorithmConstructor: AlgorithmConfig {
+//     fn new() -> Self;
+// }
+
+// pub trait AlgorithmAdjustPath: AlgorithmConfig {
+//     fn adjust_path<T>(&mut self, start: Location, end: Location)
+//         -> Option<LinkedList<Waypoint<T>>>;
+// }
+
+// pub trait AlgorithmAdjustPathQualified<T>: AlgorithmConfig + AlgorithmAdjustPath {
+//     fn adjust_path(&mut self, start: Location, end: Location)
+//         -> Option<LinkedList<Waypoint<T>>>;
+// }
+
+// impl<A: AlgorithmAdjustPath, T> AlgorithmAdjustPathQualified<T> for A {
+//     fn adjust_path(&mut self, start: Location, end: Location)
+//         -> Option<LinkedList<Waypoint<T>>>
+//         {
+//             <A as AlgorithmAdjustPath>::adjust_path::<T>(self, start, end)
+//         }
+// }
+
+// pub trait AlgorithmFields: AlgorithmConfig {
+//     fn init(
+//         &mut self,
+//         config: <Self as AlgorithmConfig>::Config,
+//         flyzones: Vec<Vec<Location>>,
+//         obstacles: Vec<Obstacle>,
+//     );
+
+//     // Getters
+//     fn get_config(&self) -> &<Self as AlgorithmConfig>::Config;
+//     fn get_flyzone(&self) -> &Vec<Vec<Location>>;
+//     fn get_obstacles(&self) -> &Vec<Obstacle>;
+
+//     // Setters
+//     fn set_config(&mut self, config: <Self as AlgorithmConfig>::Config);
+//     fn set_flyzone(&mut self, flyzone: Vec<Vec<Location>>);
+//     fn set_obstacles(&mut self, obstacles: Vec<Obstacle>);
+// }
+
+// pub trait Algorithm2
+// where
+//     Self: AlgorithmConfig + AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
+//     Self: Sealed,
+// {
+//     type Config: Default;
+// }
+
+// impl<A> Algorithm for A
+// where
+//     A: AlgorithmConfig,
+//     A: AlgorithmAdjustPath,
+//     A: AlgorithmConstructor,
+//     A: AlgorithmFields,
+//     A: Sealed,
+// {
+//     type Config = <A as AlgorithmConfig>::Config;
+// }
