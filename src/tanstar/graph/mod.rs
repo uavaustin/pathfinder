@@ -19,6 +19,7 @@ pub use self::vertex::Vertex;
 
 use obj::{Location, Obstacle};
 
+#[derive(Debug)]
 pub enum PathValidity {
     Valid,
     Invalid,

@@ -2,6 +2,7 @@
 // contains exposed functionality of the library
 #![allow(dead_code)]
 #![allow(unused_variables)]
+#![deny(missing_debug_implementations)]
 
 pub mod obj;
 pub mod tanstar;
@@ -35,41 +36,46 @@ cfg_if! {
         use std::any::TypeId;
         use std::collections::HashMap;
 
-        // macro_rules! blessed_algorithms {
-        //     () => {};
-        // }
+        macro_rules! blessed_algorithm {
+            ($m: ident, $algo: ty, $alias: tt) => {
+                impl private::Sealed for $algo { }
+                $m.insert(stringify!($alias), TypeId::of::<$algo>());
+            };
+        }
 
         lazy_static! {
             pub static ref ALGORITHMS: HashMap<&'static str, TypeId> = {
                 let mut m = HashMap::new();
-                m.insert("tanstar", TypeId::of::<Tanstar>());
+
+                blessed_algorithm!(m, Tanstar, "tanstar");
+
                 m
             };
         }
 
-        pub trait TypeContainer {
-            type Type: Algorithm;
-        }
+        // pub trait TypeContainer {
+        //     type Type: Algorithm;
+        // }
 
-        pub struct TS; impl TypeContainer for TS { type Type = Tanstar; }
+        // pub struct TS; impl TypeContainer for TS { type Type = Tanstar; }
 
-        pub enum Algos {
-            TanStar(TS),
-        }
+        // pub enum Algos {
+        //     TanStar(TS),
+        // }
 
-        pub fn string_to_type(s: String) -> Algos {
-            match s.as_str() {
-                "tanstar" => Algos::TanStar(TS),
-                _ => Algos::TanStar(TS),
-            }
-        }
+        // pub fn string_to_type(s: String) -> Algos {
+        //     match s.as_str() {
+        //         "tanstar" => Algos::TanStar(TS),
+        //         _ => Algos::TanStar(TS),
+        //     }
+        // }
 
-        pub fn string_to_ctor(s: String) -> impl Algorithm {
-            match s.as_str() {
-                "tanstar" => Tanstar::new(),
-                _ => Tanstar::new(),
-            }
-        }
+        // pub fn string_to_ctor(s: String) -> impl Algorithm {
+        //     match s.as_str() {
+        //         "tanstar" => Tanstar::new(),
+        //         _ => Tanstar::new(),
+        //     }
+        // }
     } else {
         // If we don't care about having an authoritative list of Algorithm
         // implementations, blanket impl Sealed for all the implementors that
@@ -79,6 +85,7 @@ cfg_if! {
     }
 }
 
+#[derive(Debug)]
 pub struct Pathfinder<A: Algorithm> {
     algo: A,
 }

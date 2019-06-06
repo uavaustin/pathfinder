@@ -32,6 +32,7 @@ const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
 
 #[allow(non_snake_case)]
+#[derive(Debug)]
 pub struct Tanstar {
     // Configuration options
     config: TConfig,

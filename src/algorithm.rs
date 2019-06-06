@@ -215,7 +215,7 @@ pub trait AlgorithmAdjustPath: AlgorithmConfig {
         -> Option<LinkedList<Waypoint<T>>>;
 }
 
-pub trait AlgorithmAdjustPathQualified<T>: AlgorithmConfig + AlgorithmAdjustPath {
+pub trait AlgorithmAdjustPathQualified<T> {
     fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint<T>>>;
 }
 
