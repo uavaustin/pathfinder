@@ -11,7 +11,7 @@ pub mod algorithm;
 use private::Sealed;
 pub use obj::{Location, Obstacle, Plane, Waypoint};
 pub use tanstar::{TConfig, Tanstar};
-pub use algorithm::{Algorithm, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath, AlgorithmAdjustPathQualified};
+pub use algorithm::{Algorithm, AlgorithmConfig, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath, AlgorithmAdjustPathQualified};
 
 use std::collections::LinkedList;
 
@@ -71,8 +71,7 @@ cfg_if! {
         // implementations, blanket impl Sealed for all the implementors that
         // match the criteria. In other words, allow all implementors of the
         // Algorithm traits, internal and external, to implement Algorithm.
-        // impl<A: AlgorithmConfig + AlgorithmFields + AlgorithmConstructor + AlgorithmAdjustPath> Sealed for A { }
-        impl<A: AlgorithmFields + AlgorithmConstructor + AlgorithmAdjustPath> Sealed for A { }
+        impl<A: AlgorithmConfig + AlgorithmFields + AlgorithmConstructor + AlgorithmAdjustPath> Sealed for A { }
 
     }
 }
@@ -81,15 +80,16 @@ pub struct Pathfinder<A: Algorithm> {
     algo: A,
 }
 
-impl<C: Default, A: Algorithm<C>> Pathfinder<A>
+impl<A> Pathfinder<A>
 where
-    A: AlgorithmConstructor<Config = C>,
-    A: AlgorithmFields<Config = C>,
-    A: AlgorithmAdjustPath<Config = C>,
+    A: AlgorithmConfig,
+    A: AlgorithmConstructor,
+    A: AlgorithmAdjustPath,
+    A: AlgorithmFields,
 {
     pub fn new(
         mut algo: A,
-        config: C,
+        config: <A as AlgorithmConfig>::Config,
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
     ) -> Self {
@@ -131,7 +131,7 @@ where
         new_wp_list
     }
 
-    pub fn set_config(&mut self, config: C) {
+    pub fn set_config(&mut self, config: <A as AlgorithmConfig>::Config) {
         self.algo.set_config(config);
     }
 
@@ -143,7 +143,7 @@ where
         self.algo.set_obstacles(obstacles);
     }
 
-    pub fn get_config(&self) -> &C {
+    pub fn get_config(&self) -> &<A as AlgorithmConfig>::Config {
         self.algo.get_config()
     }
 

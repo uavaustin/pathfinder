@@ -1,7 +1,7 @@
 // mod.rs
 // contains main functionality of the library
 use super::obj::*;
-use super::{AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath};
+use super::{AlgorithmConfig, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath};
 
 pub mod config;
 
@@ -79,9 +79,11 @@ impl Tanstar {
     }
 }
 
-impl AlgorithmConstructor for Tanstar {
+impl AlgorithmConfig for Tanstar {
     type Config = TConfig;
+}
 
+impl AlgorithmConstructor for Tanstar {
     fn new() -> Self {
         Self {
             // exposed API
@@ -100,8 +102,6 @@ impl AlgorithmConstructor for Tanstar {
 
 
 impl AlgorithmFields for Tanstar {
-    type Config = TConfig;
-
     fn init(
         &mut self,
         config: Self::Config,
@@ -151,8 +151,6 @@ impl AlgorithmFields for Tanstar {
 }
 
 impl AlgorithmAdjustPath for Tanstar {
-    type Config = TConfig;
-
     // Find best path using the a* algorithm
     // Return path if found and none if any error occured or no path found
     fn adjust_path<T>(
