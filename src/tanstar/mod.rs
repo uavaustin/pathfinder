@@ -167,7 +167,7 @@ impl Algorithm for Tanstar {
             assert!(cur.borrow().index != HEADER_VERTEX_INDEX);
             println!("current vertex {}", cur.borrow());
             if cur.borrow().index == END_VERTEX_INDEX {
-                path = Some(self.generate_waypoint::<T>(cur));
+                path = Some(self.generate_waypoint::<T>(cur, start.alt.into(), end.alt.into()));
                 break;
             }
             close_set.insert(cur.borrow().index);
@@ -343,10 +343,19 @@ impl Tanstar {
         open_set.push(next.clone());
     }
 
-    fn generate_waypoint<T>(&self, end_vertex: Rc<RefCell<Vertex>>) -> LinkedList<Waypoint<T>> {
+    fn generate_waypoint<T>(
+        &self,
+        end_vertex: Rc<RefCell<Vertex>>,
+        start_alt: f32,
+        end_alt: f32,
+    ) -> LinkedList<Waypoint<T>> {
         let mut waypoint_list = LinkedList::new();
         let mut cur_vertex = end_vertex;
-        println!("Generating waypoints");
+        println!(
+            "Generating waypoints from alt {} to alt {}",
+            start_alt, end_alt
+        );
+        let slope = (end_alt - start_alt) / cur_vertex.borrow().g_cost;
         loop {
             // Skip appending end vertex to waypoint_list
             let parent = match cur_vertex.borrow().parent {
@@ -360,8 +369,10 @@ impl Tanstar {
             }
 
             cur_vertex = parent;
-            println!("{}", cur_vertex.borrow());
-            let loc = Location::from((&cur_vertex.borrow().location, &self.origin));
+            let mut loc = Location::from((&cur_vertex.borrow().location, &self.origin));
+            println!("weight: {}", cur_vertex.borrow().g_cost);
+            loc.alt = (start_alt + cur_vertex.borrow().g_cost * slope).into();
+            println!("{}", loc);
             let radius = cur_vertex.borrow().radius;
             waypoint_list.push_front(Waypoint::new(loc, radius));
         }

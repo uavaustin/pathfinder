@@ -16,6 +16,8 @@ pub struct TConfig {
     pub turning_radius: f32,
     // vertex within this threshold will be merged into one
     pub vertex_merge_threshold: f32,
+    // whether generate virtual nodes for flyzones
+    pub virtualize_flyzone: bool,
 }
 
 impl Default for TConfig {
@@ -25,6 +27,7 @@ impl Default for TConfig {
             Duration::from_secs(DEFAULT_PROCESS_TIME),
             DEFAULT_TURNING_RADIUS,
             DEFAULT_V_MERGE_THRESHOLD,
+            true,
         )
     }
 }
@@ -35,12 +38,14 @@ impl TConfig {
         max_process_time: Duration,
         turning_radius: f32,
         v_merge_threshold: f32,
+        virtualize_flyzone: bool,
     ) -> Self {
         Self {
             buffer_size: buffer_size,
             max_process_time: max_process_time,
             turning_radius: turning_radius,
             vertex_merge_threshold: v_merge_threshold,
+            virtualize_flyzone: virtualize_flyzone,
         }
     }
 }

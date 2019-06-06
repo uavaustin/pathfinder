@@ -113,8 +113,10 @@ impl Tanstar {
             let mut node = (&self.obstacles[i], &self.origin, self.config.buffer_size).into();
             self.nodes.push(Rc::new(RefCell::new(node)));
         }
-        for i in 0..self.flyzones.len() {
-            self.virtualize_flyzone(i);
+        if self.config.virtualize_flyzone {
+            for i in 0..self.flyzones.len() {
+                self.virtualize_flyzone(i);
+            }
         }
     }
 

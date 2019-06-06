@@ -12,7 +12,13 @@ pub struct Location {
 
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({:.5}, {:.5})", self.lat_degree(), self.lon_degree())
+        write!(
+            f,
+            "({:.5}, {:.5}, {:.5})",
+            self.lat_degree(),
+            self.lon_degree(),
+            self.alt()
+        )
     }
 }
 
