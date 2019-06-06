@@ -52,7 +52,10 @@
 //! where
 //!     Self: AlgorithmConstructor<Config = <Self as Algorithm>::Config>,
 //!     Self: AlgorithmAdjustPath<Config = <Self as Algorithm>::Config>,
-//!     Self: AlgorithmFields<Config = <Self as Algorithm>::Config> {}
+//!     Self: AlgorithmFields<Config = <Self as Algorithm>::Config>
+//! {
+//!     type Config: Default;
+//! }
 //! ```
 //!
 //! We can ensure that all impls that come from our blanket impl meet the first
@@ -96,7 +99,8 @@
 //! }
 //! ```
 //!
-//! Alas is does not. Using `<Self as AlgorithmFields>::Config` as the Default
+//! This works but is a bit weird. As mentioned above Algorithm::Config isn't
+//! actually guaranteed to be the Config type.
 //!
 //! Another option is to ditch the type parameter on Algorithm and use transitivity:
 //! ```ignore
@@ -110,16 +114,73 @@
 //!     type Config: Default;
 //! }
 //! ```
-//! In practice this shouldn't really be different than the above, but let's
-//! go with the above (default generic type parameter) for now - it's a little
-//! cleaner.
+//!
+//! This led to some weird type behavior that I didn't fully explore.
+//!
+//! In practice this shouldn't really be different than the above, but the above
+//! (default generic type parameter) is a little cleaner.
+//!
+//! I think at this point it's apparent that trying to constrain an associated
+//! type to be equal to multiple associated types from supertraits is a bad
+//! idea. Interestingly, if you only need an associated type to be equal to one
+//! other associated type from a supertrait, everything is fine. I.e., this
+//! works just fine:
+//! ```
+//! trait A { type Uno; }
+//! trait B: A where Self: A<Uno = <Self as B>::Dos> { type Dos; }
+//!
+//! impl<T: A> B for T { type Dos = <T as A>::Uno; }
+//!
+//! struct Yo { }
+//! impl A for Yo { type Uno = u8; }
+//! ```
+//! This behaves as expected. It'll error for impls that don't ensure Uno = Dos:
+//! ```compile_fail
+//! #trait A { type Uno; }
+//! #trait B: A where Self: A<Uno = <Self as B>::Dos> { type Dos; }
+//! #
+//! impl<T: A> B for T { type Dos = (); }
+//! ```
+//!
+//! But once you've need multiple, you're in trouble:
+//!```compile_fail
+//! trait A { type Uno; type Dos; }
+//! trait B: A
+//! where Self: A<Uno = <Self as B>::Tres, Dos = <Self as B>::Tres>>
+//! { type Tres; }
+//! ```
+//!
+//! Even if they're on different supertraits:
+//! ```compile_fail
+//! trait A { type Uno; }
+//! trait B { type Dos; }
+//! trait C: A + B
+//! where Self: A<Uno = <Self as C>::Tres>,
+//!       Self: B<Dos = <Self as C>::Tres>,
+//! { type Tres; }
+//!
+//! impl<T: A + B, D> C for T
+//! where T: A<Uno = D>,
+//!       T: B<Dos = D>,
+//! { type Tres = D; }
+//! ```
+//!
+//! Though, if you don't need a blanket impl, as above, you're fine.
+//!
+//! So, to get around this, we flip the trait hierarchy a bit. Only one trait
+//! will have an associated Config type - we'll call this trait AlgorithmConfig.
+//! This trait will be on the _bottom_; all the other traits that need a Config
+//! type will have AlgorithmConfig as a supertrait. This works out to be a
+//! little cleaner than the working approaches from above and also ensures that
+//! we have one source of truth for the Algorithm's Config type.
+//!
 //!
 //! The 2nd requirement is easy enough to satisfy:
 //! ```ignore
-//! pub(crate) trait Sealed { }
+//! mod private { pub trait Sealed {} }
 //!
 //! // Blessed Algorithms:
-//! impl Sealed for SomeAlgorithm { }
+//! impl Sealed for SomeAlgorithm {}
 //!
 //! // The above plus an additional super trait bound on Algorithm:
 //! pub trait Algorithm<C: Default = <Self as AlgorithmFields>::Config>
@@ -137,10 +198,70 @@
 //! require the blessing when the "restrict-algorithm-types" feature is
 //! enabled. When it isn't, foreign Algorithm implementations are possible.
 
-
 use std::collections::LinkedList;
 use super::{Location, Obstacle, Waypoint};
 use super::private::Sealed;
+
+// pub trait SubA { type T; }
+// pub trait SubB { type T; }
+// pub trait SubC { type T; }
+
+// pub trait B
+// where
+//     Self: SubA<T = <Self as B>::T>,
+//     Self: SubB<T = <Self as B>::T>,
+//     Self: SubC<T = <Self as B>::T>,
+// {
+//     type T;
+// }
+
+// impl<T, U: SubA + SubB + SubC> B for U
+// where
+//     U: SubA<T = T>,
+//     U: SubB<T = T>,
+//     U: SubC<T = T>,
+// {
+//     type T = T;
+// }
+
+// trait A { type Uno; type Dos; }
+// trait B: A
+// where Self: A<Uno = <Self as B>::Tres, Dos = <Self as B>::Tres>
+// { type Tres; }
+
+// impl B for dyn A<Uno = (), Dos = ()> {
+//     type Tres = ();
+// }
+
+// trait A { type Uno; }
+// trait B { type Dos; }
+// trait C: A + B
+// where Self: A<Uno = <Self as C>::Tres>,
+//       Self: B<Dos = <Self as C>::Tres>,
+// { type Tres; }
+
+// impl<T: A + B, D> C for T
+// where T: A<Uno = D>,
+//       T: B<Dos = D> {
+//         type Tres = D;
+//       }
+
+struct Y;
+// impl A {}
+
+// impl
+
+// impl<T: A, U> B for T
+// where
+//     T: A<Uno = U, Dos = U> {
+//     type Tres = U;
+// }
+
+// struct Yo { }
+// impl A for Yo {
+//     type Uno = u8;
+// }
+
 
 pub trait Algorithm<C: Default = <Self as AlgorithmFields>::Config>
 where
