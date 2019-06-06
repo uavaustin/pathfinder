@@ -198,10 +198,9 @@
 //! require the blessing when the "restrict-algorithm-types" feature is
 //! enabled. When it isn't, foreign Algorithm implementations are possible.
 
-use std::collections::LinkedList;
-use super::{Location, Obstacle, Waypoint};
 use super::private::Sealed;
-
+use super::{Location, Obstacle, Waypoint};
+use std::collections::LinkedList;
 
 pub trait AlgorithmConfig {
     type Config: Default;
@@ -217,16 +216,13 @@ pub trait AlgorithmAdjustPath: AlgorithmConfig {
 }
 
 pub trait AlgorithmAdjustPathQualified<T>: AlgorithmConfig + AlgorithmAdjustPath {
-    fn adjust_path(&mut self, start: Location, end: Location)
-        -> Option<LinkedList<Waypoint<T>>>;
+    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint<T>>>;
 }
 
 impl<A: AlgorithmAdjustPath, T> AlgorithmAdjustPathQualified<T> for A {
-    fn adjust_path(&mut self, start: Location, end: Location)
-        -> Option<LinkedList<Waypoint<T>>>
-        {
-            <A as AlgorithmAdjustPath>::adjust_path::<T>(self, start, end)
-        }
+    fn adjust_path(&mut self, start: Location, end: Location) -> Option<LinkedList<Waypoint<T>>> {
+        <A as AlgorithmAdjustPath>::adjust_path::<T>(self, start, end)
+    }
 }
 
 pub trait AlgorithmFields: AlgorithmConfig {

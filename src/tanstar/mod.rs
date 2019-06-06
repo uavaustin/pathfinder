@@ -1,7 +1,7 @@
 // mod.rs
 // contains main functionality of the library
 use super::obj::*;
-use super::{AlgorithmConfig, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath};
+use super::{AlgorithmAdjustPath, AlgorithmConfig, AlgorithmConstructor, AlgorithmFields};
 
 pub mod config;
 
@@ -99,7 +99,6 @@ impl AlgorithmConstructor for Tanstar {
         }
     }
 }
-
 
 impl AlgorithmFields for Tanstar {
     fn init(

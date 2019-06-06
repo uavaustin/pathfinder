@@ -8,10 +8,13 @@ pub mod tanstar;
 
 pub mod algorithm;
 
-use private::Sealed;
+pub use algorithm::{
+    Algorithm, AlgorithmAdjustPath, AlgorithmAdjustPathQualified, AlgorithmConfig,
+    AlgorithmConstructor, AlgorithmFields,
+};
 pub use obj::{Location, Obstacle, Plane, Waypoint};
+use private::Sealed;
 pub use tanstar::{TConfig, Tanstar};
-pub use algorithm::{Algorithm, AlgorithmConfig, AlgorithmConstructor, AlgorithmFields, AlgorithmAdjustPath, AlgorithmAdjustPathQualified};
 
 use std::collections::LinkedList;
 
@@ -21,7 +24,9 @@ extern crate cfg_if;
 /// Marker Trait used for 'sealed' Traits (this cannot be implemented outside
 /// of this trait and thus any Trait that uses Sealed as a supertrait is
 /// sealed - all it's implementations are within this crate).
-mod private { pub trait Sealed { } }
+mod private {
+    pub trait Sealed {}
+}
 
 cfg_if! {
     if #[cfg(feature = "restrict-algorithm-types")] {
@@ -78,8 +83,7 @@ pub struct Pathfinder<A: Algorithm> {
     algo: A,
 }
 
-impl<A: Algorithm> Pathfinder<A>
-{
+impl<A: Algorithm> Pathfinder<A> {
     pub fn new(
         mut algo: A,
         config: <A as Algorithm>::Config,
