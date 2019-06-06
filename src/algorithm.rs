@@ -252,6 +252,7 @@ pub trait Algorithm
 where
     Self: AlgorithmConfig + AlgorithmAdjustPath + AlgorithmConstructor + AlgorithmFields,
     Self: Sealed,
+    Self: AlgorithmConfig<Config = <Self as Algorithm>::Config>,
 {
     type Config: Default;
 }

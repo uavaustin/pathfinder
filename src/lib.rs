@@ -59,7 +59,6 @@ cfg_if! {
             }
         }
 
-
         pub fn string_to_ctor(s: String) -> impl Algorithm {
             match s.as_str() {
                 "tanstar" => Tanstar::new(),
@@ -72,7 +71,6 @@ cfg_if! {
         // match the criteria. In other words, allow all implementors of the
         // Algorithm traits, internal and external, to implement Algorithm.
         impl<A: AlgorithmConfig + AlgorithmFields + AlgorithmConstructor + AlgorithmAdjustPath> Sealed for A { }
-
     }
 }
 
@@ -80,16 +78,11 @@ pub struct Pathfinder<A: Algorithm> {
     algo: A,
 }
 
-impl<A> Pathfinder<A>
-where
-    A: AlgorithmConfig,
-    A: AlgorithmConstructor,
-    A: AlgorithmAdjustPath,
-    A: AlgorithmFields,
+impl<A: Algorithm> Pathfinder<A>
 {
     pub fn new(
         mut algo: A,
-        config: <A as AlgorithmConfig>::Config,
+        config: <A as Algorithm>::Config,
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
     ) -> Self {
@@ -131,7 +124,7 @@ where
         new_wp_list
     }
 
-    pub fn set_config(&mut self, config: <A as AlgorithmConfig>::Config) {
+    pub fn set_config(&mut self, config: <A as Algorithm>::Config) {
         self.algo.set_config(config);
     }
 
@@ -143,7 +136,7 @@ where
         self.algo.set_obstacles(obstacles);
     }
 
-    pub fn get_config(&self) -> &<A as AlgorithmConfig>::Config {
+    pub fn get_config(&self) -> &<A as Algorithm>::Config {
         self.algo.get_config()
     }
 
