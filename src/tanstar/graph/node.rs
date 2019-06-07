@@ -6,9 +6,9 @@ use std::fmt;
 pub struct Node {
     pub origin: Point,
     pub radius: f32,
-    pub height: f32,                     // make private later
-    pub left_ring: Rc<RefCell<Vertex>>,  // make private later
-    pub right_ring: Rc<RefCell<Vertex>>, // make private later
+    pub height: f32,                      // make private later
+    pub left_ring: Arc<RefCell<Vertex>>,  // make private later
+    pub right_ring: Arc<RefCell<Vertex>>, // make private later
 }
 
 impl fmt::Display for Node {
@@ -87,13 +87,13 @@ impl<T> From<(&Waypoint<T>, &Location)> for Node {
 
 impl Node {
     pub fn new(origin: Point, radius: f32, height: f32) -> Self {
-        let left_head = Rc::new(RefCell::new(Vertex::new_head(
+        let left_head = Arc::new(RefCell::new(Vertex::new_head(
             &mut HEADER_VERTEX_INDEX,
             origin,
         )));
         left_head.borrow_mut().next = Some(left_head.clone());
         left_head.borrow_mut().prev = Some(left_head.clone());
-        let right_head = Rc::new(RefCell::new(Vertex::new_head(
+        let right_head = Arc::new(RefCell::new(Vertex::new_head(
             &mut HEADER_VERTEX_INDEX,
             origin,
         )));
@@ -109,7 +109,7 @@ impl Node {
     }
 
     // Traverse ring to find current pointer and next pointer for angle
-    fn traverse_rings(&self, angle: f32) -> (Rc<RefCell<Vertex>>, Rc<RefCell<Vertex>>) {
+    fn traverse_rings(&self, angle: f32) -> (Arc<RefCell<Vertex>>, Arc<RefCell<Vertex>>) {
         let (is_left, mut current) = if angle >= 0f32 {
             // Left ring
             (true, self.left_ring.clone())
@@ -143,7 +143,7 @@ impl Node {
         num_vertices: &mut i32,
         angle: f32,
         threshold: f32,
-    ) -> Rc<RefCell<Vertex>> {
+    ) -> Arc<RefCell<Vertex>> {
         println!("Looking for vertex with angle {}", angle);
         let (current, next) = self.traverse_rings(angle);
 
@@ -191,7 +191,7 @@ impl Node {
             current.borrow().index,
             next.borrow().index
         );
-        let v = Rc::new(RefCell::new(Vertex::new(num_vertices, self, angle, vec![])));
+        let v = Arc::new(RefCell::new(Vertex::new(num_vertices, self, angle, vec![])));
         next.borrow_mut().prev = Some(v.clone());
         v.borrow_mut().next = Some(next);
         v.borrow_mut().prev = Some(current.clone());
@@ -201,7 +201,7 @@ impl Node {
     }
 
     // Insert an existing vertex into a node
-    pub fn insert_vertex(&mut self, v: Rc<RefCell<Vertex>>) {
+    pub fn insert_vertex(&mut self, v: Arc<RefCell<Vertex>>) {
         let (current, next) = self.traverse_rings(v.borrow().angle);
         next.borrow_mut().prev = Some(v.clone());
         v.borrow_mut().next = Some(next);
@@ -209,7 +209,7 @@ impl Node {
         current.borrow_mut().next = Some(v.clone());
     }
 
-    pub fn prune_vertices(target: LinkedList<Rc<RefCell<Vertex>>>) {
+    pub fn prune_vertices(target: LinkedList<Arc<RefCell<Vertex>>>) {
         for v in target {
             let prev = match v.borrow_mut().prev {
                 Some(ref vert) => vert.clone(),

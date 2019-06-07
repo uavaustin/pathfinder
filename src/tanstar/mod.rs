@@ -15,7 +15,7 @@ use self::queue::Queue;
 use std::cell::RefCell;
 use std::collections::{BinaryHeap, HashSet, LinkedList};
 use std::f32::consts::PI;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 // const EQUATORIAL_RADIUS: f64 = 63781370.0;
@@ -42,7 +42,7 @@ pub struct Tanstar {
     initialized: bool,
     start_time: SystemTime,
     origin: Location, // Reference point defining each node
-    nodes: Vec<Rc<RefCell<Node>>>,
+    nodes: Vec<Arc<RefCell<Node>>>,
     num_vertices: i32,
 }
 
@@ -162,12 +162,12 @@ impl AlgorithmAdjustPath for Tanstar {
         let mut open_set = Queue::new(); // candidate vertices
         let mut close_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
 
-        let start_node = Rc::new(RefCell::new(Node::from((
+        let start_node = Arc::new(RefCell::new(Node::from((
             &start,
             &self.origin,
             self.config.turning_radius,
         ))));
-        let end_node = Rc::new(RefCell::new(Node::from((
+        let end_node = Arc::new(RefCell::new(Node::from((
             &end,
             &self.origin,
             self.config.turning_radius,
@@ -254,9 +254,9 @@ impl Tanstar {
         min_height: f32,
         end_point: &Point,
         open_set: &mut Queue,
-    ) -> LinkedList<Rc<RefCell<Vertex>>> {
+    ) -> LinkedList<Arc<RefCell<Vertex>>> {
         let mut temp_vertices = LinkedList::new();
-        let start_vertex = Rc::new(RefCell::new(Vertex::new(
+        let start_vertex = Arc::new(RefCell::new(Vertex::new(
             &mut START_VERTEX_INDEX,
             &start_node,
             0f32,
@@ -281,7 +281,7 @@ impl Tanstar {
                 vertex.parent = Some(start_vertex.clone());
                 vertex.g_cost = dist;
                 vertex.f_cost = dist + vertex.location.distance(end_point);
-                let vertex_p = Rc::new(RefCell::new(vertex));
+                let vertex_p = Arc::new(RefCell::new(vertex));
                 temp_node.borrow_mut().insert_vertex(vertex_p.clone());
                 open_set.push(vertex_p.clone());
                 temp_vertices.push_front(vertex_p.clone());
@@ -292,14 +292,14 @@ impl Tanstar {
 
             for (a, b, dist, threshold) in temp_paths {
                 println!("Inserting end vertex {}", self.num_vertices);
-                let end_vertex = Rc::new(RefCell::new(Vertex::new(
+                let end_vertex = Arc::new(RefCell::new(Vertex::new(
                     &mut END_VERTEX_INDEX,
                     &end_node,
                     b,
                     vec![],
                 )));
                 let connection = Connection::new(end_vertex.clone(), dist, threshold);
-                let vertex = Rc::new(RefCell::new(Vertex::new(
+                let vertex = Arc::new(RefCell::new(Vertex::new(
                     &mut self.num_vertices,
                     &temp_node.borrow(),
                     a,
@@ -317,11 +317,11 @@ impl Tanstar {
         (open_set, close_set, cur, end_point): &mut (
             &mut Queue,
             &HashSet<i32>,
-            &Rc<RefCell<Vertex>>,
+            &Arc<RefCell<Vertex>>,
             &Point,
         ),
         cur_g_cost: f32,
-        next: Rc<RefCell<Vertex>>,
+        next: Arc<RefCell<Vertex>>,
         dist: f32,
     ) {
         // Handle edge case when node only has one vertex
@@ -352,7 +352,7 @@ impl Tanstar {
 
     fn generate_waypoint<T>(
         &self,
-        end_vertex: Rc<RefCell<Vertex>>,
+        end_vertex: Arc<RefCell<Vertex>>,
         start_alt: f32,
         end_alt: f32,
     ) -> LinkedList<Waypoint<T>> {

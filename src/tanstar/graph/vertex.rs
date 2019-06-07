@@ -7,17 +7,17 @@ use std::hash::Hasher;
 
 #[derive(Debug)]
 pub struct Vertex {
-    pub index: i32,                          // Index to identify vertex
-    pub radius: f32,                         // Radius of the node vertex is attached to
-    pub location: Point,                     // Location of the vertex
-    pub angle: f32,                          // Angle with respect to the node
-    pub g_cost: f32,                         //
-    pub f_cost: f32,                         //
-    pub parent: Option<Rc<RefCell<Vertex>>>, // Parent of vertex
-    pub connection: Vec<Connection>,         // Edge connecting to another node
-    pub prev: Option<Rc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
-    pub next: Option<Rc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
-    pub sentinel: bool,                      // Sentinel property marks end of path hugging
+    pub index: i32,                           // Index to identify vertex
+    pub radius: f32,                          // Radius of the node vertex is attached to
+    pub location: Point,                      // Location of the vertex
+    pub angle: f32,                           // Angle with respect to the node
+    pub g_cost: f32,                          //
+    pub f_cost: f32,                          //
+    pub parent: Option<Arc<RefCell<Vertex>>>, // Parent of vertex
+    pub connection: Vec<Connection>,          // Edge connecting to another node
+    pub prev: Option<Arc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
+    pub next: Option<Arc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
+    pub sentinel: bool,                       // Sentinel property marks end of path hugging
 }
 
 impl Hash for Vertex {

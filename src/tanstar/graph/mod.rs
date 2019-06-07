@@ -95,8 +95,8 @@ impl Tanstar {
                             beta_s,
                         );
                         //b.;
-                        let s_a = Rc::new(RefCell::new(a));
-                        let s_b = Rc::new(RefCell::new(b));
+                        let s_a = Arc::new(RefCell::new(a));
+                        let s_b = Arc::new(RefCell::new(b));
                         self.nodes[i].borrow_mut().insert_vertex(s_a);
                         self.nodes[j].borrow_mut().insert_vertex(s_b);
                     }
@@ -112,7 +112,7 @@ impl Tanstar {
         self.origin = Self::find_origin(&self.flyzones);
         for i in 0..self.obstacles.len() {
             let mut node = (&self.obstacles[i], &self.origin, self.config.buffer_size).into();
-            self.nodes.push(Rc::new(RefCell::new(node)));
+            self.nodes.push(Arc::new(RefCell::new(node)));
         }
         if self.config.virtualize_flyzone {
             for i in 0..self.flyzones.len() {

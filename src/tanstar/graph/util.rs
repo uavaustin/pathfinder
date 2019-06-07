@@ -151,7 +151,7 @@ pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bo
     (x, y, (x - c.x).powi(2) + (y - c.y).powi(2), endpoint)
 }
 
-fn output_ring(origin: &Location, mut current: Rc<RefCell<Vertex>>) {
+fn output_ring(origin: &Location, mut current: Arc<RefCell<Vertex>>) {
     let temp = match current.borrow().next {
         Some(ref v) => v.clone(),
         None => panic!("Next points to null"),

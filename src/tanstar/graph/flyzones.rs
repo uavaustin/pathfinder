@@ -135,7 +135,7 @@ impl Tanstar {
                     );
                     //println!("center: {:?}", center);
                     let virt_ob = Node::new(center, self.config.turning_radius, 0f32);
-                    self.nodes.push(Rc::new(RefCell::new(virt_ob)));
+                    self.nodes.push(Arc::new(RefCell::new(virt_ob)));
                 }
             }
             iter += direction;
@@ -170,12 +170,12 @@ impl Tanstar {
                 let phi = dy.atan2(dx); //check
                 let a = phi + theta;
                 let b = phi - theta;
-                let vertex_a = Rc::new(RefCell::new(Vertex::new_sentinel(
+                let vertex_a = Arc::new(RefCell::new(Vertex::new_sentinel(
                     &mut self.num_vertices,
                     node,
                     a,
                 )));
-                let vertex_b = Rc::new(RefCell::new(Vertex::new_sentinel(
+                let vertex_b = Arc::new(RefCell::new(Vertex::new_sentinel(
                     &mut self.num_vertices,
                     node,
                     b,

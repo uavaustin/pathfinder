@@ -2,8 +2,8 @@ use super::*;
 
 // Simple wrapper around heap and set for efficient data retrival
 pub struct Queue {
-    heap: BinaryHeap<Rc<RefCell<Vertex>>>, // Efficiently get min
-    set: HashSet<i32>,                     // Efficiently check of existence
+    heap: BinaryHeap<Arc<RefCell<Vertex>>>, // Efficiently get min
+    set: HashSet<i32>,                      // Efficiently check of existence
 }
 
 impl Queue {
@@ -15,17 +15,17 @@ impl Queue {
     }
 
     // Insert to queue
-    pub fn push(&mut self, vertex: Rc<RefCell<Vertex>>) {
+    pub fn push(&mut self, vertex: Arc<RefCell<Vertex>>) {
         self.set.insert(vertex.borrow().index);
         self.heap.push(vertex);
     }
 
     // Return min from queue
-    pub fn pop(&mut self) -> Option<Rc<RefCell<Vertex>>> {
+    pub fn pop(&mut self) -> Option<Arc<RefCell<Vertex>>> {
         self.heap.pop()
     }
 
-    pub fn contains(&self, vertex: &Rc<RefCell<Vertex>>) -> bool {
+    pub fn contains(&self, vertex: &Arc<RefCell<Vertex>>) -> bool {
         self.set.contains(&vertex.borrow().index)
     }
 }

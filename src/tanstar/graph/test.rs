@@ -392,8 +392,8 @@ fn same_radius_test() {
 
     let n1 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 1_f32, 0_f32);
     let n2 = Node::new(Point::new(20_f32, 30_f32, 0_f32), 1_f32, 0_f32);
-    let a1 = Rc::new(n1);
-    let b1 = Rc::new(n2);
+    let a1 = Arc::new(n1);
+    let b1 = Arc::new(n2);
     let expected = vec![
         (PI / 2_f32, PI / 2_f32, 10f32, 0f32),
         (-PI / 2_f32, -PI / 2_f32, 10f32, 0f32),
@@ -409,8 +409,8 @@ fn same_radius_offset_test() {
     let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n1 = Node::new(Point::new(20_f32, 20_f32, 0_f32), 5_f32, 0_f32);
     let n2 = Node::new(Point::new(30_f32, 30_f32, 0_f32), 5_f32, 0_f32);
-    let a1 = Rc::new(n1);
-    let b1 = Rc::new(n2);
+    let a1 = Arc::new(n1);
+    let b1 = Arc::new(n2);
 
     let expected = vec![
         (7_f32 * PI / 4_f32, 7_f32 * PI / 4_f32, 200f32.sqrt(), 0f32),
@@ -432,8 +432,8 @@ fn overlap_test() {
     let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n3 = Node::new(Point::new(15_f32, 10_f32, 0_f32), 5_f32, 0_f32);
     let n4 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 4_f32, 0_f32);
-    let c = Rc::new(n3);
-    let d = Rc::new(n4);
+    let c = Arc::new(n3);
+    let d = Arc::new(n4);
     let expected = vec![
         (4.913799976f32, 4.913799976f32, 4.898979486f32, 0f32),
         (-4.913799976f32, -4.913799976f32, 4.898979486f32, 0f32),
@@ -446,8 +446,8 @@ fn sentinel_test() {
     let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n3 = Node::new(Point::new(15_f32, 10_f32, 0_f32), 5_f32, 0_f32);
     let n4 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 5_f32, 0_f32);
-    let c = Rc::new(n3);
-    let d = Rc::new(n4);
+    let c = Arc::new(n3);
+    let d = Arc::new(n4);
     let expected = vec![
         (PI / 3f32, 2f32 * PI / 3f32),
         (-PI / 3f32, 4f32 * PI / 3f32),
@@ -463,8 +463,8 @@ fn different_radius_no_overlap_test() {
     let pathfinder = Tanstar::create(1f32, dummy_flyzones(), Vec::new());
     let n5 = Node::new(Point::new(20_f32, 10_f32, 0_f32), 2_f32, 0_f32);
     let n6 = Node::new(Point::new(12_f32, 10_f32, 0_f32), 1_f32, 0_f32);
-    let e = Rc::new(n5);
-    let f = Rc::new(n6);
+    let e = Arc::new(n5);
+    let f = Arc::new(n6);
     let expected = vec![
         (1.6961242, 1.6961241, 63f32.sqrt(), 0f32),
         (-1.6961241, -1.6961241, 63f32.sqrt(), 0f32),
@@ -483,8 +483,8 @@ fn different_radius_no_overlap_all_flyover_test() {
     let pathfinder = Tanstar::create(1f32, dummy_flyzones(), vec![obs]);
     let n5 = Node::new(Point::new(20_f32, 10_f32, 30_f32), 2_f32, 0_f32);
     let n6 = Node::new(Point::new(12_f32, 10_f32, 30_f32), 1_f32, 0_f32);
-    let e = Rc::new(n5);
-    let f = Rc::new(n6);
+    let e = Arc::new(n5);
+    let f = Arc::new(n6);
     let expected = vec![
         (
             (1_f32 / 8_f32).acos(),
@@ -523,8 +523,8 @@ fn different_radius_no_overlap_one_flyover_test() {
     let pathfinder = Tanstar::create(1f32, dummy_flyzones(), vec![obs]);
     let n5 = Node::new(Point::new(20_f32, 10_f32, 30_f32), 2_f32, 0_f32);
     let n6 = Node::new(Point::new(12_f32, 10_f32, 30_f32), 1_f32, 0_f32);
-    let e = Rc::new(n5);
-    let f = Rc::new(n6);
+    let e = Arc::new(n5);
+    let f = Arc::new(n6);
     let expected = vec![
         (
             (1_f32 / 8_f32).acos(),
