@@ -15,7 +15,8 @@ use self::queue::Queue;
 use std::cell::RefCell;
 use std::collections::{BinaryHeap, HashSet, LinkedList};
 use std::f32::consts::PI;
-use std::sync::Arc;
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
 // const EQUATORIAL_RADIUS: f64 = 63781370.0;
@@ -30,6 +31,21 @@ const RADIUS: f64 = 6371000.0;
 const START_VERTEX_INDEX: i32 = -1;
 const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
+
+#[derive(Debug)]
+struct Wrapper<T>(Arc<Mutex<RefCell<T>>>);
+
+impl<T> Clone for Wrapper<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T> Wrapper<T> {
+    fn new(n: T) -> Self {
+        Self(Arc::new(Mutex::new(RefCell::new(n))))
+    }
+}
 
 #[allow(non_snake_case)]
 #[derive(Debug)]
