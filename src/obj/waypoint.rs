@@ -16,8 +16,8 @@ impl<T: Copy> Waypoint<T> {
 impl<T> Waypoint<T> {
     pub fn new(location: Location, radius: f32) -> Self {
         Self {
-            location: location,
-            radius: radius,
+            location,
+            radius,
             data: None,
         }
     }

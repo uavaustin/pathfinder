@@ -34,6 +34,9 @@ impl From<PathValidity> for bool {
     }
 }
 
+type Path = Vec<(f32, f32, f32, f32)>;
+type Sentinel = Vec<(f32, f32)>;
+
 impl Tanstar {
     fn insert_edge(
         &mut self,
@@ -124,11 +127,7 @@ impl Tanstar {
     // shortest valid path if one exists
 
     // returns: (i, j, distance, threshold), (a_sentinels, b_sentinels)
-    pub fn find_path(
-        &self,
-        a: &Node,
-        b: &Node,
-    ) -> (Vec<(f32, f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
+    pub fn find_path(&self, a: &Node, b: &Node) -> (Path, Option<Sentinel>) {
         let c1: Point = a.origin;
         let c2: Point = b.origin;
         let r1: f32 = a.radius;

@@ -37,15 +37,15 @@ impl TConfig {
         buffer_size: f32,
         max_process_time: Duration,
         turning_radius: f32,
-        v_merge_threshold: f32,
+        vertex_merge_threshold: f32,
         virtualize_flyzone: bool,
     ) -> Self {
         Self {
-            buffer_size: buffer_size,
-            max_process_time: max_process_time,
-            turning_radius: turning_radius,
-            vertex_merge_threshold: v_merge_threshold,
-            virtualize_flyzone: virtualize_flyzone,
+            buffer_size,
+            max_process_time,
+            turning_radius,
+            vertex_merge_threshold,
+            virtualize_flyzone,
         }
     }
 }

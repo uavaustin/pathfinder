@@ -16,7 +16,7 @@ pub struct Plane {
 impl Plane {
     pub fn new(location: Location) -> Self {
         Self {
-            location: location,
+            location,
             yaw: -1f32,
             pitch: -1f32,
             roll: -1f32,

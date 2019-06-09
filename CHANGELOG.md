@@ -1,5 +1,7 @@
 # Changelog
 
+- cleaned up code using clippy
+
 ## v1.1.0
 
 ### Breaking Changes

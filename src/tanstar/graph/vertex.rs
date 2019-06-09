@@ -109,16 +109,16 @@ impl Vertex {
 
         Self {
             index: *num_vertex,
-            radius: radius,
-            angle: angle,
-            location: location,
+            radius,
+            angle,
+            location,
             f_cost: -1f32,
             g_cost: -1f32,
             parent: None,
-            connection: connection,
+            connection,
             prev: None,
             next: None,
-            sentinel: sentinel,
+            sentinel,
         }
     }
 

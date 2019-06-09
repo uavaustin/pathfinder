@@ -26,7 +26,7 @@ impl<A: Algorithm> Pathfinder<A> {
         obstacles: Vec<Obstacle>,
     ) -> Self {
         algo.init(config, flyzones, obstacles);
-        Self { algo: algo }
+        Self { algo }
     }
 
     pub fn get_adjust_path<T>(
@@ -35,16 +35,10 @@ impl<A: Algorithm> Pathfinder<A> {
         mut wp_list: LinkedList<Waypoint<T>>,
     ) -> LinkedList<Waypoint<T>> {
         let mut new_wp_list = LinkedList::new();
-        let mut current_wp: Waypoint<T>;
         let mut current_loc = plane.location;
 
-        loop {
-            match wp_list.pop_front() {
-                Some(wp) => current_wp = wp,
-                None => break,
-            }
-
-            let next_loc = current_wp.location.clone();
+        while let Some(current_wp) = wp_list.pop_front() {
+            let next_loc = current_wp.location;
 
             if let Some(mut path) = self.algo.adjust_path::<T>(current_loc, next_loc) {
                 println!("appending");
