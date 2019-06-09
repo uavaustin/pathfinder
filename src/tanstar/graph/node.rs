@@ -20,7 +20,7 @@ impl fmt::Display for Node {
             None => panic!("next points to null"),
         };
         while current.borrow().index != HEADER_VERTEX_INDEX {
-            let ref mut vertex = current.clone();
+            let vertex = &current.clone();
             write!(f, " {} ", vertex.borrow()).expect("error in writing format display");
             current = match vertex.borrow().next {
                 Some(ref val) => val.clone(),
@@ -33,7 +33,7 @@ impl fmt::Display for Node {
             None => panic!("next points to null"),
         };
         while current.borrow().index != HEADER_VERTEX_INDEX {
-            let ref mut vertex = current.clone();
+            let vertex = &current.clone();
             write!(f, " {} ", vertex.borrow()).expect("error in writing format display");
             current = match vertex.borrow().next {
                 Some(ref val) => val.clone(),
@@ -100,9 +100,9 @@ impl Node {
         right_head.borrow_mut().next = Some(right_head.clone());
         right_head.borrow_mut().prev = Some(right_head.clone());
         Self {
-            origin: origin,
-            radius: radius,
-            height: height,
+            origin,
+            radius,
+            height,
             left_ring: left_head,
             right_ring: right_head,
         }

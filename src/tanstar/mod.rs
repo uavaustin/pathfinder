@@ -16,11 +16,11 @@ use std::cell::RefCell;
 use std::collections::{BinaryHeap, HashSet, LinkedList};
 use std::f32::consts::PI;
 use std::rc::Rc;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 // const EQUATORIAL_RADIUS: f64 = 63781370.0;
 // const POLAR_RADIUS: f64 = 6356752.0;
-const RADIUS: f64 = 6371000.0;
+const RADIUS: f64 = 6_371_000.0;
 
 // Plane properties
 // const MAX_ANGLE: f32 = PI / 6f32;
@@ -45,8 +45,8 @@ pub struct Tanstar {
     num_vertices: i32,
 }
 
-impl Tanstar {
-    pub fn new() -> Self {
+impl Default for Tanstar {
+    fn default() -> Self {
         Self {
             // exposed API
             config: TConfig::default(),
@@ -60,16 +60,21 @@ impl Tanstar {
             num_vertices: 0i32,
         }
     }
+}
+
+impl Tanstar {
+    pub fn new() -> Self {
+        Tanstar::default()
+    }
 
     // determine if flyzone intersects itself (correct order)
     // inputs (flyzones, origin), outputs true if invalid
-    fn invalid_flyzone(flyzones: &Vec<Vec<Location>>, origin: &Location) -> bool {
-        for i in 0..flyzones.len() {
-            let flyzone = &flyzones[i];
+    #[allow(clippy::many_single_char_names)]
+    fn invalid_flyzone(flyzones: &[Vec<Location>], origin: &Location) -> bool {
+        for flyzone in flyzones {
             let mut vertices = Vec::new();
-            for loc in 0..flyzone.len() {
-                let i = flyzone[loc];
-                let point = Point::from((&i, origin));
+            for loc in flyzone {
+                let point = Point::from((loc, origin));
                 vertices.push(point);
             }
             let n = vertices.len();
@@ -90,7 +95,7 @@ impl Tanstar {
                 }
             }
         }
-        return false;
+        false
     }
 }
 
@@ -104,11 +109,14 @@ impl Algorithm for Tanstar {
         obstacles: Vec<Obstacle>,
     ) {
         // Flyzone validation
-        assert!(flyzones.len() >= 1);
+        assert!(!flyzones.is_empty());
         for flyzone in &flyzones {
             assert!(flyzone.len() >= 3);
         }
-        assert!(Self::invalid_flyzone(&flyzones, &Self::find_origin(&flyzones)) == false);
+        assert!(!Self::invalid_flyzone(
+            &flyzones,
+            &Self::find_origin(&flyzones)
+        ));
 
         self.config = config;
         self.flyzones = flyzones;
