@@ -7,16 +7,15 @@ pub mod config;
 
 mod graph;
 mod queue;
+mod wrapper;
 
 pub use self::config::*;
 
 use self::graph::*;
 use self::queue::Queue;
-use std::cell::RefCell;
-use std::collections::{BinaryHeap, HashSet, LinkedList};
+use self::wrapper::Wrapper;
+use std::collections::{HashSet, LinkedList};
 use std::f32::consts::PI;
-use std::ops::Deref;
-use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
 // const EQUATORIAL_RADIUS: f64 = 63781370.0;
@@ -32,21 +31,6 @@ const START_VERTEX_INDEX: i32 = -1;
 const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
 
-#[derive(Debug)]
-struct Wrapper<T>(Arc<Mutex<RefCell<T>>>);
-
-impl<T> Clone for Wrapper<T> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
-impl<T> Wrapper<T> {
-    fn new(n: T) -> Self {
-        Self(Arc::new(Mutex::new(RefCell::new(n))))
-    }
-}
-
 #[allow(non_snake_case)]
 #[derive(Debug)]
 pub struct Tanstar {
@@ -58,7 +42,7 @@ pub struct Tanstar {
     initialized: bool,
     start_time: SystemTime,
     origin: Location, // Reference point defining each node
-    nodes: Vec<Arc<RefCell<Node>>>,
+    nodes: Vec<Wrapper<Node>>,
     num_vertices: i32,
 }
 
@@ -178,16 +162,12 @@ impl AlgorithmAdjustPath for Tanstar {
         let mut open_set = Queue::new(); // candidate vertices
         let mut close_set: HashSet<i32> = HashSet::new(); // set of vertex already visited
 
-        let start_node = Arc::new(RefCell::new(Node::from((
+        let start_node = Wrapper::new(Node::from((
             &start,
             &self.origin,
             self.config.turning_radius,
-        ))));
-        let end_node = Arc::new(RefCell::new(Node::from((
-            &end,
-            &self.origin,
-            self.config.turning_radius,
-        ))));
+        )));
+        let end_node = Wrapper::new(Node::from((&end, &self.origin, self.config.turning_radius)));
 
         let end_point = Point::from((&end, &self.origin));
         let min_height = if start.alt() > end.alt() {
@@ -197,9 +177,11 @@ impl AlgorithmAdjustPath for Tanstar {
         };
         println!("Height threshold {}", min_height);
 
+        let _start_node = start_node.lock();
+        let _end_node = end_node.lock();
         let temp_vertices = self.add_temp_vertices(
-            &start_node.borrow(),
-            &end_node.borrow(),
+            &_start_node.borrow(),
+            &_end_node.borrow(),
             min_height,
             &end_point,
             &mut open_set,
@@ -208,27 +190,33 @@ impl AlgorithmAdjustPath for Tanstar {
         output_graph(&self);
         println!("temporary vertices");
         for vert in &temp_vertices {
-            let v_loc: Location = (&vert.borrow().location, &self.origin).into();
+            let _vert = vert.lock();
+            let v_loc: Location = (&_vert.borrow().location, &self.origin).into();
             println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
         }
 
         //A* algorithm - find shortest path from plane to destination
         while let Some(cur) = open_set.pop() {
-            assert!(cur.borrow().index != HEADER_VERTEX_INDEX);
-            println!("current vertex {}", cur.borrow());
-            if cur.borrow().index == END_VERTEX_INDEX {
-                path = Some(self.generate_waypoint::<T>(cur, start.alt.into(), end.alt.into()));
+            let _cur = cur.lock();
+            assert!(_cur.borrow().index != HEADER_VERTEX_INDEX);
+            println!("current vertex {}", *_cur.borrow());
+            if _cur.borrow().index == END_VERTEX_INDEX {
+                path = Some(self.generate_waypoint::<T>(
+                    cur.clone(),
+                    start.alt.into(),
+                    end.alt.into(),
+                ));
                 break;
             }
-            close_set.insert(cur.borrow().index);
+            close_set.insert(_cur.borrow().index);
 
-            let cur_vertex = cur.borrow();
+            let cur_vertex = _cur.borrow();
             let state = &mut (&mut open_set, &close_set, &cur, &end_point);
             let g_cost = cur_vertex.g_cost;
             for connection in &cur_vertex.connection {
                 // println!(
                 //     "Adding connection {} to queue",
-                //     connection.neighbor.borrow().index
+                //     connection.neighbor.lock().borrow().index
                 // );
                 // Only add vertex if height meets threshold requirement
                 if min_height > connection.threshold {
@@ -240,19 +228,20 @@ impl AlgorithmAdjustPath for Tanstar {
             }
 
             let mut weight = cur_vertex.get_neighbor_weight();
-            if let Some(ref next_vertex) = cur_vertex.next {
-                // println!("Adding neighbor {} to queue", next_vertex.borrow().index);
-                let mut next = next_vertex.clone();
+            if let Some(ref next) = cur_vertex.next {
+                let mut next_ptr = next.clone();
                 // If next is header, skip to header neighbor
-                if next.borrow().index == HEADER_VERTEX_INDEX {
-                    weight += next.borrow().get_neighbor_weight();
-                    next = match next_vertex.borrow().next {
+                let _next = next.lock();
+                let index = _next.borrow().index;
+                if index == HEADER_VERTEX_INDEX {
+                    weight += _next.borrow().get_neighbor_weight();
+                    next_ptr = match _next.borrow().next {
                         Some(ref true_next) => true_next.clone(),
                         None => panic!("broken chain"),
                     }
                 }
 
-                Self::update_vertex(state, g_cost, next, weight);
+                Self::update_vertex(state, g_cost, next_ptr, weight);
             }
         }
 
@@ -270,19 +259,19 @@ impl Tanstar {
         min_height: f32,
         end_point: &Point,
         open_set: &mut Queue,
-    ) -> LinkedList<Arc<RefCell<Vertex>>> {
+    ) -> LinkedList<Wrapper<Vertex>> {
         let mut temp_vertices = LinkedList::new();
-        let start_vertex = Arc::new(RefCell::new(Vertex::new(
+        let start_vertex = Wrapper::new(Vertex::new(
             &mut START_VERTEX_INDEX,
             &start_node,
             0f32,
             vec![],
-        )));
+        ));
 
         //Prepare graph for A*
         println!("\n[ Inserting temp vertices ]");
         for i in 0..self.nodes.len() {
-            let temp_node = &self.nodes[i];
+            let temp_node = &self.nodes[i].lock();
             let (temp_paths, _) = self.find_path(&start_node, &temp_node.borrow());
             println!("[start {}]: path count -> {}", i, temp_paths.len());
 
@@ -297,7 +286,7 @@ impl Tanstar {
                 vertex.parent = Some(start_vertex.clone());
                 vertex.g_cost = dist;
                 vertex.f_cost = dist + vertex.location.distance(end_point);
-                let vertex_p = Arc::new(RefCell::new(vertex));
+                let vertex_p = Wrapper::new(vertex);
                 temp_node.borrow_mut().insert_vertex(vertex_p.clone());
                 open_set.push(vertex_p.clone());
                 temp_vertices.push_front(vertex_p.clone());
@@ -308,19 +297,15 @@ impl Tanstar {
 
             for (a, b, dist, threshold) in temp_paths {
                 println!("Inserting end vertex {}", self.num_vertices);
-                let end_vertex = Arc::new(RefCell::new(Vertex::new(
-                    &mut END_VERTEX_INDEX,
-                    &end_node,
-                    b,
-                    vec![],
-                )));
+                let end_vertex =
+                    Wrapper::new(Vertex::new(&mut END_VERTEX_INDEX, &end_node, b, vec![]));
                 let connection = Connection::new(end_vertex.clone(), dist, threshold);
-                let vertex = Arc::new(RefCell::new(Vertex::new(
+                let vertex = Wrapper::new(Vertex::new(
                     &mut self.num_vertices,
                     &temp_node.borrow(),
                     a,
                     vec![connection],
-                )));
+                ));
                 temp_node.borrow_mut().insert_vertex(vertex.clone());
                 temp_vertices.push_front(vertex.clone());
             }
@@ -333,31 +318,33 @@ impl Tanstar {
         (open_set, close_set, cur, end_point): &mut (
             &mut Queue,
             &HashSet<i32>,
-            &Arc<RefCell<Vertex>>,
+            &Wrapper<Vertex>,
             &Point,
         ),
         cur_g_cost: f32,
-        next: Arc<RefCell<Vertex>>,
+        next: Wrapper<Vertex>,
         dist: f32,
     ) {
         // Handle edge case when node only has one vertex
-        if next.borrow().index == cur.borrow().index {
+        let _cur = cur.lock();
+        let _next = next.lock();
+        if _next.borrow().index == _cur.borrow().index {
             return;
         }
         let new_g_cost = cur_g_cost + dist;
-        // println!("add vertex to queue {}", next.borrow());
+        // println!("add vertex to queue {}", _next.borrow());
         {
-            if next.borrow().sentinel {
+            if _next.borrow().sentinel {
                 println!("SENTINEL ENCOUNTERED");
             }
-            if close_set.contains(&next.borrow().index)    //vertex is already explored
-                || next.borrow().sentinel                   //vertex is a sentinel
-                || (open_set.contains(&next) && new_g_cost >= next.borrow().g_cost)
+            if close_set.contains(& _next.borrow().index)    //vertex is already explored
+                ||  _next.borrow().sentinel                   //vertex is a sentinel
+                || (open_set.contains(&next) && new_g_cost >=  _next.borrow().g_cost)
             {
                 //vertex has been visited and the current cost is better
                 return;
             }
-            let mut next_mut = next.borrow_mut();
+            let mut next_mut = _next.borrow_mut();
             let new_f_cost = new_g_cost + next_mut.location.distance(end_point);
             next_mut.g_cost = new_g_cost;
             next_mut.f_cost = new_f_cost;
@@ -368,7 +355,7 @@ impl Tanstar {
 
     fn generate_waypoint<T>(
         &self,
-        end_vertex: Arc<RefCell<Vertex>>,
+        end_vertex: Wrapper<Vertex>,
         start_alt: f32,
         end_alt: f32,
     ) -> LinkedList<Waypoint<T>> {
@@ -378,26 +365,34 @@ impl Tanstar {
             "Generating waypoints from alt {} to alt {}",
             start_alt, end_alt
         );
-        let slope = (end_alt - start_alt) / cur_vertex.borrow().g_cost;
+        let slope;
+        {
+            let _cur_vertex = cur_vertex.lock();
+            slope = (end_alt - start_alt) / _cur_vertex.borrow().g_cost;
+        }
         loop {
-            // Skip appending end vertex to waypoint_list
-            let parent = match cur_vertex.borrow().parent {
-                Some(ref cur_parent) => cur_parent.clone(),
-                None => panic!("Missing a parent without reaching start point"),
-            };
+            let parent;
+            {
+                let _cur_vertex = cur_vertex.lock();
+                // Skip appending end vertex to waypoint_list
+                parent = match _cur_vertex.borrow().parent {
+                    Some(ref cur_parent) => cur_parent.clone(),
+                    None => panic!("Missing a parent without reaching start point"),
+                };
+                let _parent = parent.lock();
+                // Skip appending start vertex to waypoint list
+                if _parent.borrow().index == START_VERTEX_INDEX {
+                    break;
+                }
 
-            // Skip appending start vertex to waypoint list
-            if parent.borrow().index == START_VERTEX_INDEX {
-                break;
+                let mut loc = Location::from((&_parent.borrow().location, &self.origin));
+                println!("weight: {}", _parent.borrow().g_cost);
+                loc.alt = (start_alt + _parent.borrow().g_cost * slope).into();
+                println!("{}", loc);
+                let radius = _parent.borrow().radius;
+                waypoint_list.push_front(Waypoint::new(loc, radius));
             }
-
             cur_vertex = parent;
-            let mut loc = Location::from((&cur_vertex.borrow().location, &self.origin));
-            println!("weight: {}", cur_vertex.borrow().g_cost);
-            loc.alt = (start_alt + cur_vertex.borrow().g_cost * slope).into();
-            println!("{}", loc);
-            let radius = cur_vertex.borrow().radius;
-            waypoint_list.push_front(Waypoint::new(loc, radius));
         }
         waypoint_list
     }

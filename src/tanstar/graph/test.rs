@@ -1,5 +1,6 @@
 use super::*;
 use obj::Obstacle;
+use std::sync::Arc;
 const THRESHOLD: f64 = 0.001;
 
 //assert equal, equal practically because floating points suck for intersection
@@ -570,12 +571,14 @@ fn virtualize_flyzone_square() {
     let node_d = Point::new(5f32, 15f32, 0f32);
     let expected = vec![node_d, node_c, node_b, node_a];
     for i in 0..4 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
     let test_flyzone = vec![vec![a, b, c, d]];
     pathfinder.set_flyzone(test_flyzone);
     for i in 0..4 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
 }
 
@@ -629,12 +632,14 @@ fn virtualize_flyzone_plus() {
         node_a,
     ];
     for i in 0..11 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
     let test_flyzone = vec![vec![a, b, c, d, e, f, g, h, i, j, k, l]];
     pathfinder.set_flyzone(test_flyzone);
     for i in 0..4 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
 }
 
@@ -654,12 +659,14 @@ fn virtualize_flyzone_linear() {
     let node_d = Point::new(5f32, 15f32, 0f32);
     let expected = vec![node_d, node_c, node_b, node_a];
     for i in 0..4 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
     let test_flyzone = vec![vec![a, b, c, d, e]];
     pathfinder.set_flyzone(test_flyzone);
     for i in 0..4 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
 }
 
@@ -683,12 +690,14 @@ fn virtualize_flyzone_small_angle() {
     let node_e = Point::new(6.2927, 14.3550, 0f32);
     let expected = vec![node_f, node_e, node_d, node_c, node_b, node_a];
     for i in 0..6 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
     let test_flyzone = vec![vec![a, b, c, d, e, f, g]];
     pathfinder.set_flyzone(test_flyzone);
     for i in 0..6 {
-        assert_point_eq(&pathfinder.nodes[i].borrow().origin, &expected[i]);
+        let node_i = pathfinder.nodes[i].lock();
+        assert_point_eq(&node_i.borrow().origin, &expected[i]);
     }
 }
 

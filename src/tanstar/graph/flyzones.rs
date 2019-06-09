@@ -135,7 +135,7 @@ impl Tanstar {
                     );
                     //println!("center: {:?}", center);
                     let virt_ob = Node::new(center, self.config.turning_radius, 0f32);
-                    self.nodes.push(Arc::new(RefCell::new(virt_ob)));
+                    self.nodes.push(Wrapper::new(virt_ob));
                 }
             }
             iter += direction;
@@ -170,21 +170,17 @@ impl Tanstar {
                 let phi = dy.atan2(dx); //check
                 let a = phi + theta;
                 let b = phi - theta;
-                let vertex_a = Arc::new(RefCell::new(Vertex::new_sentinel(
-                    &mut self.num_vertices,
-                    node,
-                    a,
-                )));
-                let vertex_b = Arc::new(RefCell::new(Vertex::new_sentinel(
-                    &mut self.num_vertices,
-                    node,
-                    b,
-                )));
+                let vertex_a = Wrapper::new(Vertex::new_sentinel(&mut self.num_vertices, node, a));
+                let vertex_b = Wrapper::new(Vertex::new_sentinel(&mut self.num_vertices, node, b));
 
-                let a = Location::from((&vertex_a.borrow().location, &self.origin));
-                let b = Location::from((&vertex_b.borrow().location, &self.origin));
-                println!("flyzone/node vertices: {:?},{:?}", a.lat(), a.lon());
-                println!("flyzone/node vertices: {:?},{:?}", b.lat(), b.lon());
+                {
+                    let v_a = vertex_a.lock();
+                    let v_b = vertex_b.lock();
+                    let a = Location::from((&v_a.borrow().location, &self.origin));
+                    let b = Location::from((&v_b.borrow().location, &self.origin));
+                    println!("flyzone/node vertices: {:?},{:?}", a.lat(), a.lon());
+                    println!("flyzone/node vertices: {:?},{:?}", b.lat(), b.lon());
+                }
                 node.insert_vertex(vertex_a);
                 node.insert_vertex(vertex_b);
             }

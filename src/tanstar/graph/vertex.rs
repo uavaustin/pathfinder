@@ -1,23 +1,23 @@
 use super::*;
-
 use std::cmp::Ordering;
+
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 
 #[derive(Debug)]
 pub struct Vertex {
-    pub index: i32,                           // Index to identify vertex
-    pub radius: f32,                          // Radius of the node vertex is attached to
-    pub location: Point,                      // Location of the vertex
-    pub angle: f32,                           // Angle with respect to the node
-    pub g_cost: f32,                          //
-    pub f_cost: f32,                          //
-    pub parent: Option<Arc<RefCell<Vertex>>>, // Parent of vertex
-    pub connection: Vec<Connection>,          // Edge connecting to another node
-    pub prev: Option<Arc<RefCell<Vertex>>>,   // Previous neighbor vertex in the same node
-    pub next: Option<Arc<RefCell<Vertex>>>,   // Neighbor vertex in the same node
-    pub sentinel: bool,                       // Sentinel property marks end of path hugging
+    pub index: i32,                      // Index to identify vertex
+    pub radius: f32,                     // Radius of the node vertex is attached to
+    pub location: Point,                 // Location of the vertex
+    pub angle: f32,                      // Angle with respect to the node
+    pub g_cost: f32,                     //
+    pub f_cost: f32,                     //
+    pub parent: Option<Wrapper<Vertex>>, // Parent of vertex
+    pub connection: Vec<Connection>,     // Edge connecting to another node
+    pub prev: Option<Wrapper<Vertex>>,   // Previous neighbor vertex in the same node
+    pub next: Option<Wrapper<Vertex>>,   // Neighbor vertex in the same node
+    pub sentinel: bool,                  // Sentinel property marks end of path hugging
 }
 
 impl Hash for Vertex {
@@ -124,7 +124,8 @@ impl Vertex {
 
     pub fn get_neighbor_weight(&self) -> f32 {
         if let Some(ref neighbor) = self.next {
-            return arc_length(self.angle, neighbor.borrow().angle, self.radius);
+            let _neighbor = neighbor.lock();
+            return arc_length(self.angle, _neighbor.borrow().angle, self.radius);
         } else {
             panic!("broken chain");
         }

@@ -1,9 +1,11 @@
 use super::*;
 
+use std::collections::BinaryHeap;
+
 // Simple wrapper around heap and set for efficient data retrival
 pub struct Queue {
-    heap: BinaryHeap<Arc<RefCell<Vertex>>>, // Efficiently get min
-    set: HashSet<i32>,                      // Efficiently check of existence
+    heap: BinaryHeap<Wrapper<Vertex>>, // Efficiently get min
+    set: HashSet<i32>,                 // Efficiently check of existence
 }
 
 impl Queue {
@@ -15,17 +17,22 @@ impl Queue {
     }
 
     // Insert to queue
-    pub fn push(&mut self, vertex: Arc<RefCell<Vertex>>) {
-        self.set.insert(vertex.borrow().index);
+    pub fn push(&mut self, vertex: Wrapper<Vertex>) {
+        {
+            let _vertex = vertex.lock();
+            self.set.insert(_vertex.borrow().index);
+        }
         self.heap.push(vertex);
     }
 
     // Return min from queue
-    pub fn pop(&mut self) -> Option<Arc<RefCell<Vertex>>> {
+    pub fn pop(&mut self) -> Option<Wrapper<Vertex>> {
         self.heap.pop()
     }
 
-    pub fn contains(&self, vertex: &Arc<RefCell<Vertex>>) -> bool {
-        self.set.contains(&vertex.borrow().index)
+    pub fn contains(&self, vertex: &Wrapper<Vertex>) -> bool {
+        let _vertex = vertex.lock();
+        let index = _vertex.borrow().index;
+        self.set.contains(&index)
     }
 }

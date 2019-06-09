@@ -151,26 +151,34 @@ pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bo
     (x, y, (x - c.x).powi(2) + (y - c.y).powi(2), endpoint)
 }
 
-fn output_ring(origin: &Location, mut current: Arc<RefCell<Vertex>>) {
-    let temp = match current.borrow().next {
-        Some(ref v) => v.clone(),
-        None => panic!("Next points to null"),
-    };
-    current = temp;
-    let mut count = 0;
-    loop {
-        let ref mut vertex = current.clone();
-        if vertex.borrow().index != HEADER_VERTEX_INDEX {
-            count += 1;
-            let v_loc = Location::from((&vertex.borrow().location, origin));
-            println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
-        } else {
-            break;
-        }
-        current = match vertex.borrow().next {
+fn output_ring(origin: &Location, mut current: Wrapper<Vertex>) {
+    let temp;
+    {
+        let _current = current.lock();
+        temp = match _current.borrow().next {
             Some(ref v) => v.clone(),
             None => panic!("Next points to null"),
         };
+    }
+    current = temp;
+    let mut count = 0;
+    loop {
+        let _current;
+        {
+            let vertex = current.lock();
+            if vertex.borrow().index != HEADER_VERTEX_INDEX {
+                count += 1;
+                let v_loc = Location::from((&vertex.borrow().location, origin));
+                println!("{}, {}", v_loc.lat_degree(), v_loc.lon_degree());
+            } else {
+                break;
+            }
+            _current = match vertex.borrow().next {
+                Some(ref v) => v.clone(),
+                None => panic!("Next points to null"),
+            };
+        }
+        current = _current;
     }
     // println!("Node vertex count {}", count);
 }
@@ -183,27 +191,29 @@ pub fn output_graph(finder: &Tanstar) {
     println!("vertex count: {}\n", finder.num_vertices);
     println!("---- Node List ----");
     // for node in &finder.nodes {
-    //     let loc = Location::from((&node.borrow().origin, &finder.origin));
+    //     let loc = Location::from((&node.lock().borrow().origin, &finder.origin));
     //     println!("{}, {}", loc.lat_degree(), loc.lon_degree());
     // }
     //println!("\n---- Left Vertex List ----");
 
     for node in &finder.nodes {
-        // let loc = Location::from((&node.borrow().origin, &finder.origin));
-        // println!("Node origin {:?}", node.borrow().origin);
-        if node.borrow().height > 0f32 {
-            output_ring(&finder.origin, node.borrow().left_ring.clone());
+        // let loc = Location::from((&node.lock().borrow().origin, &finder.origin));
+        // println!("Node origin {:?}", node.lock().borrow().origin);
+        let _node = node.lock();
+        if _node.borrow().height > 0f32 {
+            output_ring(&finder.origin, _node.borrow().left_ring.clone());
         }
     }
 
     //println!("\n---- Right Vertex List ----");
 
     for node in &finder.nodes {
-        // let loc = Location::from((&node.borrow().origin, &finder.origin));
-        // let loc = node.borrow().origin;
-        // println!("Node origin {:?}", node.borrow().origin);
-        if node.borrow().height > 0f32 {
-            output_ring(&finder.origin, node.borrow().right_ring.clone());
+        // let loc = Location::from((&node.lock().borrow().origin, &finder.origin));
+        // let loc = node.lock().borrow().origin;
+        // println!("Node origin {:?}", node.lock().borrow().origin);
+        let _node = node.lock();
+        if _node.borrow().height > 0f32 {
+            output_ring(&finder.origin, _node.borrow().right_ring.clone());
         }
     }
 

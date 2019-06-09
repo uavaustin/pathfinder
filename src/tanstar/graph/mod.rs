@@ -43,31 +43,44 @@ impl Tanstar {
         (alpha, beta, distance, threshold): (f32, f32, f32, f32),
     ) {
         // Insert edge from u -> v
-        let v = self.nodes[j].borrow().get_vertex(
+        let i = self.nodes[i].lock();
+        let j = self.nodes[j].lock();
+        let v = j.borrow().get_vertex(
             &mut self.num_vertices,
             beta,
             self.config.vertex_merge_threshold,
         );
         let edge = Connection::new(v.clone(), distance, threshold);
-        let u = self.nodes[i].borrow().get_vertex(
+        let u = i.borrow().get_vertex(
             &mut self.num_vertices,
             alpha,
             self.config.vertex_merge_threshold,
         );
-        u.borrow_mut().connection.push(edge);
+        let _u = u.lock();
+        _u.borrow_mut().connection.push(edge);
     }
 
     pub fn build_graph(&mut self) {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
             let node = self.nodes[i].clone();
-            self.insert_flyzone_sentinel(&mut node.borrow_mut());
+            {
+                let _node = node.lock();
+                self.insert_flyzone_sentinel(&mut _node.borrow_mut());
+            }
 
             for j in i + 1..self.nodes.len() {
-                let (paths, obs_sentinels) =
-                    self.find_path(&self.nodes[i].borrow(), &self.nodes[j].borrow());
-                println!("[{} {}]: path count -> {}", i, j, paths.len());
-
+                let paths: Vec<(f32, f32, f32, f32)>;
+                let obs_sentinels;
+                {
+                    let node_i = self.nodes[i].lock();
+                    let node_j = self.nodes[j].lock();
+                    let (_paths, _obs_sentinels) =
+                        self.find_path(&node_i.borrow(), &node_j.borrow());
+                    paths = _paths;
+                    obs_sentinels = _obs_sentinels;
+                    println!("[{} {}]: path count -> {}", i, j, paths.len());
+                }
                 // Inserting edge
                 for mut path in paths {
                     // Edge from i to j
@@ -79,26 +92,21 @@ impl Tanstar {
                     self.insert_edge(j, i, path);
                 }
 
+                let node_i = self.nodes[i].lock();
+                let node_j = self.nodes[j].lock();
+
                 // Inserting sentinels
                 if obs_sentinels.is_some() {
                     println!("inserting sentinels");
                     for (alpha_s, beta_s) in obs_sentinels.unwrap() {
-                        let mut a = Vertex::new_sentinel(
-                            &mut self.num_vertices,
-                            &self.nodes[i].borrow(),
-                            alpha_s,
-                        );
-                        //a.sentinel = true;
-                        let mut b = Vertex::new_sentinel(
-                            &mut self.num_vertices,
-                            &self.nodes[j].borrow(),
-                            beta_s,
-                        );
-                        //b.;
-                        let s_a = Arc::new(RefCell::new(a));
-                        let s_b = Arc::new(RefCell::new(b));
-                        self.nodes[i].borrow_mut().insert_vertex(s_a);
-                        self.nodes[j].borrow_mut().insert_vertex(s_b);
+                        let mut a =
+                            Vertex::new_sentinel(&mut self.num_vertices, &node_i.borrow(), alpha_s);
+                        let mut b =
+                            Vertex::new_sentinel(&mut self.num_vertices, &node_j.borrow(), beta_s);
+                        let s_a = Wrapper::new(a);
+                        let s_b = Wrapper::new(b);
+                        node_i.borrow_mut().insert_vertex(s_a);
+                        node_j.borrow_mut().insert_vertex(s_b);
                     }
                 }
             }
@@ -112,7 +120,7 @@ impl Tanstar {
         self.origin = Self::find_origin(&self.flyzones);
         for i in 0..self.obstacles.len() {
             let mut node = (&self.obstacles[i], &self.origin, self.config.buffer_size).into();
-            self.nodes.push(Arc::new(RefCell::new(node)));
+            self.nodes.push(Wrapper::new(node));
         }
         if self.config.virtualize_flyzone {
             for i in 0..self.flyzones.len() {
