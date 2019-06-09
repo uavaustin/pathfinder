@@ -11,6 +11,7 @@ pub struct Wrapper<T>(Arc<ReentrantMutex<RefCell<T>>>);
 impl<T: Eq> Eq for Wrapper<T> {}
 
 impl<T: PartialEq> PartialEq for Wrapper<T> {
+    #[allow(clippy::let_and_return)]
     fn eq(&self, other: &Self) -> bool {
         // *self.lock().borrow().eq(*other.lock().borrow())
         let _self = self.lock();
@@ -21,6 +22,7 @@ impl<T: PartialEq> PartialEq for Wrapper<T> {
 }
 
 impl<T: Ord> Ord for Wrapper<T> {
+    #[allow(clippy::let_and_return)]
     fn cmp(&self, other: &Self) -> Ordering {
         let _self = self.lock();
         let _other = other.lock();
@@ -30,6 +32,7 @@ impl<T: Ord> Ord for Wrapper<T> {
 }
 
 impl<T: PartialOrd> PartialOrd for Wrapper<T> {
+    #[allow(clippy::let_and_return)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let _self = self.lock();
         let _other = other.lock();

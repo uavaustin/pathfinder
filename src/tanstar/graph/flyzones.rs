@@ -5,7 +5,7 @@ use super::*;
 
 // determine if set of order points is clockwise, c-clockwise, or straight
 // input vector of points, output (direction, straight)
-fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
+fn vertex_direction(points: &[Point]) -> (bool, bool) {
     let mut sum_whole = 0f32;
     for i in 0..points.len() {
         let first = points[i];
@@ -27,22 +27,21 @@ fn vertex_direction(points: &Vec<Point>) -> (bool, bool) {
 
 impl Tanstar {
     // Find origin (lower left corner) of a flyzone
-    pub fn find_origin(flyzones: &Vec<Vec<Location>>) -> Location {
+    pub(in tanstar) fn find_origin(flyzones: &[Vec<Location>]) -> Location {
         const MAX_RADIAN: f64 = 2f64 * ::std::f64::consts::PI;
         let mut min_lat = MAX_RADIAN;
         let mut min_lon = MAX_RADIAN;
         let mut max_lon = 0f64;
         let mut lon = min_lon;
 
-        assert!(flyzones.len() > 0, "Require at least one flyzone");
-        for i in 0..flyzones.len() {
-            let flyzone_points = &flyzones[i];
+        assert!(!flyzones.is_empty(), "Require at least one flyzone");
+        for flyzone in flyzones {
             assert!(
-                flyzone_points.len() > 2,
+                flyzone.len() > 2,
                 "Require at least 3 points to construct fly zone."
             );
 
-            for point in flyzone_points {
+            for point in flyzone {
                 if point.lat() < min_lat {
                     min_lat = point.lat();
                 }
@@ -68,7 +67,7 @@ impl Tanstar {
     }
 
     // Convert flyzone into virtual nodes
-    pub fn virtualize_flyzone(&mut self, index: usize) {
+    pub(in tanstar::graph) fn virtualize_flyzone(&mut self, index: usize) {
         let flyzone = &self.flyzones[index];
         // convert flyzone to points
         let mut flyzone_points = Vec::new();
@@ -79,11 +78,7 @@ impl Tanstar {
         // determine flyzone directions
         let size = flyzone.len() as isize - 1;
         let (clockwise, _) = vertex_direction(&flyzone_points);
-        let (direction, mut iter): (isize, isize) = if clockwise == true {
-            (1, 0)
-        } else {
-            (-1, size)
-        };
+        let (direction, mut iter): (isize, isize) = if clockwise { (1, 0) } else { (-1, size) };
 
         // edge conditions for flyzone
         while (iter <= size) && (iter > -1) {
@@ -110,18 +105,15 @@ impl Tanstar {
             let bisection = (bisect.0 / mag_bisection, bisect.1 / mag_bisection);
             let theta = ((vec_a.0 * vec_b.0 + vec_a.1 * vec_b.1) / (mag_a * mag_b)).acos();
             // section direction
-            let (iter_clockwise, straight) = vertex_direction(&vec![a, vertex, b]);
+            let (iter_clockwise, straight) = vertex_direction(&[a, vertex, b]);
             // straight line condition
-            if straight == true {
-                println!("Straight!");
-            } else {
-                let d = if (iter_clockwise == false && direction == 1)
-                    || (iter_clockwise == true && direction == -1)
-                {
-                    self.config.turning_radius
-                } else {
-                    self.config.turning_radius / ((theta / 2f32).sin())
-                };
+            if !straight {
+                let d =
+                    if (!iter_clockwise && direction == 1) || (iter_clockwise && direction == -1) {
+                        self.config.turning_radius
+                    } else {
+                        self.config.turning_radius / ((theta / 2f32).sin())
+                    };
 
                 if d > mag_a || d > mag_b {
                     println!("small angle");
@@ -143,7 +135,8 @@ impl Tanstar {
     }
 
     // determines vertices of node and flyzone intersection
-    pub fn insert_flyzone_sentinel(&mut self, node: &mut Node) {
+    #[allow(clippy::many_single_char_names)]
+    pub(in tanstar::graph) fn insert_flyzone_sentinel(&mut self, node: &mut Node) {
         let center: Point = node.origin;
         let r: f32 = node.radius;
         for flyzone in self.flyzones.iter() {

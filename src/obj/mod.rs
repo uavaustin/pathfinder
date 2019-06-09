@@ -1,3 +1,5 @@
+//! Objects used for the obstacle avoidance API
+
 mod location;
 mod obstacle;
 mod plane;

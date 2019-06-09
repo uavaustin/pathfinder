@@ -1,6 +1,7 @@
 use super::Location;
 
 #[derive(Clone, Debug)]
+///  Represents a waypoint.
 pub struct Waypoint<T> {
     pub location: Location,
     pub radius: f32, // In meters
@@ -16,8 +17,8 @@ impl<T: Copy> Waypoint<T> {
 impl<T> Waypoint<T> {
     pub fn new(location: Location, radius: f32) -> Self {
         Self {
-            location: location,
-            radius: radius,
+            location,
+            radius,
             data: None,
         }
     }
@@ -35,11 +36,6 @@ impl<T> Waypoint<T> {
 
     pub fn from_radians(lon: f64, lat: f64, alt: f32, radius: f32) -> Self {
         Self::new(Location::from_radians(lon, lat, alt), radius)
-    }
-
-    pub fn extend(&self, mut location: Location, alt: f32) -> Self {
-        location.alt = alt.into();
-        Self::new(location, self.radius)
     }
 
     pub fn add_data<U>(self, data: U) -> Waypoint<U> {

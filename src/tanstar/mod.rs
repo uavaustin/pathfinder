@@ -1,5 +1,4 @@
-// mod.rs
-// contains main functionality of the library
+//! Implementation of the Tan* algorithm
 use super::obj::*;
 use super::{AlgorithmAdjustPath, AlgorithmConfig, AlgorithmConstructor, AlgorithmFields};
 
@@ -9,18 +8,18 @@ mod graph;
 mod queue;
 mod wrapper;
 
-pub use self::config::*;
+pub use self::config::TConfig;
 
 use self::graph::*;
 use self::queue::Queue;
 use self::wrapper::Wrapper;
 use std::collections::{HashSet, LinkedList};
 use std::f32::consts::PI;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 // const EQUATORIAL_RADIUS: f64 = 63781370.0;
 // const POLAR_RADIUS: f64 = 6356752.0;
-const RADIUS: f64 = 6371000.0;
+const RADIUS: f64 = 6_371_000.0;
 
 // Plane properties
 // const MAX_ANGLE: f32 = PI / 6f32;
@@ -33,6 +32,7 @@ const HEADER_VERTEX_INDEX: i32 = -3;
 
 #[allow(non_snake_case)]
 #[derive(Debug)]
+/// Represents a Tan* algorithm
 pub struct Tanstar {
     // Configuration options
     config: TConfig,
@@ -46,16 +46,37 @@ pub struct Tanstar {
     num_vertices: i32,
 }
 
+impl Default for Tanstar {
+    fn default() -> Self {
+        Self {
+            // exposed API
+            config: TConfig::default(),
+            flyzones: Vec::new(),
+            obstacles: Vec::new(),
+            // private
+            initialized: false,
+            start_time: SystemTime::now(),
+            origin: Location::from_degrees(0f64, 0f64, 0f32),
+            nodes: Vec::new(),
+            num_vertices: 0i32,
+        }
+    }
+}
+
 impl Tanstar {
+    /// Default constructor for Tanstar.
+    pub fn new() -> Self {
+        Tanstar::default()
+    }
+
     // determine if flyzone intersects itself (correct order)
     // inputs (flyzones, origin), outputs true if invalid
-    fn invalid_flyzone(flyzones: &Vec<Vec<Location>>, origin: &Location) -> bool {
-        for i in 0..flyzones.len() {
-            let flyzone = &flyzones[i];
+    #[allow(clippy::many_single_char_names)]
+    fn invalid_flyzone(flyzones: &[Vec<Location>], origin: &Location) -> bool {
+        for flyzone in flyzones {
             let mut vertices = Vec::new();
-            for loc in 0..flyzone.len() {
-                let i = flyzone[loc];
-                let point = Point::from((&i, origin));
+            for loc in flyzone {
+                let point = Point::from((loc, origin));
                 vertices.push(point);
             }
             let n = vertices.len();
@@ -76,7 +97,7 @@ impl Tanstar {
                 }
             }
         }
-        return false;
+        false
     }
 }
 
@@ -109,11 +130,14 @@ impl AlgorithmFields for Tanstar {
         obstacles: Vec<Obstacle>,
     ) {
         // Flyzone validation
-        assert!(flyzones.len() >= 1);
+        assert!(!flyzones.is_empty());
         for flyzone in &flyzones {
             assert!(flyzone.len() >= 3);
         }
-        assert!(Self::invalid_flyzone(&flyzones, &Self::find_origin(&flyzones)) == false);
+        assert!(!Self::invalid_flyzone(
+            &flyzones,
+            &Self::find_origin(&flyzones)
+        ));
 
         self.config = config;
         self.flyzones = flyzones;
@@ -201,11 +225,7 @@ impl AlgorithmAdjustPath for Tanstar {
             assert!(_cur.borrow().index != HEADER_VERTEX_INDEX);
             println!("current vertex {}", *_cur.borrow());
             if _cur.borrow().index == END_VERTEX_INDEX {
-                path = Some(self.generate_waypoint::<T>(
-                    cur.clone(),
-                    start.alt.into(),
-                    end.alt.into(),
-                ));
+                path = Some(self.generate_waypoint::<T>(cur.clone(), start.alt(), end.alt()));
                 break;
             }
             close_set.insert(_cur.borrow().index);
@@ -385,9 +405,10 @@ impl Tanstar {
                     break;
                 }
 
-                let mut loc = Location::from((&_parent.borrow().location, &self.origin));
+                let new_alt = start_alt + _parent.borrow().g_cost * slope;
+                _parent.borrow_mut().location.z = new_alt;
+                let loc = Location::from((&_parent.borrow().location, &self.origin));
                 println!("weight: {}", _parent.borrow().g_cost);
-                loc.alt = (start_alt + _parent.borrow().g_cost * slope).into();
                 println!("{}", loc);
                 let radius = _parent.borrow().radius;
                 waypoint_list.push_front(Waypoint::new(loc, radius));

@@ -10,8 +10,9 @@ pub struct Point {
 impl From<(&Point, &Location)> for Location {
     // Convert point with respect to origin to location
     fn from((point, origin): (&Point, &Location)) -> Self {
-        let lat = point.y as f64 / RADIUS + origin.lat();
-        let lon = ((point.x as f64 / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
+        let lat = f64::from(point.y) / RADIUS + origin.lat();
+        let lon =
+            ((f64::from(point.x) / RADIUS / 2f64).sin() / lat.cos()).asin() * 2f64 + origin.lon();
         Self::from_radians(lat, lon, point.z)
     }
 }
@@ -43,14 +44,14 @@ impl From<(&Node, f32)> for Point {
 
 impl Location {
     // Create location using x-y distance from origin
-    pub fn from_meters(x: f32, y: f32, alt: f32, origin: &Location) -> Self {
+    pub(in tanstar) fn from_meters(x: f32, y: f32, alt: f32, origin: &Location) -> Self {
         (&Point::new(x, y, alt), origin).into()
     }
 }
 
 impl Point {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x: x, y: y, z: z }
+        Self { x, y, z }
     }
 
     pub fn distance(&self, other: &Point) -> f32 {

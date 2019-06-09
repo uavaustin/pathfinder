@@ -116,9 +116,9 @@ impl Node {
             head.borrow_mut().prev = Some(right_head.clone());
         }
         Self {
-            origin: origin,
-            radius: radius,
-            height: height,
+            origin,
+            radius,
+            height,
             left_ring: left_head,
             right_ring: right_head,
         }

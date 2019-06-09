@@ -1,6 +1,5 @@
-// algorithm.rs
-// trait that defines minimum requirement for a pathfinding algorithm
-
+//! Trait that defines minimum requirement for a pathfinding algorithm
+//!
 //! The Algorithm traits have become a little weird and deserve explanation.
 //!
 //! At this point we have six Algorithm traits:

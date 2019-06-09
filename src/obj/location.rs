@@ -4,10 +4,11 @@ use self::ordered_float::*;
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+/// Represents a physical location expressed in standard coordinates
 pub struct Location {
-    lat: OrderedFloat<f64>,     //In radians
-    lon: OrderedFloat<f64>,     //In radians
-    pub alt: OrderedFloat<f32>, //In meters
+    lat: OrderedFloat<f64>, //In radians
+    lon: OrderedFloat<f64>, //In radians
+    alt: OrderedFloat<f32>, //In meters
 }
 
 impl fmt::Display for Location {

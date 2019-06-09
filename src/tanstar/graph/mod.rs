@@ -35,6 +35,13 @@ impl From<PathValidity> for bool {
     }
 }
 
+// Type alias for possible paths
+// i: f32 => angle of vertex for start of path
+// j: f32 => angle of vertex for end of path
+// returns: (i, j, distance, threshold), (a_sentinels, b_sentinels)
+type Path = Vec<(f32, f32, f32, f32)>;
+type Sentinel = Vec<(f32, f32)>;
+
 impl Tanstar {
     fn insert_edge(
         &mut self,
@@ -60,7 +67,7 @@ impl Tanstar {
         _u.borrow_mut().connection.push(edge);
     }
 
-    pub fn build_graph(&mut self) {
+    pub(in tanstar) fn build_graph(&mut self) {
         self.populate_nodes();
         for i in 0..self.nodes.len() {
             let node = self.nodes[i].clone();
@@ -133,11 +140,7 @@ impl Tanstar {
     // shortest valid path if one exists
 
     // returns: (i, j, distance, threshold), (a_sentinels, b_sentinels)
-    pub fn find_path(
-        &self,
-        a: &Node,
-        b: &Node,
-    ) -> (Vec<(f32, f32, f32, f32)>, Option<Vec<(f32, f32)>>) {
+    pub(in tanstar) fn find_path(&self, a: &Node, b: &Node) -> (Path, Option<Sentinel>) {
         let c1: Point = a.origin;
         let c2: Point = b.origin;
         let r1: f32 = a.radius;

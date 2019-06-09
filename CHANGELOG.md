@@ -1,5 +1,10 @@
 # Changelog
 
+- cleaned up code using clippy
+- fixed function visibility
+- added basic rustdoc
+- seperated pathfinder into own module
+
 ## v1.1.0
 
 ### Breaking Changes

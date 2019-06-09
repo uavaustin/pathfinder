@@ -1,6 +1,7 @@
 use super::Location;
 
 #[derive(Debug, Clone)]
+/// Represents a circular obstacle.
 pub struct Obstacle {
     pub location: Location,
     pub radius: f32, // In meters
@@ -12,9 +13,9 @@ pub struct Obstacle {
 impl Obstacle {
     pub fn new(location: Location, radius: f32, height: f32) -> Self {
         Self {
-            location: location,
-            radius: radius,
-            height: height,
+            location,
+            radius,
+            height,
         }
     }
     pub fn from_degrees(lon: f64, lat: f64, radius: f32, height: f32) -> Self {

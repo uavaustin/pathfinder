@@ -4,8 +4,8 @@
 use super::*;
 
 impl Tanstar {
-    // Helper function to create and init tanstar object
-    pub fn create(
+    // Helper function to create and initialize tanstar object.
+    pub(crate) fn create(
         buffer_size: f32,
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
@@ -67,7 +67,7 @@ fn area(a: &Point, b: &Point, c: &Point) -> f32 {
 // helper function for intersection calculation
 // returns true if point c is between a and b, false otherwise
 fn between(a: &Point, b: &Point, c: &Point) -> bool {
-    if a.x != b.x {
+    if (a.x - b.x).abs() > std::f32::EPSILON {
         (a.x <= c.x && c.x <= b.x) || (a.x >= c.x && c.x >= b.x)
     } else {
         (a.y <= c.y && c.y <= b.y) || (a.y >= c.y && c.y >= b.y)
@@ -88,12 +88,10 @@ pub fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
         // d is colinear also AND between a and b or at opposite ends?
         if between(a, b, c) {
             return true;
+        } else if area(a, b, d) == 0f32 {
+            return between(c, d, a) || between(c, d, b);
         } else {
-            if area(a, b, d) == 0f32 {
-                return between(c, d, a) || between(c, d, b);
-            } else {
-                return false;
-            }
+            return false;
         }
     } else if a2 == 0f32 {
         // check if d is between a and b since c is not colinear
@@ -103,17 +101,15 @@ pub fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
         // checks if a is between c and d OR
         // b is colinear AND either between a and b or at opposite ends?
         if between(c, d, a) {
-            return true;
+            true
+        } else if area(c, d, b) == 0f32 {
+            between(a, b, c) || between(a, b, d)
         } else {
-            if area(c, d, b) == 0f32 {
-                return between(a, b, c) || between(a, b, d);
-            } else {
-                return false;
-            }
+            false
         }
     } else if a4 == 0f32 {
         // check if b is between c and d since we know a is not colinear
-        return between(c, d, b);
+        between(c, d, b)
     }
     //tests for regular intersection
     else {
@@ -123,6 +119,7 @@ pub fn intersect(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
 
 // calculate distance of shortest distance from point c to a segment defined by a and b
 // returns x, y of intersection, distance SQUARED, and whether intersection is at endpoint
+#[allow(clippy::many_single_char_names)]
 pub fn intersect_distance(a: &Point, b: &Point, c: &Point) -> (f32, f32, f32, bool) {
     //calculate distance from a to b, squared
     let pd2 = (a.x - b.x).powi(2) + (a.y - b.y).powi(2);
@@ -221,6 +218,7 @@ pub fn output_graph(finder: &Tanstar) {
 }
 
 // find the intersection of line ab with obstacle c, if they exist
+#[allow(clippy::many_single_char_names)]
 pub fn perpendicular_intersect(
     origin: &Location,
     a: &Point,
@@ -251,9 +249,9 @@ pub fn perpendicular_intersect(
 
         let p1 = Point::new(x + dx * mag, y + dy * mag, c.height);
         let p2 = Point::new(x - dx * mag, y - dy * mag, c.height);
-        return (Some(p1), Some(p2));
+        (Some(p1), Some(p2))
     } else {
-        return (None, None);
+        (None, None)
     }
 }
 
@@ -315,9 +313,7 @@ pub fn circular_intersect(
             ) //CURRENTLY JUST USES OBS HEIGHT
         };
         (Some(intersect_1), None)
-    } else
-    //if(discriminant > 0.0)
-    {
+    } else {
         let (intersect_1, intersect_2) = if dx >= dy {
             (
                 Point::new(

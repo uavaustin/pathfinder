@@ -3,6 +3,7 @@ use super::Location;
 // #TODO: standardize location name
 // #TODO: fully implement builder pattern for greater flexibility
 #[derive(Clone, Copy, Debug)]
+/// Represents a plane.
 pub struct Plane {
     pub location: Location,
     pub yaw: f32,         // In degrees, -1 if not provided
@@ -16,7 +17,7 @@ pub struct Plane {
 impl Plane {
     pub fn new(location: Location) -> Self {
         Self {
-            location: location,
+            location,
             yaw: -1f32,
             pitch: -1f32,
             roll: -1f32,
