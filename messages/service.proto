@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package pathfinder;
-
-message TestMessage {
-    string information = 1;
-}

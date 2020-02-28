@@ -1,23 +1,23 @@
 extern crate pathfinder;
 
 use pathfinder::*;
+use process::process::*;
 use std::collections::LinkedList;
 use std::io;
 use std::io::{BufReader, Read};
 
 pub fn main() -> io::Result<()> {
-    let test_message = TestMessage::new();
-
     // read to end of incoming data (should include everything for Process)
     let mut reader = BufReader::new(io::stdin());
     let mut buffer = String::new();
     reader.read_to_string(&mut buffer)?;
     // create a Process and insure it is valid (None means it was invalid)
-    let process: Process;
-    match Process::parse(buffer) {
-        Some(p) => process = p,
-        None => return Err(io::Error::from(io::ErrorKind::InvalidData)),
-    }
+    let mut process: Process = Process::default();
+    process.parse(buffer);
+    // match Process::parse(buffer) {
+    //     Some(p) => process = p,
+    //     default => return Err(io::Error::from(io::ErrorKind::InvalidData)),
+    // }
 
     let plane = Plane::new(process.plane_location);
     let mut pathfinder = Pathfinder::new(

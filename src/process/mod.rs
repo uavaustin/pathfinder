@@ -1,7 +1,12 @@
 use super::*;
 
-mod process;
-mod service;
+pub mod interop;
+pub mod pathfinder;
+pub mod process;
+pub mod telemetry;
 
-pub use self::process::*;
-pub use self::service::*;
+// excluded because it causes name-overlap issues with obj crate
+// pub use self::interop::*;
+// pub use self::pathfinder::*;
+// pub use self::process::*;
+// pub use self::telemetry::*;

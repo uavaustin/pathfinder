@@ -104,6 +104,18 @@ impl Process {
     }
 }
 
+impl Default for Process {
+    fn default() -> Self {
+        Self::new(
+            vec![vec![]],
+            vec![],
+            LinkedList::new(),
+            Location::from_degrees(0f64, 0f64, 0f32),
+            TConfig::default(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     /*
