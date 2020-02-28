@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::linked_list::LinkedList;
+use std::time::Duration;
 
 pub struct Process {
     pub flyzones: Vec<Vec<Location>>,
@@ -37,65 +38,70 @@ impl Process {
         pathfinder.get_adjust_path(plane.clone(), self.waypoints.clone())
     }
 
-    pub fn parse(input: String) -> Option<Self> {
-        let mut config: Option<TConfig> = None;
-        let mut flyzones: Option<Vec<Vec<Location>>> = None;
-        let mut plane_location: Option<Location> = None;
-        let mut obstacles: Option<Vec<Obstacle>> = None;
-        let mut waypoints: Option<LinkedList<Waypoint<()>>> = None;
+    pub fn parse(&mut self, input: String) {
+        // **Look into Thruster**
 
         // parse into data
         let lines = input.split("\n");
-        for line in lines {
-            let data_type = &line[..line.rfind(": ")?];
+        for mut line in lines {
+            // get
+            let reverse_index: usize;
+            match line.rfind(": ") {
+                Some(x) => reverse_index = x,
+                None => continue,
+            }
+            let data_type = &line[..reverse_index];
+            line = &line[reverse_index..];
             // check what kind of data is contained in this line
             match data_type {
-                "Config:" => config = Self::parse_config(line.to_string()),
-                "Flyzones:" => flyzones = Self::parse_flyzones(line.to_string()),
-                "Plane_Location:" => plane_location = Self::parse_plane_location(line.to_string()),
-                "Obstacles:" => obstacles = Self::parse_obstacles(line.to_string()),
-                "Waypoints:" => waypoints = Self::parse_waypoints(line.to_string()),
+                "Config:" => self.parse_config(line.to_string()),
+                "Flyzones:" => self.parse_flyzones(line.to_string()),
+                "Plane_Location:" => self.parse_plane_location(line.to_string()),
+                "Obstacles:" => self.parse_obstacles(line.to_string()),
+                "Waypoints:" => self.parse_waypoints(line.to_string()),
                 _ => (),
             }
         }
-
-        // return Process
-        Some(Self::new(
-            flyzones?,
-            obstacles?,
-            waypoints?,
-            plane_location?,
-            config?,
-        ))
     }
 
-    fn parse_config(input: String) -> Option<TConfig> {
+    fn parse_config(&mut self, input: String) {
+        /*
+        let data = input.split(',');
+        //f32, Duration, f32, f32, bool
+        let buffer_size = parse::f32(data[0]);
+        let max_process_time = parse(data[1], );
+        let turning_radius = parse::f32(data[2]);
+        let vertex_merge_threshold = parse::f32(data[3]);
+        let virtualize_flyzone = parse::bool(data[4]);
+
         // return placeholder
-        Some(TConfig::default())
+        self.config = TConfig::new(buffer_size, /*max_process_time*/, turning_radius, vertex_merge_threshold, virtualize_flyzone);
+        */
+        self.config = TConfig::default();
     }
 
-    fn parse_flyzones(input: String) -> Option<Vec<Vec<Location>>> {
+    fn parse_flyzones(&mut self, input: String) {
         // return placeholder
-        Some(vec![vec![Location::from_degrees(0f64, 0f64, 0f32)]])
+        self.flyzones = vec![vec![Location::from_degrees(0f64, 0f64, 0f32)]];
     }
 
-    fn parse_plane_location(input: String) -> Option<Location> {
+    fn parse_plane_location(&mut self, input: String) {
         // return placeholder
-        Some(Location::from_degrees(0f64, 0f64, 0f32))
+        self.plane_location = Location::from_degrees(0f64, 0f64, 0f32)
     }
 
-    fn parse_obstacles(input: String) -> Option<Vec<Obstacle>> {
+    fn parse_obstacles(&mut self, input: String) {
         // return placeholder
-        Some(vec![Obstacle::new(
+        self.obstacles = vec![Obstacle::new(
             Location::from_degrees(0f64, 0f64, 0f32),
             0f32,
             0f32,
-        )])
+        )];
     }
 
-    fn parse_waypoints(input: String) -> Option<LinkedList<Waypoint<()>>> {
+    fn parse_waypoints(&mut self, input: String) {
         // return placeholder
-        Some(LinkedList::new())
+        self.waypoints = LinkedList::new();
     }
 }
 
