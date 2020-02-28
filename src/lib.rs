@@ -3,6 +3,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+extern crate protobuf;
+
 pub mod obj;
 pub mod process;
 pub mod tanstar;

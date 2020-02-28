@@ -7,8 +7,12 @@ license = "MIT"
 [badges]
 travis-ci = { repository = "uavaustin/pathfinder", branch = "master" }
 
+[build-dependencies]
+protoc-rust = "2.10.1"
+
 [dependencies]
 ordered-float = "1.0.1"
+protobuf = "2.10.1"
 
 [dev-dependencies]
 rand = "0.5.1"

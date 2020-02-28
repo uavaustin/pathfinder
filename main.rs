@@ -6,6 +6,8 @@ use std::io;
 use std::io::{BufReader, Read};
 
 pub fn main() -> io::Result<()> {
+    let test_message = TestMessage::new();
+
     // read to end of incoming data (should include everything for Process)
     let mut reader = BufReader::new(io::stdin());
     let mut buffer = String::new();
