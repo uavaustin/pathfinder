@@ -42,7 +42,9 @@ message Rotation {
 
 // In meters
 message Altitude {
+    // Mean Sea Level
     double msl = 1;
+    // Above Ground Level
     double agl = 2;
 }
 

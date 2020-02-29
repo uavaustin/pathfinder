@@ -1,25 +1,27 @@
 extern crate pathfinder;
+extern crate protobuf;
 
 use pathfinder::*;
 use process::process::*;
-use std::collections::LinkedList;
+use protobuf::ProtobufError;
+use std::borrow::BorrowMut;
+use std::collections::linked_list::LinkedList;
 use std::io;
-use std::io::{BufReader, Read};
+use std::io::BufReader;
 
-pub fn main() -> io::Result<()> {
+pub fn main() -> Result<(), ProtobufError> {
+    // TODO: Look into Thruster
+
     // read to end of incoming data (should include everything for Process)
     let mut reader = BufReader::new(io::stdin());
-    let mut buffer = String::new();
-    reader.read_to_string(&mut buffer)?;
     // create a Process and insure it is valid (None means it was invalid)
-    let mut process: Process = Process::default();
-    process.parse(buffer);
-    // match Process::parse(buffer) {
-    //     Some(p) => process = p,
-    //     default => return Err(io::Error::from(io::ErrorKind::InvalidData)),
-    // }
+    let process: Process;
+    match Process::parse(reader.borrow_mut()) {
+        Ok(p) => process = p,
+        Err(e) => return Err(e),
+    }
 
-    let plane = Plane::new(process.plane_location);
+    let plane = process.plane;
     let mut pathfinder = Pathfinder::new(
         Tanstar::new(),
         process.config,

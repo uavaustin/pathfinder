@@ -1,11 +1,15 @@
 use super::*;
+use protobuf::*;
+use std::borrow::BorrowMut;
 use std::collections::linked_list::LinkedList;
+use std::io::Read;
+use std::time::Duration;
 
 pub struct Process {
     pub flyzones: Vec<Vec<Location>>,
     pub obstacles: Vec<Obstacle>,
     pub waypoints: LinkedList<Waypoint<()>>,
-    pub plane_location: Location,
+    pub plane: Plane,
     pub config: TConfig,
 }
 
@@ -14,14 +18,14 @@ impl Process {
         flyzones: Vec<Vec<Location>>,
         obstacles: Vec<Obstacle>,
         waypoints: LinkedList<Waypoint<()>>,
-        plane_location: Location,
+        plane: Plane,
         config: TConfig,
     ) -> Self {
         Self {
             flyzones,
             obstacles,
             waypoints,
-            plane_location,
+            plane,
             config,
         }
     }
@@ -33,74 +37,80 @@ impl Process {
             self.flyzones.clone(),
             self.obstacles.clone(),
         );
-        let plane = Plane::new(self.plane_location.clone());
-        pathfinder.get_adjust_path(plane.clone(), self.waypoints.clone())
+        pathfinder.get_adjust_path(self.plane.clone(), self.waypoints.clone())
     }
 
-    pub fn parse(&mut self, input: String) {
-        // **Look into Thruster**
-
+    pub fn parse(reader: &mut dyn Read) -> ProtobufResult<Self> {
         // parse into data
-        let lines = input.split("\n");
-        for mut line in lines {
-            // get
-            let reverse_index: usize;
-            match line.rfind(": ") {
-                Some(x) => reverse_index = x,
-                None => continue,
-            }
-            let data_type = &line[..reverse_index];
-            line = &line[reverse_index..];
-            // check what kind of data is contained in this line
-            match data_type {
-                "Config:" => self.parse_config(line.to_string()),
-                "Flyzones:" => self.parse_flyzones(line.to_string()),
-                "Plane_Location:" => self.parse_plane_location(line.to_string()),
-                "Obstacles:" => self.parse_obstacles(line.to_string()),
-                "Waypoints:" => self.parse_waypoints(line.to_string()),
-                _ => (),
-            }
+        let mut is = protobuf::CodedInputStream::new(reader);
+
+        // parse request
+        let mut request = process::pathfinder::Request::new();
+        match request.merge_from(is.borrow_mut()) {
+            Err(e) => return Err(e),
+            _ => (),
         }
-    }
 
-    fn parse_config(&mut self, input: String) {
-        /*
-        let data = input.split(',');
-        //f32, Duration, f32, f32, bool
-        let buffer_size = parse::f32(data[0]);
-        let max_process_time = parse(data[1], );
-        let turning_radius = parse::f32(data[2]);
-        let vertex_merge_threshold = parse::f32(data[3]);
-        let virtualize_flyzone = parse::bool(data[4]);
+        // parse plane
+        let mut proto_plane = process::pathfinder::Plane::new();
+        match proto_plane.merge_from(is.borrow_mut()) {
+            Err(e) => return Err(e),
+            _ => (),
+        }
+        // should altitude be msl or agl?
+        let mut plane = Plane::new(Location::from_degrees(
+            request.get_overview().get_pos().get_lat(),
+            request.get_overview().get_pos().get_lon(),
+            request.get_overview().get_alt().get_msl() as f32,
+        ));
+        plane.yaw = proto_plane.get_rot().get_yaw() as f32;
+        plane.pitch = proto_plane.get_rot().get_pitch() as f32;
+        plane.roll = proto_plane.get_rot().get_roll() as f32;
+        plane.airspeed = proto_plane.get_speed().get_airspeed() as f32;
+        plane.groundspeed = proto_plane.get_speed().get_ground_speed() as f32;
+        // plane.wind_dir = // no source so ignore TODO: get source and don't ignore
 
-        // return placeholder
-        self.config = TConfig::new(buffer_size, /*max_process_time*/, turning_radius, vertex_merge_threshold, virtualize_flyzone);
-        */
-        self.config = TConfig::default();
-    }
+        // parse flyzones
+        let mut flyzones = Vec::new();
+        // go through each InteropMission_FlyZone
+        for im_fz in request.get_flyzones() {
+            // create a flyzone from the locations of the boundary
+            let mut fz = Vec::new();
+            for loc in im_fz.get_boundary() {
+                fz.push(Location::from_degrees(loc.get_lat(), loc.get_lon(), 0f32));
+            }
+            flyzones.push(fz);
+        }
 
-    fn parse_flyzones(&mut self, input: String) {
-        // return placeholder
-        self.flyzones = vec![vec![Location::from_degrees(0f64, 0f64, 0f32)]];
-    }
+        // parse obstacles
+        let mut obstacles = Vec::new();
+        // go through each Obstacles_StationaryObstacle
+        for s_o in request.get_obstacles().get_stationary() {
+            // create an obstacle
+            let pos = s_o.get_pos();
+            let obs = Obstacle::from_degrees(
+                pos.get_lon(),
+                pos.get_lat(),
+                s_o.get_radius() as f32,
+                s_o.get_height() as f32,
+            );
+            obstacles.push(obs);
+        }
 
-    fn parse_plane_location(&mut self, input: String) {
-        // return placeholder
-        self.plane_location = Location::from_degrees(0f64, 0f64, 0f32)
-    }
+        // parse waypoints
+        let mut waypoints = LinkedList::new();
+        // for mi in request.get_mission().get_mission_items() {
+        //     // TODO: add a bunch of waypoints from mi.get_x(), mi.get_y(), mi.get_z() (probably)
+        //     waypoints.push_back()
+        // }
 
-    fn parse_obstacles(&mut self, input: String) {
-        // return placeholder
-        self.obstacles = vec![Obstacle::new(
-            Location::from_degrees(0f64, 0f64, 0f32),
-            0f32,
-            0f32,
-        )];
-    }
+        // parse config (assuming overview.algorithm is Tanstar) TODO: don't assume
+        let mut config = TConfig::default();
+        config.buffer_size = request.get_buffer_size() as f32;
+        config.max_process_time = Duration::from_secs(request.get_process_time().into());
 
-    fn parse_waypoints(&mut self, input: String) {
-        // return placeholder
-        self.waypoints = LinkedList::new();
+        // return process
+        Ok(Process::new(flyzones, obstacles, waypoints, plane, config))
     }
 }
 
@@ -110,7 +120,7 @@ impl Default for Process {
             vec![vec![]],
             vec![],
             LinkedList::new(),
-            Location::from_degrees(0f64, 0f64, 0f32),
+            Plane::new(Location::from_degrees(0f64, 0f64, 0f32)),
             TConfig::default(),
         )
     }
@@ -119,31 +129,6 @@ impl Default for Process {
 #[cfg(test)]
 mod tests {
     /*
-    #[test]
-    fn test_parse_config() {
-
-    }
-
-    #[test]
-    fn test_parse_flyzones() {
-
-    }
-
-    #[test]
-    fn test_parse_plane_location() {
-
-    }
-
-    #[test]
-    fn test_parse_obstacles() {
-
-    }
-
-    #[test]
-    fn test_parse_waypoints() {
-
-    }
-
     #[test]
     fn test_parse() {
 
