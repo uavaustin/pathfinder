@@ -1,12 +1,11 @@
 use super::*;
 
-pub mod interop;
-pub mod pathfinder;
 pub mod process;
-pub mod telemetry;
+pub mod nsfw;
 
-// excluded because it causes name-overlap issues with obj crate
-// pub use self::interop::*;
-// pub use self::pathfinder::*;
-// pub use self::process::*;
-// pub use self::telemetry::*;
+pub use self::process::*;
+// changed name of Point and Obstacle to avoid ambiguous names (overlapping with obj crate. Response was left out for simplicity (not used)
+pub use self::nsfw::{
+    AvoidRequest, AvoidResponse, Flyzone, Obstacle as NSFW_Obstacle, PathRequest, PathResponse,
+    Point as NSFW_Point,
+};

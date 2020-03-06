@@ -1,0 +1,74 @@
+
+/*
+ * Messages for nsfw service.
+ */
+
+ syntax = 'proto3';
+
+ package pathfinder;
+
+// NSFW
+
+// changed mission sent to telemetry from nsfw
+ message Response {
+    // literally a message to front-end
+    bool success = 1;
+ }
+
+// PROCESS
+
+// inputs of PFproc
+message PathRequest {
+    // FZs list
+    repeated Flyzone flyzoneList = 1;
+    // OBs list
+    repeated Obstacle obstacleList = 2;
+    // WP list
+    repeated Point oldWaypoints = 3;
+
+    // Plane
+    Point planeLocation = 4;
+}
+
+// changed WPs sent to nsfw from PFproc
+message PathResponse {
+    // WP list
+    repeated Point newWaypoints = 1;
+}
+
+// inputs of VAproc
+message AvoidRequest {
+    // next WP
+    Point nextWaypoint = 1;
+
+    // Our Plane
+    Point planeLocation = 2;
+
+    // Enemy
+    Point enemyLocation = 3;
+
+}
+
+// changed OBs sent to nsfw from VAproc
+message AvoidResponse {
+    // new Obstacles
+    Obstacle enemyOb = 1;
+}
+
+
+
+// used type defs:
+message Point {
+    double lat = 1;
+    double lon = 2;
+    double alt = 3;
+}
+
+message Obstacle {
+    Point center = 1;
+    double radius = 2;
+}
+
+message Flyzone {
+    repeated Point polygon = 1;
+}

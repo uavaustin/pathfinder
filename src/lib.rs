@@ -12,6 +12,7 @@ pub mod tanstar;
 mod algorithm;
 
 pub use obj::*;
+pub use process::*;
 pub use tanstar::{TConfig, Tanstar};
 
 use algorithm::Algorithm;
