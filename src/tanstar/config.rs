@@ -49,3 +49,59 @@ impl TConfig {
         }
     }
 }
+
+impl PartialEq for TConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.max_process_time.eq(&other.max_process_time)
+            && (
+                self.buffer_size,
+                self.turning_radius,
+                self.vertex_merge_threshold,
+                self.virtualize_flyzone,
+            ) == (
+                other.buffer_size,
+                other.turning_radius,
+                other.vertex_merge_threshold,
+                other.virtualize_flyzone,
+            )
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.max_process_time.ne(&other.max_process_time)
+            || (
+                self.buffer_size,
+                self.turning_radius,
+                self.vertex_merge_threshold,
+                self.virtualize_flyzone,
+            ) != (
+                other.buffer_size,
+                other.turning_radius,
+                other.vertex_merge_threshold,
+                other.virtualize_flyzone,
+            )
+    }
+}
+
+impl Eq for TConfig {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eq() {
+        let config1 = TConfig::new(10f32, Duration::from_secs(1), 20f32, 30f32, false);
+        let config2 = TConfig::from(config1.clone());
+        let config3 = TConfig::new(10f32, Duration::from_secs(1), 20f32, 30f32, false);
+        assert!(config1.eq(&config2) && config2.eq(&config1));
+        assert!(config2.eq(&config3) && config3.eq(&config2));
+        assert!(config1.eq(&config3) && config3.eq(&config1));
+    }
+
+    #[test]
+    fn test_ne() {
+        let config1 = TConfig::new(10f32, Duration::from_secs(1), 20f32, 30f32, false);
+        let config2 = TConfig::new(30f32, Duration::from_secs(1), 20f32, 10f32, false);
+        assert!(config1.ne(&config2) && config2.ne(&config1));
+    }
+}

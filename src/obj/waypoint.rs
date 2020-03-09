@@ -51,3 +51,39 @@ impl<T> Waypoint<T> {
         self
     }
 }
+
+impl PartialEq for Waypoint<()> {
+    fn eq(&self, other: &Self) -> bool {
+        // data is being ignored for now because nothing uses it currently TODO: include data
+        self.location.eq(&other.location) && self.radius == other.radius
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        // data is being ignored for now because nothing uses it currently TODO: include data
+        self.location.ne(&other.location) || self.radius != other.radius
+    }
+}
+
+impl Eq for Waypoint<()> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eq() {
+        let waypoint1 = Waypoint::from_degrees(1f64, 2f64, 10f32, 20f32);
+        let waypoint2 = Waypoint::from(waypoint1.clone());
+        let waypoint3 = Waypoint::from_degrees(1f64, 2f64, 10f32, 20f32);
+        assert!(waypoint1.eq(&waypoint2) && waypoint2.eq(&waypoint1));
+        assert!(waypoint2.eq(&waypoint3) && waypoint3.eq(&waypoint2));
+        assert!(waypoint1.eq(&waypoint3) && waypoint3.eq(&waypoint1));
+    }
+
+    #[test]
+    fn test_ne() {
+        let waypoint1 = Waypoint::from_degrees(1f64, 2f64, 10f32, 20f32);
+        let waypoint2 = Waypoint::from_degrees(2f64, 1f64, 10f32, 20f32);
+        assert!(waypoint1.ne(&waypoint2) && waypoint2.ne(&waypoint1));
+    }
+}

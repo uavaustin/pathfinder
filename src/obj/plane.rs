@@ -41,3 +41,67 @@ impl Plane {
         self
     }
 }
+
+impl PartialEq for Plane {
+    fn eq(&self, other: &Self) -> bool {
+        self.location.eq(&other.location)
+            && (
+                self.yaw,
+                self.pitch,
+                self.roll,
+                self.airspeed,
+                self.groundspeed,
+                self.wind_dir,
+            ) == (
+                other.yaw,
+                other.pitch,
+                other.roll,
+                other.airspeed,
+                other.groundspeed,
+                other.wind_dir,
+            )
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.location.ne(&other.location)
+            || (
+                self.yaw,
+                self.pitch,
+                self.roll,
+                self.airspeed,
+                self.groundspeed,
+                self.wind_dir,
+            ) != (
+                other.yaw,
+                other.pitch,
+                other.roll,
+                other.airspeed,
+                other.groundspeed,
+                other.wind_dir,
+            )
+    }
+}
+
+impl Eq for Plane {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eq() {
+        let plane1 = Plane::from_degrees(1f64, 2f64, 3f32);
+        let plane2 = Plane::from(plane1.clone());
+        let plane3 = Plane::from_degrees(1f64, 2f64, 3f32);
+        assert!(plane1.eq(&plane2) && plane2.eq(&plane1));
+        assert!(plane2.eq(&plane3) && plane3.eq(&plane2));
+        assert!(plane1.eq(&plane3) && plane3.eq(&plane1));
+    }
+
+    #[test]
+    fn test_ne() {
+        let plane1 = Plane::from_degrees(1f64, 2f64, 3f32);
+        let plane2 = Plane::from_degrees(3f64, 2f64, 1f32);
+        assert!(plane1.ne(&plane2) && plane2.ne(&plane1));
+    }
+}
