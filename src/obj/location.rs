@@ -15,7 +15,7 @@ pub struct Location {
 }
 
 impl fmt::Display for Location {
-    /// Formats the location for display using the given formatter
+    /// Formats the 'Location' for display using the given ['Formatter']
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -28,7 +28,7 @@ impl fmt::Display for Location {
 }
 
 impl Location {
-    /// Create location from coordinates in degrees
+    /// Create 'Location' from coordinates in degrees
     pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
         Self {
             lat: lat.to_radians().into(),
@@ -36,7 +36,7 @@ impl Location {
             alt: alt.into(),
         }
     }
-    /// Create location from coordinates in radians
+    /// Create 'Location' from coordinates in radians
     pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Self {
         Self {
             lat: lat.into(),
