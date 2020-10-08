@@ -6,11 +6,11 @@ use super::Location;
 /// ground to a specified height.
 #[derive(Debug, Clone)]
 pub struct Obstacle {
-    /// The position of the 'Obstacle' as a ['Location']
+    /// Position as a ['Location']
     pub location: Location,
-    /// The radius of the 'Obstacle' in meters
+    /// Radius in meters
     pub radius: f32,
-    /// The height of the 'Obstacle' in meters
+    /// Height in meters
     pub height: f32,
 }
 
