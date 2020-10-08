@@ -1,3 +1,5 @@
+//! A set of structs for handling general pathfinding data
+
 mod location;
 mod obstacle;
 mod plane;
