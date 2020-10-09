@@ -28,7 +28,7 @@ impl fmt::Display for Location {
 }
 
 impl Location {
-    /// Create 'Location' from coordinates in degrees
+    /// Create a 'Location' from coordinates in degrees
     pub fn from_degrees(lat: f64, lon: f64, alt: f32) -> Self {
         Self {
             lat: lat.to_radians().into(),
@@ -36,7 +36,7 @@ impl Location {
             alt: alt.into(),
         }
     }
-    /// Create 'Location' from coordinates in radians
+    /// Create a 'Location' from coordinates in radians
     pub fn from_radians(lat: f64, lon: f64, alt: f32) -> Self {
         Self {
             lat: lat.into(),

@@ -16,17 +16,16 @@ pub struct Plane {
     pub pitch: f32,
     /// Rotation on the forward axis in degrees, -1 if not provided
     pub roll: f32,
-    /// Airspeed in meters per second, -1 if not provided
-    // #TODO: find out what this is and document
+    /// Speed of the plane relative to the air (with wind) in meters per second, -1 if not provided
     pub airspeed: f32,
-    /// Speed of the 'Plane' relative to the ground in meters per second, -1 if not provided
+    /// Speed of the plane relative to the ground in meters per second, -1 if not provided
     pub groundspeed: f32,
     /// Direction of the wind as a rotation in degrees around the upward axis, -1 if not provided
     pub wind_dir: f32,
 }
 
 impl Plane {
-    /// Create a new 'Plane' from a 'Location'
+    /// Create a 'Plane' from a 'Location'
     pub fn new(location: Location) -> Self {
         Self {
             location,

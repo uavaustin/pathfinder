@@ -8,7 +8,7 @@ use super::Location;
 pub struct Obstacle {
     /// Position as a ['Location']
     pub location: Location,
-    /// Radius in meters
+    /// Radius of cylinder in meters
     pub radius: f32,
     /// Height in meters
     pub height: f32,
