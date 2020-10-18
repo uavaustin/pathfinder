@@ -19,13 +19,24 @@ pub use self::vertex::Vertex;
 
 use obj::{Location, Obstacle};
 
+/// An enum describing the validity of the path in reference to obstacles, flyzones, and the ground
+// #TODO: Ensure that the ground is considered
 pub enum PathValidity {
+    /// The path does not intersect with anything the plane can't fly through
     Valid,
+    /// The path intersects with an obstacle, the ground, or goes outside the flyzone
     Invalid,
+    /// The path is okay to traverse at the given height
+    ///
+    /// From the top-down 2D perspective the path intersects with 1 or more obstacles, but the
+    /// obstacles all have a height less than or equal to the given height.
     Flyover(f32),
 }
 
 impl From<PathValidity> for bool {
+    /// Converts the validity into a boolean
+    ///
+    /// The path is only intraversable if it is 'Invalid'.
     fn from(pv: PathValidity) -> bool {
         match pv {
             PathValidity::Invalid => false,
@@ -34,7 +45,20 @@ impl From<PathValidity> for bool {
     }
 }
 
+/// A ['Vec'] of path segments: (i, j, distance, threshold)
+///
+/// i: counter-clockwise deflection angle from the positive x-axis around the first obstacle that a segment is tangent to
+/// j: counter-clockwise deflection from the positive x-axis around the second obstacle that a segment is tangent to
+/// distance: distance between the 2 points coincident to the segment and the obstacles
+/// threshold: minimum height the segment must be flown at to be valid
 type Path = Vec<(f32, f32, f32, f32)>;
+/// A ['Vec'] of obstacle intersections
+///
+/// The values are the deflection angles from the displacement vector (from the first obstacle
+/// to the second) on the first obstacle and on the second obstacle.
+/// I.e. for a tuple (i, j):
+/// i would be the counter-clockwise deflection angle of the point relative to the first obstacle
+/// j would be the counter-clockwise deflection angle of the point relative to the second obstacle (same displacement vector)
 type Sentinel = Vec<(f32, f32)>;
 
 impl Tanstar {
@@ -109,6 +133,10 @@ impl Tanstar {
         // output_graph(&self);
     }
 
+    /// Sets up 'Tanstar' for pathfinding
+    ///
+    /// Clears 'nodes' and fills it with newly created ['Node']s from 'obstacles'. If it should it
+    /// also virtualizes the flyzones.
     fn populate_nodes(&mut self) {
         self.nodes.clear();
         self.origin = Self::find_origin(&self.flyzones);
@@ -123,20 +151,21 @@ impl Tanstar {
         }
     }
 
-    // Generate all valid possible path (tangent lines) between two nodes, and return the
-    // shortest valid path if one exists
-
-    // returns: (i, j, distance, threshold), (a_sentinels, b_sentinels)
-    pub fn find_path(&self, a: &Node, b: &Node) -> (Path, Option<Sentinel>) {
-        let c1: Point = a.origin;
-        let c2: Point = b.origin;
-        let r1: f32 = a.radius;
-        let r2: f32 = b.radius;
-        let dist: f32 = c1.distance(&c2);
+    /// Finds the shortest valid path with 'Sentinel's at obstacle intersections, if any;
+    /// returns an empty vector for 'Path' if none exists
+    ///
+    /// Generates all possible path segments (tangent lines) between two ['Node']s and finds
+    /// the shortest valid one.
+    pub fn find_path(&self, node1: &Node, node2: &Node) -> (Path, Option<Sentinel>) {
+        let pos1: Point = node1.origin;
+        let pos2: Point = node2.origin;
+        let rad1: f32 = node1.radius;
+        let rad2: f32 = node2.radius;
+        let dist: f32 = pos1.distance(&pos2);
 
         // theta1 and theta2 represents the normalize angle
         // normalized between 0 and 2pi
-        let theta = (c2.y - c1.y).atan2(c2.x - c1.x);
+        let theta = (pos2.y - pos1.y).atan2(pos2.x - pos1.x);
         let (theta1, theta2) = if theta > 0f32 {
             (theta, theta + PI)
         } else {
@@ -145,7 +174,7 @@ impl Tanstar {
 
         println!(
             "x1:{}, y1:{}, r1:{}, x2:{}, y2:{}, r2:{}",
-            c1.x, c1.y, r1, c2.x, c2.y, r2
+            pos1.x, pos1.y, rad1, pos2.x, pos2.y, rad2
         );
 
         println!(
@@ -157,11 +186,11 @@ impl Tanstar {
 
         // gamma1 and gamma2 are the angle between reference axis and the tangents
         // gamma1 is angle to inner tangent, gamma2 is angle to outer tangent
-        let gamma1 = ((r1 + r2).abs() / dist).acos();
-        let mut gamma2 = ((r1 - r2).abs() / dist).acos();
+        let gamma1 = ((rad1 + rad2).abs() / dist).acos();
+        let mut gamma2 = ((rad1 - rad2).abs() / dist).acos();
 
-        // we assume r1 is greater than r2 for the math to work, so find complement if otherwise
-        if r2 > r1 {
+        // we assume rad1 is greater than rad2 for the math to work, so find complement if otherwise
+        if rad2 > rad1 {
             gamma2 = PI - gamma2;
         }
 
@@ -184,7 +213,7 @@ impl Tanstar {
         ];
 
         let mut sentinels = None;
-        if r1 != 0f32 && r2 != 0f32 && dist > r1 + r2 {
+        if rad1 != 0f32 && rad2 != 0f32 && dist > rad1 + rad2 {
             candidates.append(&mut vec![
                 // Inner left tangent
                 (
@@ -200,27 +229,27 @@ impl Tanstar {
         } else {
             println!("obstacle sentinels detected");
             //determine angle locations of sentinels
-            let theta_s = ((r1.powi(2) + dist.powi(2) - r2.powi(2)) / (2f32 * r1 * dist)).acos();
-            let phi_s = ((r2.powi(2) + dist.powi(2) - r1.powi(2)) / (2f32 * r2 * dist)).acos();
+            let theta_s = ((rad1.powi(2) + dist.powi(2) - rad2.powi(2)) / (2f32 * rad1 * dist)).acos();
+            let phi_s = ((rad2.powi(2) + dist.powi(2) - rad1.powi(2)) / (2f32 * rad2 * dist)).acos();
 
-            //sentinel vertices on A
-            let a_s1 = theta_s;
-            let a_s2 = -theta_s;
-            let a_s3 = -2f32 * PI + theta_s;
-            let a_s4 = 2f32 * PI - theta_s;
-            //sentinel vertices on B
-            let b_s1 = PI - phi_s;
-            let b_s2 = PI + phi_s;
-            let b_s3 = -PI + phi_s;
-            let b_s4 = -PI - phi_s;
-            sentinels = Some(vec![(a_s1, b_s1), (a_s2, b_s2), (a_s3, b_s3), (a_s4, b_s4)]);
+            //sentinel vertices on node1
+            let node1_s1 = theta_s;
+            let node1_s2 = -theta_s;
+            let node1_s3 = -2f32 * PI + theta_s;
+            let node1_s4 = 2f32 * PI - theta_s;
+            //sentinel vertices on node2
+            let node2_s1 = PI - phi_s;
+            let node2_s2 = PI + phi_s;
+            let node2_s3 = -PI + phi_s;
+            let node2_s4 = -PI - phi_s;
+            sentinels = Some(vec![(node1_s1, node2_s1), (node1_s2, node2_s2), (node1_s3, node2_s3), (node1_s4, node2_s4)]);
         }
 
         let mut connections = Vec::new();
         let mut point_connections = Vec::new();
         for (i, j) in candidates {
-            let p1 = Point::from((a, i));
-            let p2 = Point::from((b, j));
+            let p1 = Point::from((node1, i));
+            let p2 = Point::from((node2, j));
             println!("angles {} -> {}", i.to_degrees(), j.to_degrees());
             println!("validating path {:?} -> {:?}", p1, p2);
 
@@ -230,9 +259,9 @@ impl Tanstar {
                     connections.push((i, j, p1.distance(&p2), 0f32));
                     point_connections.push((p1, p2));
                 }
-                PathValidity::Flyover(h_min) => {
+                PathValidity::Flyover(height_min) => {
                     println!("This path is Valid with Flyover.");
-                    connections.push((i, j, p1.distance(&p2), h_min));
+                    connections.push((i, j, p1.distance(&p2), height_min));
                     point_connections.push((p1, p2));
                 }
                 _ => {
