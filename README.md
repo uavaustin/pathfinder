@@ -66,3 +66,16 @@ The weights used to calculate path preferences can be configured. Pathfinder wil
 
 -   `direct_path_modifier_weight` - high value makes Pathfinder prefer direct paths
 -   `heading_modifier_weight` - high value makes Pathfinder prefer paths that maintains current heading
+
+## Interacting with Node.js
+
+The `wasm-bindgen` library gives the ability to convert Rust into Web Assembly into Javascript relatively easily.
+
+### Building
+
+For building with `wasm-bindgen` there is a tool called `wasm-pack` which will handle a lot of the required setup and
+execution. To build for Node.js the following command should be used:
+
+    $ wasm-pack build --target=nodejs
+
+This will create a `pkg` directory at the crate root with JS and Wasm files.
