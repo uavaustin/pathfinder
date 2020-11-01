@@ -3,6 +3,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+extern crate wasm_bindgen;
+
 pub mod obj;
 pub mod tanstar;
 
@@ -13,6 +15,7 @@ pub use tanstar::{TConfig, Tanstar};
 
 use algorithm::Algorithm;
 use std::collections::LinkedList;
+use wasm_bindgen::prelude::*;
 
 pub struct Pathfinder<A: Algorithm> {
     algo: A,
@@ -79,6 +82,259 @@ impl<A: Algorithm> Pathfinder<A> {
 
     pub fn get_obstacle(&self) -> &Vec<Obstacle> {
         self.algo.get_obstacles()
+    }
+}
+
+/// A struct imported from Javascript for wrapping [`Location`]
+#[wasm_bindgen]
+extern "C" {
+    pub type LocationWrapper;
+
+    /// Gets the latitude in degrees
+    #[wasm_bindgen(getter)]
+    pub fn get_lat(this: &LocationWrapper) -> f64;
+
+    /// Gets the longitude in degrees
+    #[wasm_bindgen(getter)]
+    pub fn get_lon(this: &LocationWrapper) -> f64;
+
+    /// Gets the altitude in meters
+    #[wasm_bindgen(getter)]
+    pub fn get_alt(this: &LocationWrapper) -> f32;
+}
+
+// // Location can't be wasm-bindgenified directly
+// impl Into<Location> for LocationWrapper {
+//     fn into(self) -> Location {
+//         Location::from_degrees(self.get_lat(), self.get_lon(), self.get_alt())
+//     }
+// }
+
+/// A struct imported from Javascript for wrapping [`Obstacle`]
+#[wasm_bindgen]
+extern "C" {
+    pub type ObstacleWrapper;
+
+    /// Gets the location as a [`LocationWrapper`]
+    #[wasm_bindgen(getter, js_name = location)]
+    pub fn get_obstacle_location(this: &ObstacleWrapper) -> LocationWrapper;
+
+    /// Gets the radius in meters
+    #[wasm_bindgen(getter, js_name = radius)]
+    pub fn get_obstacle_radius(this: &ObstacleWrapper) -> f32;
+
+    /// Gets the height in meters
+    #[wasm_bindgen(getter)]
+    pub fn get_height(this: &ObstacleWrapper) -> f32;
+}
+
+// // Obstacle can't be wasm-bindgenified directly
+// impl Into<Obstacle> for ObstacleWrapper {
+//     fn into(self) -> Obstacle {
+//         Obstacle::new(
+//             self.get_obstacle_location().into(),
+//             self.get_obstacle_radius(),
+//             self.get_height()
+//         )
+//     }
+// }
+
+/// A struct imported from Javascript for wrapping [`Plane`]
+#[wasm_bindgen]
+extern "C" {
+    pub type PlaneWrapper;
+
+    /// Gets the location as a [`LocationWrapper`]
+    #[wasm_bindgen(getter, js_name = location)]
+    pub fn get_plane_location(this: &PlaneWrapper) -> LocationWrapper;
+
+    /// Gets the yaw in degrees, -1 if not provided
+    #[wasm_bindgen(getter)]
+    pub fn get_yaw(this: &PlaneWrapper) -> f32;
+
+    /// Gets the pitch in degrees, -1 if not provided
+    #[wasm_bindgen(getter)]
+    pub fn get_pitch(this: &PlaneWrapper) -> f32;
+
+    /// Gets the roll in degrees, -1 if not provided
+    #[wasm_bindgen(getter)]
+    pub fn get_roll(this: &PlaneWrapper) -> f32;
+
+    /// Gets the airspeed in meters per second, -1 if not provided
+    #[wasm_bindgen(getter)]
+    pub fn get_airspeed(this: &PlaneWrapper) -> f32;
+
+    /// Gets the groundspeed in meters per second, -1 if not provided
+    #[wasm_bindgen(getter)]
+    pub fn get_groundspeed(this: &PlaneWrapper) -> f32;
+
+    /// Gets the wind_dir in degrees, -1 if not provided
+    #[wasm_bindgen(getter)]
+    pub fn get_wind_dir(this: &PlaneWrapper) -> f32;
+}
+
+// // Plane can't be wasm-bindgenified directly
+// impl Into<Plane> for PlaneWrapper {
+//     fn into(self) -> Plane {
+//         Plane {
+//             location: self.get_plane_location().into(),
+//             yaw: self.get_yaw(),
+//             pitch: self.get_pitch(),
+//             roll: self.get_roll(),
+//             airspeed: self.get_airspeed(),
+//             groundspeed: self.get_groundspeed(),
+//             wind_dir: self.get_wind_dir()
+//         }
+//     }
+// }
+
+/// A struct imported from Javascript for wrapping [`TConfig`]
+#[wasm_bindgen]
+extern "C" {
+    pub type TConfigWrapper;
+
+    /// Get the buffer around obstacles in meters
+    #[wasm_bindgen(getter)]
+    pub fn get_buffer_size(this: &TConfigWrapper) -> f32;
+
+    /// Get the maximum process time allowed in seconds
+    #[wasm_bindgen(getter)]
+    pub fn get_max_process_time(this: &TConfigWrapper) -> f32;
+
+    /// Get the turning radius of the plane in meters
+    #[wasm_bindgen(getter)]
+    pub fn get_turning_radius(this: &TConfigWrapper) -> f32;
+
+    /// Get the merge threshold for vertices
+    ///
+    /// Vertices within this threshold will be merged into one.
+    #[wasm_bindgen(getter)]
+    pub fn get_vertex_merge_threshold(this: &TConfigWrapper) -> f32;
+
+    /// Whether to generate virtual nodes for flyzones
+    #[wasm_bindgen(getter)]
+    pub fn get_virtualize_flyzone(this: &TConfigWrapper) -> bool;
+}
+
+// // TConfig can't be wasm-bindgenified directly
+// impl Into<TConfig> for TConfigWrapper {
+//     fn into(self) -> TConfig {
+//         TConfig::new(
+//             self.get_buffer_size(),
+//             self.get_max_process_time(),
+//             self.get_turning_radius(),
+//             self.get_vertex_merge_threshold(),
+//             self.get_virtualize_flyzone()
+//         )
+//     }
+// }
+
+/// A struct imported from Javascript for wrapping [`Waypoint`]
+///
+/// Since `wasm-bindgen` currently doesn't support generic structures the wrapped `Waypoint` is
+/// given a null type.
+#[wasm_bindgen]
+extern "C" {
+    pub type WaypointWrapper;
+
+    /// Gets the location as a [`LocationWrapper`]
+    #[wasm_bindgen(getter, js_name = location)]
+    pub fn get_waypoint_location(this: &WaypointWrapper) -> LocationWrapper;
+
+    /// Gets the radius in meters
+    #[wasm_bindgen(getter, js_name = radius)]
+    pub fn get_waypoint_radius(this: &WaypointWrapper) -> f32;
+
+    // data is omitted due to its lack of use
+}
+
+// // Waypoint can't be wasm-bindgenified directly
+// impl Into<Waypoint<()>> for WaypointWrapper {
+//     fn into(self) -> Waypoint<()> {
+//         Waypoint::new(
+//             self.get_waypoint_location().into,
+//             self.get_waypoint_radius()
+//         )
+//     }
+// }
+
+/// A wrapper for `wasm-bindgen` to interact with
+///
+/// Due to `wasm-bindgen`'s current inability to handle generic structures, the `pathfinder`
+/// and implementation definitions must be changed when the Pathfinder implementation changes.
+#[wasm_bindgen]
+pub struct PathfinderWrapper {
+    pathfinder: Pathfinder<Tanstar>
+}
+
+#[wasm_bindgen]
+impl PathfinderWrapper {
+    // Signature:
+    // mut algo: Tanstar,
+    // config: Tanstar::Config,
+    // flyzones: Vec<Vec<Location>>,
+    // obstacles: Vec<Obstacle>,
+    // ) -> Self {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        mut algo: Tanstar,
+        config: TConfigWrapper,
+        flyzones: js_sys::Array,
+        obstacles: js_sys::Array,
+    ) -> Self {
+        unimplemented!();
+    }
+
+    // Signature:
+    // &mut self,
+    // plane: Plane,
+    // mut wp_list: LinkedList<Waypoint<()>>,
+    // ) -> LinkedList<Waypoint<()>> {
+    #[wasm_bindgen(method, js_name = getAdjustPath)]
+    pub fn get_adjust_path(
+        &mut self,
+        plane: PlaneWrapper,
+        mut wp_list: js_sys::Array,
+    ) -> js_sys::Array {
+        unimplemented!();
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_config(&mut self, config: TConfigWrapper) {
+        unimplemented!();
+    }
+
+    // Signature:
+    // &mut self, flyzone: Vec<Vec<Location>>) {
+    #[wasm_bindgen(setter)]
+    pub fn set_flyzone(&mut self, flyzone: js_sys::Array) {
+        unimplemented!();
+    }
+
+    // Signature:
+    // &mut self, obstacles: Vec<Obstacle>) {
+    #[wasm_bindgen(setter)]
+    pub fn set_obstacles(&mut self, obstacles: js_sys::Array) {
+        unimplemented!();
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn get_config(&self) -> TConfigWrapper {
+        unimplemented!();
+    }
+
+    // Signature:
+    // &mut self) -> &Vec<Vec<Location>> {
+    #[wasm_bindgen(getter)]
+    pub fn get_flyzone(&mut self) -> js_sys::Array {
+        unimplemented!();
+    }
+
+    // Signature:
+    // &self) -> &Vec<Obstacle> {
+    #[wasm_bindgen(getter)]
+    pub fn get_obstacle(&self) -> js_sys::Array {
+        unimplemented!();
     }
 }
 

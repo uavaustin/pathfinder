@@ -17,6 +17,7 @@ use std::collections::{BinaryHeap, HashSet, LinkedList};
 use std::f32::consts::PI;
 use std::rc::Rc;
 use std::time::SystemTime;
+use wasm_bindgen::prelude::*;
 
 // const EQUATORIAL_RADIUS: f64 = 63781370.0;
 // const POLAR_RADIUS: f64 = 6356752.0;
@@ -31,6 +32,7 @@ const START_VERTEX_INDEX: i32 = -1;
 const END_VERTEX_INDEX: i32 = -2;
 const HEADER_VERTEX_INDEX: i32 = -3;
 
+#[wasm_bindgen]
 #[allow(non_snake_case)]
 pub struct Tanstar {
     // Configuration options
