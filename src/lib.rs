@@ -91,18 +91,18 @@ extern "C" {
     pub type LocationWrapper;
 
     /// Gets the latitude in degrees
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_lat(this: &LocationWrapper) -> f64;
 
     /// Gets the longitude in degrees
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_lon(this: &LocationWrapper) -> f64;
 
     /// Gets the altitude in meters
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_alt(this: &LocationWrapper) -> f32;
 }
 
@@ -119,18 +119,18 @@ extern "C" {
     pub type ObstacleWrapper;
 
     /// Gets the location as a [`LocationWrapper`]
-    //#[wasm_bindgen(getter, js_name = location)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = location)]
+    // #[wasm_bindgen(method)]
     pub fn get_obstacle_location(this: &ObstacleWrapper) -> LocationWrapper;
 
     /// Gets the radius in meters
-    //#[wasm_bindgen(getter, js_name = radius)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = radius)]
+    // #[wasm_bindgen(method)]
     pub fn get_obstacle_radius(this: &ObstacleWrapper) -> f32;
 
     /// Gets the height in meters
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_height(this: &ObstacleWrapper) -> f32;
 }
 
@@ -151,38 +151,38 @@ extern "C" {
     pub type PlaneWrapper;
 
     /// Gets the location as a [`LocationWrapper`]
-    //#[wasm_bindgen(getter, js_name = location)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = location)]
+    // #[wasm_bindgen(method)]
     pub fn get_plane_location(this: &PlaneWrapper) -> LocationWrapper;
 
     /// Gets the yaw in degrees, -1 if not provided
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_yaw(this: &PlaneWrapper) -> f32;
 
     /// Gets the pitch in degrees, -1 if not provided
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_pitch(this: &PlaneWrapper) -> f32;
 
     /// Gets the roll in degrees, -1 if not provided
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_roll(this: &PlaneWrapper) -> f32;
 
     /// Gets the airspeed in meters per second, -1 if not provided
-    //#[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_airspeed(this: &PlaneWrapper) -> f32;
 
     /// Gets the groundspeed in meters per second, -1 if not provided
-    // #[wasm_bindgen(getter)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter)]
+    // #[wasm_bindgen(method)]
     pub fn get_groundspeed(this: &PlaneWrapper) -> f32;
 
     /// Gets the wind_dir in degrees, -1 if not provided
-    // #[wasm_bindgen(getter, js_name = windDir)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = windDir)]
+    // #[wasm_bindgen(method)]
     pub fn get_wind_dir(this: &PlaneWrapper) -> f32;
 }
 
@@ -207,30 +207,30 @@ extern "C" {
     pub type TConfigWrapper;
 
     /// Get the buffer around obstacles in meters
-    // #[wasm_bindgen(getter, js_name = bufferSize)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = bufferSize)]
+    // #[wasm_bindgen(method)]
     pub fn get_buffer_size(this: &TConfigWrapper) -> f32;
 
     /// Get the maximum process time allowed in seconds
-    // #[wasm_bindgen(getter, js_name = maxProcessTime)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = maxProcessTime)]
+    // #[wasm_bindgen(method)]
     pub fn get_max_process_time(this: &TConfigWrapper) -> f32;
 
     /// Get the turning radius of the plane in meters
-    // #[wasm_bindgen(getter, js_name = turningRadius)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = turningRadius)]
+    // #[wasm_bindgen(method)]
     pub fn get_turning_radius(this: &TConfigWrapper) -> f32;
 
     /// Get the merge threshold for vertices
     ///
     /// Vertices within this threshold will be merged into one.
-    // #[wasm_bindgen(getter, js_name = vertexMergeThreshold)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = vertexMergeThreshold)]
+    // #[wasm_bindgen(method)]
     pub fn get_vertex_merge_threshold(this: &TConfigWrapper) -> f32;
 
     /// Whether to generate virtual nodes for flyzones
-    // #[wasm_bindgen(getter, js_name = virtualizeFlyzone)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = virtualizeFlyzone)]
+    // #[wasm_bindgen(method)]
     pub fn get_virtualize_flyzone(this: &TConfigWrapper) -> bool;
 }
 
@@ -256,13 +256,13 @@ extern "C" {
     pub type WaypointWrapper;
 
     /// Gets the location as a [`LocationWrapper`]
-    // #[wasm_bindgen(getter, js_name = location)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = location)]
+    // #[wasm_bindgen(method)]
     pub fn get_waypoint_location(this: &WaypointWrapper) -> LocationWrapper;
 
     /// Gets the radius in meters
-    // #[wasm_bindgen(getter, js_name = radius)]
-    #[wasm_bindgen(method)]
+    #[wasm_bindgen(method, getter, js_name = radius)]
+    // #[wasm_bindgen(method)]
     pub fn get_waypoint_radius(this: &WaypointWrapper) -> f32;
 
     // data is omitted due to its lack of use

@@ -11,15 +11,15 @@ module.exports.LocationWrapper = class LocationWrapper {
     this.alt = altitude;
   }
 
-  function get_lat() {
+  get lat() {
     return this.lat;
   }
 
-  function get_lon() {
+  get lon() {
     return this.lon;
   }
 
-  function get_alt() {
+  get alt() {
     return this.alt;
   }
 };
@@ -37,15 +37,15 @@ module.exports.ObstacleWrapper = class ObstacleWrapper {
     this.height = height;
   }
 
-  function get_obstacle_location() {
+  get location() {
     return this.location;
   }
 
-  function get_obstacle_radius() {
+  get radius() {
     return this.radius;
   }
 
-  function get_height() {
+  get height() {
     return this.height;
   }
 };
@@ -71,31 +71,31 @@ module.exports.PlaneWrapper = class PlaneWrapper {
     this.windDir = windDir ? windDir : -1;
   }
 
-  function get_plane_location() {
+  get location() {
     return this.location;
   }
 
-  function get_yaw() {
+  get yaw() {
     return this.yaw;
   }
 
-  function get_pitch() {
+  get pitch() {
     return this.pitch;
   }
 
-  function get_roll() {
+  get roll() {
     return this.roll;
   }
 
-  function get_airspeed() {
+  get airspeed() {
     return this.airspeed;
   }
 
-  function get_groundspeed() {
+  get groundspeed() {
     return this.groundspeed;
   }
 
-  function get_wind_dir() {
+  get windDir() {
     return this.windDir;
   }
 };
@@ -117,23 +117,23 @@ module.exports.TConfigWrapper = class TConfigWrapper {
     this.virtualizeFlyzone = virtualizeFlyzone;
   }
 
-  function get_buffer_size() {
+  get bufferSize() {
     return this.bufferSize;
   }
 
-  function get_max_process_time() {
+  get maxProcessTime() {
     return this.maxProcessTime;
   }
 
-  function get_turning_radius() {
+  get turningRadius() {
     return this.turningRadius;
   }
 
-  function get_vertex_merge_threshold() {
+  get vertexMergeThreshold() {
     return this.vertexMergeThreshold;
   }
 
-  function get_virtualize_flyzone() {
+  get virtualizeFlyzone() {
     return this.virtualizeFlyzone;
   }
 };
@@ -149,11 +149,11 @@ module.exports.WaypointWrapper = class WaypointWrapper {
     this.radius = radius;
   }
 
-  function get_waypoint_location() {
+  get waypointLocation() {
     return this.location;
   }
 
-  function get_waypoint_radius() {
+  get waypointRadius() {
     return this.radius;
   }
 };
