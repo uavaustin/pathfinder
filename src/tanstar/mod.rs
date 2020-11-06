@@ -64,7 +64,9 @@ impl Default for Tanstar {
     }
 }
 
+#[wasm_bindgen]
 impl Tanstar {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Tanstar::default()
     }
