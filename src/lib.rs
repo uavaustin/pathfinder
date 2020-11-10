@@ -444,6 +444,14 @@ impl PathfinderWrapper {
     }
 }
 
+// DEBUG
+// Allows for panics to be sent to Javascript
+// #[wasm_bindgen(method)]
+// pub fn init_panic_hook() {
+//     extern crate console_error_panic_hook;
+//     console_error_panic_hook::set_once();
+// }
+
 #[cfg(test)]
 mod tests {
     use super::*;

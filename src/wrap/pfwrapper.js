@@ -85,14 +85,14 @@ module.exports.PlaneWrapper = class PlaneWrapper {
    * @param {number} [groundspeed=-1] - In meters per second, -1 if not provided.
    * @param {number} [windDir=-1]     - In degrees, -1 if not provided
    */
-  constructor(location, yaw, pitch, roll, airspeed, groundspeed, windDir) {
+  constructor(location, yaw = -1, pitch = -1, roll = -1, airspeed = -1, groundspeed = -1, windDir = -1) {
     this._location = location;
-    this._yaw = yaw ? yaw : -1;
-    this._pitch = pitch ? pitch : -1;
-    this._roll = roll ? roll : -1;
-    this._airspeed = airspeed ? airspeed : -1;
-    this._groundspeed = groundspeed ? groundspeed : -1;
-    this._windDir = windDir ? windDir : -1;
+    this._yaw = yaw;
+    this._pitch = pitch;
+    this._roll = roll;
+    this._airspeed = airspeed;
+    this._groundspeed = groundspeed;
+    this._windDir = windDir;
   }
 
   get location() {
@@ -153,15 +153,16 @@ module.exports.PlaneWrapper = class PlaneWrapper {
 };
 
 // A wrapper for transferring TConfig data between Rust and Wasm/JS.
+// TODO: Centralize defaults (i.e. handle from original Rust class)
 module.exports.TConfigWrapper = class TConfigWrapper {
   /**
-   * @param {number}  bufferSize           - Buffer around obstacle in meters.
-   * @param {number}  maxProcessTime       - Maximum process time allowed in seconds.
-   * @param {number}  turningRadius        - Turning radius of plane in meters.
-   * @param {number}  vertexMergeThreshold - In meters. Vertices within threshold will be merged into one.
-   * @param {boolean} virtualizeFlyzone    - Whether to generate virtual nodes for flyzones.
+   * @param {number}  [bufferSize=2]              - Buffer around obstacle in meters.
+   * @param {number}  [maxProcessTime=10]         - Maximum process time allowed in seconds.
+   * @param {number}  [turningRadius=5]           - Turning radius of plane in meters.
+   * @param {number}  [vertexMergeThreshold=5]    - In meters. Vertices within threshold will be merged into one.
+   * @param {boolean} [virtualizeFlyzone=true]    - Whether to generate virtual nodes for flyzones.
    */
-  constructor(bufferSize, maxProcessTime, turningRadius, vertexMergeThreshold, virtualizeFlyzone) {
+  constructor(bufferSize = 2, maxProcessTime = 10, turningRadius = 5, vertexMergeThreshold = 5, virtualizeFlyzone = true) {
     this._bufferSize = bufferSize;
     this._maxProcessTime = maxProcessTime;
     this._turningRadius = turningRadius;

@@ -41,7 +41,7 @@ pub struct Tanstar {
     obstacles: Vec<Obstacle>,
     // private
     initialized: bool,
-    start_time: SystemTime,
+    start_time: SystemTime, // TODO: Consider handling time outside of pathfinder
     origin: Location, // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
     num_vertices: i32,
@@ -66,9 +66,28 @@ impl Default for Tanstar {
 
 #[wasm_bindgen]
 impl Tanstar {
-    #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Tanstar::default()
+    }
+
+    /// Creates a `Tanstar` without intentions for timing
+    ///
+    /// Sets `start_time` to be the Unix epoch. This should be used when timing shouldn't be handled
+    /// by pathfinder.
+    #[wasm_bindgen(method)]
+    pub fn untimed() -> Self {
+        Self {
+            // exposed API
+            config: TConfig::default(),
+            flyzones: Vec::new(),
+            obstacles: Vec::new(),
+            // private
+            initialized: false,
+            start_time: SystemTime::UNIX_EPOCH,
+            origin: Location::from_degrees(0f64, 0f64, 0f32),
+            nodes: Vec::new(),
+            num_vertices: 0i32,
+        }
     }
 
     // determine if flyzone intersects itself (correct order)

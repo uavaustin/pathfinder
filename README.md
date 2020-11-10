@@ -79,3 +79,5 @@ execution. To build for Node.js the following command should be used:
     $ wasm-pack build --target=nodejs
 
 This will create a `pkg` directory at the crate root with JS and Wasm files.
+
+Note: Use the option `--debug` when Wasm debug information (such as readable errors and stack traces) are desired.
