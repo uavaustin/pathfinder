@@ -42,7 +42,7 @@ pub struct Tanstar {
     // private
     initialized: bool,
     start_time: SystemTime, // TODO: Consider handling time outside of pathfinder
-    origin: Location, // Reference point defining each node
+    origin: Location,       // Reference point defining each node
     nodes: Vec<Rc<RefCell<Node>>>,
     num_vertices: i32,
 }

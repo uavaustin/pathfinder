@@ -8,7 +8,7 @@ license = "MIT"
 travis-ci = { repository = "uavaustin/pathfinder", branch = "master" }
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 ordered-float = "1.0.1"
@@ -20,6 +20,7 @@ js-sys = "0.3.45"
 [dev-dependencies]
 rand = "0.5.1"
 criterion = "0.2"
+wasm-bindgen-test = "0.3.18"
 
 [[bench]]
 name = "my_benchmark"

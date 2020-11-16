@@ -95,25 +95,29 @@ extern "C" {
     pub fn new_location_wrapper(lat: f64, lon: f64, alt: f32) -> LocationWrapper;
 
     /// Gets the latitude in degrees
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getLat)]
     pub fn get_lat(this: &LocationWrapper) -> f64;
 
     /// Gets the longitude in degrees
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getLon)]
     pub fn get_lon(this: &LocationWrapper) -> f64;
 
     /// Gets the altitude in meters
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getAlt)]
     pub fn get_alt(this: &LocationWrapper) -> f32;
 }
 
 // Location can't be directly wrapped
 impl From<Location> for LocationWrapper {
     fn from(location: Location) -> Self {
-        LocationWrapper::new_location_wrapper(location.lat(), location.lon(), location.alt())
+        LocationWrapper::new_location_wrapper(
+            location.lat_degree(),
+            location.lon_degree(),
+            location.alt(),
+        )
     }
 }
 
@@ -131,28 +135,36 @@ extern "C" {
 
     /// Creates an [`ObstacleWrapper`]
     #[wasm_bindgen(constructor)]
-    pub fn new_obstacle_wrapper(location: &LocationWrapper, radius: f32, height: f32) -> ObstacleWrapper;
+    pub fn new_obstacle_wrapper(
+        location: LocationWrapper,
+        radius: f32,
+        height: f32,
+    ) -> ObstacleWrapper;
 
     /// Gets the location as a [`LocationWrapper`]
-    #[wasm_bindgen(method, getter, js_name = location)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = location)]
+    #[wasm_bindgen(method, js_name = getLocation)]
     pub fn get_obstacle_location(this: &ObstacleWrapper) -> LocationWrapper;
 
     /// Gets the radius in meters
-    #[wasm_bindgen(method, getter, js_name = radius)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = radius)]
+    #[wasm_bindgen(method, js_name = getRadius)]
     pub fn get_obstacle_radius(this: &ObstacleWrapper) -> f32;
 
     /// Gets the height in meters
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getHeight)]
     pub fn get_height(this: &ObstacleWrapper) -> f32;
 }
 
 // Obstacle can't be wrapped directly
 impl From<Obstacle> for ObstacleWrapper {
     fn from(obstacle: Obstacle) -> Self {
-        ObstacleWrapper::new_obstacle_wrapper(&obstacle.location.into(), obstacle.radius, obstacle.height)
+        ObstacleWrapper::new_obstacle_wrapper(
+            obstacle.location.into(),
+            obstacle.radius,
+            obstacle.height,
+        )
     }
 }
 
@@ -162,7 +174,7 @@ impl Into<Obstacle> for ObstacleWrapper {
         Obstacle::new(
             self.get_obstacle_location().into(),
             self.get_obstacle_radius(),
-            self.get_height()
+            self.get_height(),
         )
     }
 }
@@ -173,38 +185,38 @@ extern "C" {
     pub type PlaneWrapper;
 
     /// Gets the location as a [`LocationWrapper`]
-    #[wasm_bindgen(method, getter, js_name = location)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = location)]
+    #[wasm_bindgen(method, js_name = getLocation)]
     pub fn get_plane_location(this: &PlaneWrapper) -> LocationWrapper;
 
     /// Gets the yaw in degrees, -1 if not provided
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getYaw)]
     pub fn get_yaw(this: &PlaneWrapper) -> f32;
 
     /// Gets the pitch in degrees, -1 if not provided
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getPitch)]
     pub fn get_pitch(this: &PlaneWrapper) -> f32;
 
     /// Gets the roll in degrees, -1 if not provided
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getRoll)]
     pub fn get_roll(this: &PlaneWrapper) -> f32;
 
     /// Gets the airspeed in meters per second, -1 if not provided
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name= getAirspeed)]
     pub fn get_airspeed(this: &PlaneWrapper) -> f32;
 
     /// Gets the groundspeed in meters per second, -1 if not provided
-    #[wasm_bindgen(method, getter)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, js_name = getGroundspeed)]
     pub fn get_groundspeed(this: &PlaneWrapper) -> f32;
 
     /// Gets the wind_dir in degrees, -1 if not provided
-    #[wasm_bindgen(method, getter, js_name = windDir)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = windDir)]
+    #[wasm_bindgen(method, js_name = getWindDir)]
     pub fn get_wind_dir(this: &PlaneWrapper) -> f32;
 }
 
@@ -218,7 +230,7 @@ impl Into<Plane> for PlaneWrapper {
             roll: self.get_roll(),
             airspeed: self.get_airspeed(),
             groundspeed: self.get_groundspeed(),
-            wind_dir: self.get_wind_dir()
+            wind_dir: self.get_wind_dir(),
         }
     }
 }
@@ -235,33 +247,34 @@ extern "C" {
         max_process_time: f32,
         turning_radius: f32,
         vertex_merge_threshold: f32,
-        virtualize_flyzone: bool) -> TConfigWrapper;
+        virtualize_flyzone: bool,
+    ) -> TConfigWrapper;
 
     /// Get the buffer around obstacles in meters
-    #[wasm_bindgen(method, getter, js_name = bufferSize)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = bufferSize)]
+    #[wasm_bindgen(method, js_name = getBufferSize)]
     pub fn get_buffer_size(this: &TConfigWrapper) -> f32;
 
     /// Get the maximum process time allowed in seconds
-    #[wasm_bindgen(method, getter, js_name = maxProcessTime)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = maxProcessTime)]
+    #[wasm_bindgen(method, js_name = getMaxProcessTime)]
     pub fn get_max_process_time(this: &TConfigWrapper) -> f32;
 
     /// Get the turning radius of the plane in meters
-    #[wasm_bindgen(method, getter, js_name = turningRadius)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = turningRadius)]
+    #[wasm_bindgen(method, js_name = getTurningRadius)]
     pub fn get_turning_radius(this: &TConfigWrapper) -> f32;
 
     /// Get the merge threshold for vertices
     ///
     /// Vertices within this threshold will be merged into one.
-    #[wasm_bindgen(method, getter, js_name = vertexMergeThreshold)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = vertexMergeThreshold)]
+    #[wasm_bindgen(method, js_name = getVertexMergeThreshold)]
     pub fn get_vertex_merge_threshold(this: &TConfigWrapper) -> f32;
 
     /// Whether to generate virtual nodes for flyzones
-    #[wasm_bindgen(method, getter, js_name = virtualizeFlyzone)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = virtualizeFlyzone)]
+    #[wasm_bindgen(method, js_name = getVirtualizeFlyzone)]
     pub fn get_virtualize_flyzone(this: &TConfigWrapper) -> bool;
 }
 
@@ -273,7 +286,7 @@ impl From<TConfig> for TConfigWrapper {
             config.max_process_time.as_secs_f32(),
             config.turning_radius,
             config.vertex_merge_threshold,
-            config.virtualize_flyzone
+            config.virtualize_flyzone,
         )
     }
 }
@@ -286,7 +299,7 @@ impl Into<TConfig> for TConfigWrapper {
             std::time::Duration::from_secs_f32(self.get_max_process_time()),
             self.get_turning_radius(),
             self.get_vertex_merge_threshold(),
-            self.get_virtualize_flyzone()
+            self.get_virtualize_flyzone(),
         )
     }
 }
@@ -301,25 +314,25 @@ extern "C" {
 
     /// Creates a [`WaypointWrapper`]
     #[wasm_bindgen(constructor)]
-    pub fn new_waypoint_wrapper(location: &LocationWrapper, radius: f32) -> WaypointWrapper;
+    pub fn new_waypoint_wrapper(location: LocationWrapper, radius: f32) -> WaypointWrapper;
 
     /// Gets the location as a [`LocationWrapper`]
-    #[wasm_bindgen(method, getter, js_name = location)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = location)]
+    #[wasm_bindgen(method, js_name = getLocation)]
     pub fn get_waypoint_location(this: &WaypointWrapper) -> LocationWrapper;
 
     /// Gets the radius in meters
-    #[wasm_bindgen(method, getter, js_name = radius)]
-    // #[wasm_bindgen(method)]
+    // #[wasm_bindgen(method, getter, js_name = radius)]
+    #[wasm_bindgen(method, js_name = getRadius)]
     pub fn get_waypoint_radius(this: &WaypointWrapper) -> f32;
 
-    // data is omitted due to its lack of use
+// data is omitted due to its lack of use
 }
 
 // Waypoint can't be directly wrapped
 impl From<Waypoint<()>> for WaypointWrapper {
     fn from(waypoint: Waypoint<()>) -> Self {
-        WaypointWrapper::new_waypoint_wrapper(&waypoint.location.into(), waypoint.radius)
+        WaypointWrapper::new_waypoint_wrapper(waypoint.location.into(), waypoint.radius)
     }
 }
 
@@ -328,7 +341,7 @@ impl Into<Waypoint<()>> for WaypointWrapper {
     fn into(self) -> Waypoint<()> {
         Waypoint::new(
             self.get_waypoint_location().into(),
-            self.get_waypoint_radius()
+            self.get_waypoint_radius(),
         )
     }
 }
@@ -339,7 +352,7 @@ impl Into<Waypoint<()>> for WaypointWrapper {
 /// and implementation definitions must be changed when the Pathfinder implementation changes.
 #[wasm_bindgen]
 pub struct PathfinderWrapper {
-    pathfinder: Pathfinder<Tanstar>
+    pathfinder: Pathfinder<Tanstar>,
 }
 
 #[wasm_bindgen]
@@ -360,16 +373,28 @@ impl PathfinderWrapper {
     ) -> Self {
         // TODO: Check if unwrapable
         // Unwrap flyzones without checking
-        let flyzones_vec = flyzones.to_vec().iter().map(|fz_arr| {
-            js_sys::Array::from(fz_arr).to_vec().into_iter().map(|lw| LocationWrapper::from(lw).into()).collect()
-        }).collect();
+        let flyzones_vec = flyzones
+            .to_vec()
+            .iter()
+            .map(|fz_arr| {
+                js_sys::Array::from(fz_arr)
+                    .to_vec()
+                    .into_iter()
+                    .map(|lw| LocationWrapper::from(lw).into())
+                    .collect()
+            })
+            .collect();
 
         // TODO: Check if unwrapable
         // Unwrap obstacles without checking
-        let obstacles_vec = obstacles.to_vec().into_iter().map(|ow| ObstacleWrapper::from(ow).into()).collect();
+        let obstacles_vec = obstacles
+            .to_vec()
+            .into_iter()
+            .map(|ow| ObstacleWrapper::from(ow).into())
+            .collect();
 
         PathfinderWrapper {
-            pathfinder: Pathfinder::new(algo, config.into(), flyzones_vec, obstacles_vec)
+            pathfinder: Pathfinder::new(algo, config.into(), flyzones_vec, obstacles_vec),
         }
     }
 
@@ -386,61 +411,97 @@ impl PathfinderWrapper {
     ) -> js_sys::Array {
         // TODO: Check if unwrapable
         // Unwrap wp_list without checking
-        let wp_linked_list = wp_list.to_vec().into_iter().map(|ww| WaypointWrapper::from(ww).into()).collect();
+        let wp_linked_list = wp_list
+            .to_vec()
+            .into_iter()
+            .map(|ww| WaypointWrapper::from(ww).into())
+            .collect();
 
-        self.pathfinder.get_adjust_path(plane.into(), wp_linked_list)
-            .into_iter().map(WaypointWrapper::from).collect()
+        self.pathfinder
+            .get_adjust_path(plane.into(), wp_linked_list)
+            .into_iter()
+            .map(WaypointWrapper::from)
+            .collect()
     }
 
-    #[wasm_bindgen(setter)]
+    // #[wasm_bindgen(setter)]
+    #[wasm_bindgen(method, js_name = setConfig)]
     pub fn set_config(&mut self, config: TConfigWrapper) {
         self.pathfinder.set_config(config.into());
     }
 
     // Signature:
     // &mut self, flyzone: Vec<Vec<Location>>) {
-    #[wasm_bindgen(setter)]
+    // #[wasm_bindgen(setter)]
+    #[wasm_bindgen(method, js_name = setFlyzone)]
     pub fn set_flyzone(&mut self, flyzone: js_sys::Array) {
         // TODO: Check if unwrapable
         // Unwrap flyzone without checking
-        let flyzones_vec = flyzone.to_vec().iter().map(|fz_arr| {
-            js_sys::Array::from(fz_arr).to_vec().into_iter().map(|lw| LocationWrapper::from(lw).into()).collect()
-        }).collect();
+        let flyzones_vec = flyzone
+            .to_vec()
+            .iter()
+            .map(|fz_arr| {
+                js_sys::Array::from(fz_arr)
+                    .to_vec()
+                    .into_iter()
+                    .map(|lw| LocationWrapper::from(lw).into())
+                    .collect()
+            })
+            .collect();
 
         self.pathfinder.set_flyzone(flyzones_vec);
     }
 
     // Signature:
     // &mut self, obstacles: Vec<Obstacle>) {
-    #[wasm_bindgen(setter)]
+    // #[wasm_bindgen(setter)]
+    #[wasm_bindgen(method, js_name = setObstacles)]
     pub fn set_obstacles(&mut self, obstacles: js_sys::Array) {
         // TODO: Check if unwrapable
         // Unwrap obstacles without checking
-        let obstacles_vec = obstacles.to_vec().into_iter().map(|ow| ObstacleWrapper::from(ow).into()).collect();
+        let obstacles_vec = obstacles
+            .to_vec()
+            .into_iter()
+            .map(|ow| ObstacleWrapper::from(ow).into())
+            .collect();
 
         self.pathfinder.set_obstacles(obstacles_vec);
     }
 
-    #[wasm_bindgen(getter)]
+    // #[wasm_bindgen(getter)]
+    #[wasm_bindgen(getter, js_name = getConfig)]
     pub fn get_config(&self) -> TConfigWrapper {
         self.pathfinder.get_config().clone().into()
     }
 
     // Signature:
     // &mut self) -> &Vec<Vec<Location>> {
-    #[wasm_bindgen(getter)]
+    // #[wasm_bindgen(getter)]
+    #[wasm_bindgen(method, js_name = getFlyzone)]
     pub fn get_flyzone(&mut self) -> js_sys::Array {
         // Convert flyzone into Array of Array of LocationWrappers
-        self.pathfinder.get_flyzone().iter().map(|flyzone| {
-            flyzone.iter().map(|loc| LocationWrapper::from(loc.clone())).collect::<js_sys::Array>()
-        }).collect()
+        self.pathfinder
+            .get_flyzone()
+            .iter()
+            .map(|flyzone| {
+                flyzone
+                    .iter()
+                    .map(|loc| LocationWrapper::from(loc.clone()))
+                    .collect::<js_sys::Array>()
+            })
+            .collect()
     }
 
     // Signature:
     // &self) -> &Vec<Obstacle> {
-    #[wasm_bindgen(getter)]
+    // #[wasm_bindgen(getter)]
+    #[wasm_bindgen(method, js_name = getObstacle)]
     pub fn get_obstacle(&self) -> js_sys::Array {
-        self.pathfinder.get_obstacle().iter().map(|obs| ObstacleWrapper::from(obs.clone())).collect()
+        self.pathfinder
+            .get_obstacle()
+            .iter()
+            .map(|obs| ObstacleWrapper::from(obs.clone()))
+            .collect()
     }
 }
 
@@ -467,6 +528,59 @@ mod tests {
     fn tanstar_invalid_flyzone_test() {
         Pathfinder::new(Tanstar::new(), TConfig::default(), vec![vec![]], Vec::new());
     }
+}
 
-    // TODO: Test wasm-bindgen stuff
+#[cfg(test)]
+pub mod wasm_bindgen_tests {
+    extern crate wasm_bindgen_test;
+
+    use self::wasm_bindgen_test::*;
+    use super::*;
+
+    #[wasm_bindgen_test]
+    fn location_wrapper_from_location_test() {
+        let location = Location::from_degrees(-1.0, 0.0, 1.0);
+        let location_wrapper_into: LocationWrapper = location.into();
+        let location_wrapper_from = LocationWrapper::from(location);
+        assert_eq!(location.lat_degree(), location_wrapper_into.get_lat());
+        assert_eq!(location.lon_degree(), location_wrapper_into.get_lon());
+        assert_eq!(location.alt(), location_wrapper_into.get_alt());
+        assert_eq!(location.lat_degree(), location_wrapper_from.get_lat());
+        assert_eq!(location.lon_degree(), location_wrapper_from.get_lon());
+        assert_eq!(location.alt(), location_wrapper_from.get_alt());
+    }
+
+    #[wasm_bindgen_test]
+    fn location_wrapper_into_location_test() {
+        let location_wrapper = LocationWrapper::new_location_wrapper(-1.0, 0.0, 1.0);
+        let location_wrapper_to_convert = LocationWrapper::new_location_wrapper(
+            location_wrapper.get_lat(),
+            location_wrapper.get_lon(),
+            location_wrapper.get_alt(),
+        ); // into() moves the value and wasm-bindgen JavaScript types don't clone() to the same type
+        let location: Location = location_wrapper_to_convert.into();
+        assert_eq!(location_wrapper.get_lat(), location.lat_degree());
+        assert_eq!(location_wrapper.get_lon(), location.lon_degree());
+        assert_eq!(location_wrapper.get_alt(), location.alt());
+    }
+
+    #[wasm_bindgen_test]
+    fn obstacle_wrapper_into_obstacle_test() {
+        let location = LocationWrapper::new_location_wrapper(-1.0, 5.0, 1.0);
+        let lat = location.get_lat();
+        let lon = location.get_lon();
+        let alt = location.get_alt();
+
+        let obstacle_wrapper = ObstacleWrapper::new_obstacle_wrapper(location, 0.1, 10.0);
+        let radius = obstacle_wrapper.get_obstacle_radius();
+        let height = obstacle_wrapper.get_height();
+
+        let obstacle: Obstacle = obstacle_wrapper.into();
+        let obs_location = obstacle.location;
+        assert_eq!(lat, obs_location.lat_degree());
+        assert_eq!(lon, obs_location.lon_degree());
+        assert_eq!(alt, obs_location.alt());
+        assert_eq!(radius, obstacle.radius);
+        assert_eq!(height, obstacle.height);
+    }
 }

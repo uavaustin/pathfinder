@@ -6,33 +6,21 @@ module.exports.LocationWrapper = class LocationWrapper {
    * @param {number} altitude  - In meters.
    */
   constructor(latitude, longitude, altitude) {
-    this._lat = latitude;
-    this._lon = longitude;
-    this._alt = altitude;
+    this.lat = latitude;
+    this.lon = longitude;
+    this.alt = altitude;
   }
 
-  get lat() {
-    return this._lat;
+  getLat() {
+    return this.lat;
   }
 
-  set lat(value) {
-    this._lat = value;
+  getLon() {
+    return this.lon;
   }
 
-  get lon() {
-    return this._lon;
-  }
-
-  set lon(value) {
-    this._lon = value;
-  }
-
-  get alt() {
-    return this._alt;
-  }
-
-  set alt(value) {
-    this._alt = value;
+  getAlt() {
+    return this.alt;
   }
 };
 
@@ -44,33 +32,21 @@ module.exports.ObstacleWrapper = class ObstacleWrapper {
    * @param {number} height   - In meters.
    */
   constructor(location, radius, height) {
-    this._location = location;
-    this._radius = radius;
-    this._height = height;
+    this.location = location;
+    this.radius = radius;
+    this.height = height;
   }
 
-  get location() {
-    return this._location;
+  getLocation() {
+    return this.location;
   }
 
-  set location(value) {
-    this._location = value;
+  getRadius() {
+    return this.radius;
   }
 
-  get radius() {
-    return this._radius;
-  }
-
-  set radius(value) {
-    this._radius = value;
-  }
-
-  get height() {
-    return this._height;
-  }
-
-  set height(value) {
-    this._height = value;
+  getHeight() {
+    return this.height;
   }
 };
 
@@ -86,69 +62,41 @@ module.exports.PlaneWrapper = class PlaneWrapper {
    * @param {number} [windDir=-1]     - In degrees, -1 if not provided
    */
   constructor(location, yaw = -1, pitch = -1, roll = -1, airspeed = -1, groundspeed = -1, windDir = -1) {
-    this._location = location;
-    this._yaw = yaw;
-    this._pitch = pitch;
-    this._roll = roll;
-    this._airspeed = airspeed;
-    this._groundspeed = groundspeed;
-    this._windDir = windDir;
+    this.location = location;
+    this.yaw = yaw;
+    this.pitch = pitch;
+    this.roll = roll;
+    this.airspeed = airspeed;
+    this.groundspeed = groundspeed;
+    this.windDir = windDir;
   }
 
-  get location() {
-    return this._location;
+  getLocation() {
+    return this.location;
   }
 
-  set location(value) {
-    this._location = value;
+  getYaw() {
+    return this.yaw;
   }
 
-  get yaw() {
-    return this._yaw;
+  getPitch() {
+    return this.pitch;
   }
 
-  set yaw(value) {
-    this._yaw = value;
+  getRoll() {
+    return this.roll;
   }
 
-  get pitch() {
-    return this._pitch;
+  getAirspeed() {
+    return this.airspeed;
   }
 
-  set pitch(value) {
-    this._pitch = value;
+  getGroundspeed() {
+    return this.groundspeed;
   }
 
-  get roll() {
-    return this._roll;
-  }
-
-  set roll(value) {
-    this._roll = value;
-  }
-
-  get airspeed() {
-    return this._airspeed;
-  }
-
-  set airspeed(value) {
-    this._airspeed = value;
-  }
-
-  get groundspeed() {
-    return this._groundspeed;
-  }
-
-  set groundspeed(value) {
-    this._groundspeed = value;
-  }
-
-  get windDir() {
-    return this._windDir;
-  }
-
-  set windDir(value) {
-    this._windDir = value;
+  getWindDir() {
+    return this.windDir;
   }
 };
 
@@ -163,51 +111,31 @@ module.exports.TConfigWrapper = class TConfigWrapper {
    * @param {boolean} [virtualizeFlyzone=true]    - Whether to generate virtual nodes for flyzones.
    */
   constructor(bufferSize = 2, maxProcessTime = 10, turningRadius = 5, vertexMergeThreshold = 5, virtualizeFlyzone = true) {
-    this._bufferSize = bufferSize;
-    this._maxProcessTime = maxProcessTime;
-    this._turningRadius = turningRadius;
-    this._vertexMergeThreshold = vertexMergeThreshold;
-    this._virtualizeFlyzone = virtualizeFlyzone;
+    this.bufferSize = bufferSize;
+    this.maxProcessTime = maxProcessTime;
+    this.turningRadius = turningRadius;
+    this.vertexMergeThreshold = vertexMergeThreshold;
+    this.virtualizeFlyzone = virtualizeFlyzone;
   }
 
-  get bufferSize() {
-    return this._bufferSize;
+  getBufferSize() {
+    return this.bufferSize;
   }
 
-  set bufferSize(value) {
-    this._bufferSize = value;
+  getMaxProcessTime() {
+    return this.maxProcessTime;
   }
 
-  get maxProcessTime() {
-    return this._maxProcessTime;
+  getTurningRadius() {
+    return this.turningRadius;
   }
 
-  set maxProcessTime(value) {
-    this._maxProcessTime = value;
+  getVertexMergeThreshold() {
+    return this.vertexMergeThreshold;
   }
 
-  get turningRadius() {
-    return this._turningRadius;
-  }
-
-  set turningRadius(value) {
-    this._turningRadius = value;
-  }
-
-  get vertexMergeThreshold() {
-    return this._vertexMergeThreshold;
-  }
-
-  set vertexMergeThreshold(value) {
-    this._vertexMergeThreshold = value;
-  }
-
-  get virtualizeFlyzone() {
-    return this._virtualizeFlyzone;
-  }
-
-  set virtualizeFlyzone(value) {
-    this._virtualizeFlyzone = value;
+  getVirtualizeFlyzone() {
+    return this.virtualizeFlyzone;
   }
 };
 
@@ -218,23 +146,15 @@ module.exports.WaypointWrapper = class WaypointWrapper {
    * @param {number} radius   - In meters.
    */
   constructor(location, radius) {
-    this._location = location;
-    this._radius = radius;
+    this.location = location;
+    this.radius = radius;
   }
 
-  get location() {
-    return this._location;
+  getLocation() {
+    return this.location;
   }
 
-  set location(value) {
-    this._location = value;
-  }
-
-  get radius() {
-    return this._radius;
-  }
-
-  set radius(value) {
-    this._radius = value;
+  getRadius() {
+    return this.radius;
   }
 };
